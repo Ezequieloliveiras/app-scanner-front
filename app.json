@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "App Scanner",
+    "slug": "app-scanner-front",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "appscanner",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Use a camera para ler o QR Code da nota fiscal."
+      }
+    },
+    "android": {
+      "permissions": ["android.permission.CAMERA"]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Use a camera para ler o QR Code da nota fiscal."
+        }
+      ]
+    ]
+  }
+}
