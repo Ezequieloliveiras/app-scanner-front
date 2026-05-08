@@ -13,6 +13,12 @@ export type Product = {
   quantity: number;
   ean: string;
   stockEntries: StockEntry[];
+  branchStocks?: BranchStock[];
+};
+
+export type BranchStock = {
+  branchName: string;
+  quantity: number;
 };
 
 export type InvoicePreviewProduct = {
@@ -41,5 +47,41 @@ export type CommitStockResult = {
 
 export type MissingDeliveredPayload = {
   quantity: number;
+  observation?: string;
+};
+
+export type BranchTransferStatus = "reserved" | "in_transit" | "received" | "cancelled";
+
+export type BranchTransferHistory = {
+  status: BranchTransferStatus;
+  observation?: string;
+  createdAt: string;
+};
+
+export type BranchTransfer = {
+  _id: string;
+  product: string;
+  productName: string;
+  ean: string;
+  quantity: number;
+  sourceBranch: string;
+  sourceBranchCode?: string;
+  targetBranch: string;
+  targetBranchCode?: string;
+  lot?: string;
+  status: BranchTransferStatus;
+  observation?: string;
+  history: BranchTransferHistory[];
+  createdAt: string;
+};
+
+export type CreateBranchTransferPayload = {
+  productId: string;
+  quantity: number;
+  sourceBranch?: string;
+  sourceBranchCode?: string;
+  targetBranch: string;
+  targetBranchCode?: string;
+  lot?: string;
   observation?: string;
 };

@@ -1,6 +1,9 @@
 import {
   CommitStockPayload,
   CommitStockResult,
+  BranchTransfer,
+  BranchTransferStatus,
+  CreateBranchTransferPayload,
   InvoiceResult,
   MissingDeliveredPayload,
   Product
@@ -61,6 +64,31 @@ export const api = {
     return request<Product>(`/api/products/${productId}/missing-delivered`, {
       method: "POST",
       body: JSON.stringify(payload)
+    });
+  },
+
+  listBranchTransfers() {
+    return request<BranchTransfer[]>("/api/branches/transfers");
+  },
+
+  createBranchTransfer(payload: CreateBranchTransferPayload) {
+    return request<BranchTransfer>("/api/branches/transfers", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+
+  updateBranchTransferStatus(id: string, status: Exclude<BranchTransferStatus, "reserved">, observation?: string) {
+    return request<BranchTransfer>(`/api/branches/transfers/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, observation })
+    });
+  },
+
+  cancelBranchTransfer(id: string, observation?: string) {
+    return request<BranchTransfer>(`/api/branches/transfers/${id}/cancel`, {
+      method: "PATCH",
+      body: JSON.stringify({ observation })
     });
   }
 };

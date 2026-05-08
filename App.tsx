@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BarcodeScanningResult, CameraView, useCameraPermissions } from "expo-camera";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,13 +16,25 @@ import {
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "./src/api/client";
 import { ProductList } from "./src/components/ProductList";
-import { InvoicePreviewProduct, InvoiceResult, Product } from "./src/types/product";
+import { BranchTransfer, BranchTransferStatus, InvoicePreviewProduct, InvoiceResult, Product } from "./src/types/product";
 
-type Screen = "home" | "scan" | "products";
+type Screen = "home" | "scan" | "products" | "branches";
 
 type EditableInvoiceProduct = InvoicePreviewProduct & {
   quantityInput: string;
 };
+
+type BranchOption = {
+  code: string;
+  name: string;
+};
+
+const BRANCH_OPTIONS: BranchOption[] = [
+  { code: "CENTRAL", name: "Estoque central" },
+  { code: "FILIAL-01", name: "Filial 01" },
+  { code: "FILIAL-02", name: "Filial 02" },
+  { code: "FILIAL-03", name: "Filial 03" }
+];
 
 export default function App() {
   return (
@@ -38,6 +50,16 @@ function MainApp() {
   const [screen, setScreen] = useState<Screen>("home");
   const [menuOpen, setMenuOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
+  const [branchTransfers, setBranchTransfers] = useState<BranchTransfer[]>([]);
+  const [branchProductId, setBranchProductId] = useState("");
+  const [branchProductSearch, setBranchProductSearch] = useState("");
+  const [sourceBranch, setSourceBranch] = useState<BranchOption>(BRANCH_OPTIONS[0]);
+  const [sourceBranchSearch, setSourceBranchSearch] = useState("");
+  const [targetBranch, setTargetBranch] = useState<BranchOption | null>(null);
+  const [targetBranchSearch, setTargetBranchSearch] = useState("");
+  const [branchQuantity, setBranchQuantity] = useState("");
+  const [branchLot, setBranchLot] = useState("");
+  const [branchObservation, setBranchObservation] = useState("");
   const [pendingInvoice, setPendingInvoice] = useState<InvoiceResult | null>(null);
   const [pendingProducts, setPendingProducts] = useState<EditableInvoiceProduct[]>([]);
   const [editingProductIndex, setEditingProductIndex] = useState<number | null>(null);
@@ -50,11 +72,17 @@ function MainApp() {
     setProducts(data);
   }, []);
 
+  const loadBranchTransfers = useCallback(async () => {
+    const data = await api.listBranchTransfers();
+    setBranchTransfers(data);
+  }, []);
+
   useEffect(() => {
     loadProducts().catch(() => {
       setError("Nao consegui conectar na API. Confira se o backend esta rodando.");
     });
-  }, [loadProducts]);
+    loadBranchTransfers().catch(() => undefined);
+  }, [loadProducts, loadBranchTransfers]);
 
   async function handleInvoicePreview(action: () => Promise<InvoiceResult>) {
     try {
@@ -98,6 +126,13 @@ function MainApp() {
     setMenuOpen(false);
     setScreen("products");
     loadProducts().catch(() => setError("Nao consegui atualizar os produtos."));
+  }
+
+  function goToBranches() {
+    setError(null);
+    setMenuOpen(false);
+    setScreen("branches");
+    Promise.all([loadProducts(), loadBranchTransfers()]).catch(() => setError("Nao consegui atualizar filial."));
   }
 
   function updatePendingProduct(index: number, changes: Partial<EditableInvoiceProduct>) {
@@ -166,6 +201,92 @@ function MainApp() {
     await loadProducts();
   }
 
+  async function createBranchTransfer() {
+    const quantity = parseQuantity(branchQuantity);
+
+    if (!branchProductId || !targetBranch || quantity <= 0) {
+      Alert.alert("Dados incompletos", "Escolha produto, filial destino e quantidade para reservar.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      await api.createBranchTransfer({
+        productId: branchProductId,
+        sourceBranch: sourceBranch.name,
+        sourceBranchCode: sourceBranch.code,
+        targetBranch: targetBranch.name,
+        targetBranchCode: targetBranch.code,
+        quantity,
+        lot: branchLot.trim() || undefined,
+        observation: branchObservation.trim() || undefined
+      });
+      setBranchProductId("");
+      setBranchProductSearch("");
+      setSourceBranch(BRANCH_OPTIONS[0]);
+      setSourceBranchSearch("");
+      setTargetBranch(null);
+      setTargetBranchSearch("");
+      setBranchQuantity("");
+      setBranchLot("");
+      setBranchObservation("");
+      await Promise.all([loadProducts(), loadBranchTransfers()]);
+      Alert.alert("Estoque reservado", `Produto reservado para a filial ${targetBranch.name}.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao reservar estoque.";
+      setError(message);
+      Alert.alert("Reserva nao concluida", message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function updateBranchTransferStatus(id: string, status: Exclude<BranchTransferStatus, "reserved">) {
+    try {
+      setLoading(true);
+      setError(null);
+      await api.updateBranchTransferStatus(id, status);
+      await Promise.all([loadProducts(), loadBranchTransfers()]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao movimentar filial.";
+      setError(message);
+      Alert.alert("Movimentacao nao concluida", message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function confirmCancelBranchTransfer(id: string) {
+    Alert.alert(
+      "Cancelar movimentacao?",
+      "O estoque reservado sera devolvido para a filial de origem.",
+      [
+        { text: "Voltar", style: "cancel" },
+        {
+          text: "Cancelar movimentacao",
+          style: "destructive",
+          onPress: () => cancelBranchTransfer(id)
+        }
+      ]
+    );
+  }
+
+  async function cancelBranchTransfer(id: string) {
+    try {
+      setLoading(true);
+      setError(null);
+      await api.cancelBranchTransfer(id);
+      await Promise.all([loadProducts(), loadBranchTransfers()]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao cancelar movimentacao.";
+      setError(message);
+      Alert.alert("Cancelamento nao concluido", message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const editingProduct = editingProductIndex === null ? null : pendingProducts[editingProductIndex];
 
   return (
@@ -188,6 +309,7 @@ function MainApp() {
             pendingCount={pendingProducts.length}
             onScan={goToScan}
             onProducts={goToProducts}
+            onBranches={goToBranches}
             onSimulate={() => handleInvoicePreview(api.simulateInvoice)}
           />
         )}
@@ -218,6 +340,36 @@ function MainApp() {
             onRegisterMissingDelivered={registerMissingDelivered}
           />
         )}
+
+        {screen === "branches" && (
+          <BranchScreen
+            products={products}
+            transfers={branchTransfers}
+            selectedProductId={branchProductId}
+            productSearch={branchProductSearch}
+            branchOptions={BRANCH_OPTIONS}
+            sourceBranch={sourceBranch}
+            sourceBranchSearch={sourceBranchSearch}
+            targetBranch={targetBranch}
+            targetBranchSearch={targetBranchSearch}
+            quantity={branchQuantity}
+            lot={branchLot}
+            observation={branchObservation}
+            loading={loading}
+            onSelectProduct={setBranchProductId}
+            onChangeProductSearch={setBranchProductSearch}
+            onSelectSourceBranch={setSourceBranch}
+            onChangeSourceBranchSearch={setSourceBranchSearch}
+            onSelectTargetBranch={setTargetBranch}
+            onChangeTargetBranchSearch={setTargetBranchSearch}
+            onChangeQuantity={setBranchQuantity}
+            onChangeLot={setBranchLot}
+            onChangeObservation={setBranchObservation}
+            onCreateTransfer={createBranchTransfer}
+            onUpdateStatus={updateBranchTransferStatus}
+            onCancelTransfer={confirmCancelBranchTransfer}
+          />
+        )}
       </View>
 
       <BottomNav
@@ -240,6 +392,7 @@ function MainApp() {
         }}
         onScan={goToScan}
         onProducts={goToProducts}
+        onBranches={goToBranches}
         onSimulate={() => {
           setMenuOpen(false);
           handleInvoicePreview(api.simulateInvoice);
@@ -340,12 +493,14 @@ function HomeScreen({
   pendingCount,
   onScan,
   onProducts,
+  onBranches,
   onSimulate
 }: {
   productsCount: number;
   pendingCount: number;
   onScan: () => void;
   onProducts: () => void;
+  onBranches: () => void;
   onSimulate: () => void;
 }) {
   return (
@@ -368,6 +523,7 @@ function HomeScreen({
       <View style={styles.quickGrid}>
         <HomeAction icon="camera-outline" title="Camera" text="Escannear nota" onPress={onScan} />
         <HomeAction icon="cube-outline" title="Produtos" text="Ver estoque" onPress={onProducts} />
+        <HomeAction icon="git-compare-outline" title="Filial" text="Movimentar estoque" onPress={onBranches} />
         <HomeAction icon="document-text-outline" title="XML" text="Simular leitura" onPress={onSimulate} />
       </View>
     </ScrollView>
@@ -547,6 +703,7 @@ function SideMenu({
   onHome,
   onScan,
   onProducts,
+  onBranches,
   onSimulate,
   topInset
 }: {
@@ -555,6 +712,7 @@ function SideMenu({
   onHome: () => void;
   onScan: () => void;
   onProducts: () => void;
+  onBranches: () => void;
   onSimulate: () => void;
   topInset: number;
 }) {
@@ -572,6 +730,7 @@ function SideMenu({
           <MenuItem icon="home-outline" label="Home" onPress={onHome} />
           <MenuItem icon="camera-outline" label="Scannear" onPress={onScan} />
           <MenuItem icon="cube-outline" label="Ver produtos" onPress={onProducts} />
+          <MenuItem icon="git-compare-outline" label="Filial" onPress={onBranches} />
           <MenuItem icon="document-text-outline" label="Siimular XML" onPress={onSimulate} />
         </View>
       </View>
@@ -645,11 +804,591 @@ function ObservationModal({
   );
 }
 
+function BranchScreen({
+  products,
+  transfers,
+  selectedProductId,
+  productSearch,
+  branchOptions,
+  sourceBranch,
+  sourceBranchSearch,
+  targetBranch,
+  targetBranchSearch,
+  quantity,
+  lot,
+  observation,
+  loading,
+  onSelectProduct,
+  onChangeProductSearch,
+  onSelectSourceBranch,
+  onChangeSourceBranchSearch,
+  onSelectTargetBranch,
+  onChangeTargetBranchSearch,
+  onChangeQuantity,
+  onChangeLot,
+  onChangeObservation,
+  onCreateTransfer,
+  onUpdateStatus,
+  onCancelTransfer
+}: {
+  products: Product[];
+  transfers: BranchTransfer[];
+  selectedProductId: string;
+  productSearch: string;
+  branchOptions: BranchOption[];
+  sourceBranch: BranchOption;
+  sourceBranchSearch: string;
+  targetBranch: BranchOption | null;
+  targetBranchSearch: string;
+  quantity: string;
+  lot: string;
+  observation: string;
+  loading: boolean;
+  onSelectProduct: (productId: string) => void;
+  onChangeProductSearch: (value: string) => void;
+  onSelectSourceBranch: (branch: BranchOption) => void;
+  onChangeSourceBranchSearch: (value: string) => void;
+  onSelectTargetBranch: (branch: BranchOption | null) => void;
+  onChangeTargetBranchSearch: (value: string) => void;
+  onChangeQuantity: (value: string) => void;
+  onChangeLot: (value: string) => void;
+  onChangeObservation: (value: string) => void;
+  onCreateTransfer: () => void;
+  onUpdateStatus: (id: string, status: Exclude<BranchTransferStatus, "reserved">) => void;
+  onCancelTransfer: (id: string) => void;
+}) {
+  const [selectModal, setSelectModal] = useState<"product" | "source" | "target" | "filterSource" | "filterTarget" | null>(null);
+  const [openSection, setOpenSection] = useState<"reserve" | "movements" | null>(null);
+  const [movementIdSearch, setMovementIdSearch] = useState("");
+  const [filterSourceBranch, setFilterSourceBranch] = useState<BranchOption | null>(null);
+  const [filterTargetBranch, setFilterTargetBranch] = useState<BranchOption | null>(null);
+  const selectedProduct = products.find((product) => product._id === selectedProductId);
+  const productResults = filterProducts(products, productSearch).slice(0, 6);
+  const sourceBranchResults = filterBranches(branchOptions, sourceBranchSearch).filter(
+    (branch) => branch.code !== targetBranch?.code
+  );
+  const targetBranchResults = filterBranches(branchOptions, targetBranchSearch).filter(
+    (branch) => branch.code !== sourceBranch.code
+  );
+  const filteredTransfers = filterTransfers(transfers, movementIdSearch, filterSourceBranch, filterTargetBranch);
+
+  return (
+    <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
+      <View style={styles.branchPanel}>
+        <Pressable style={styles.accordionHeader} onPress={() => setOpenSection(openSection === "reserve" ? null : "reserve")}>
+          <View style={styles.accordionTitleArea}>
+            <Text style={styles.sectionTitle}>Reservar estoque para filial</Text>
+            <Text style={styles.sectionSubtitle}>Busque produto e filiais por nome ou codigo antes de reservar.</Text>
+          </View>
+          <Ionicons name={openSection === "reserve" ? "chevron-up-outline" : "chevron-down-outline"} size={22} color="#0f766e" />
+        </Pressable>
+
+        {openSection === "reserve" && (
+          <View style={styles.accordionBody}>
+
+        <Text style={styles.fieldLabel}>Produto</Text>
+        <View style={styles.selectInputRow}>
+          <TextInput
+            value={productSearch}
+            onChangeText={(value) => {
+              onChangeProductSearch(value);
+              onSelectProduct("");
+            }}
+            placeholder="Buscar produto por nome ou EAN"
+            style={styles.selectInput}
+          />
+          <Pressable style={styles.selectButton} onPress={() => setSelectModal("product")}>
+            <Ionicons name="list-outline" size={22} color="#0f766e" />
+          </Pressable>
+        </View>
+        {!!productSearch.trim() && !selectedProduct && (
+          <View style={styles.branchProductGrid}>
+            {productResults.length === 0 ? (
+              <Text style={styles.mutedText}>Nenhum produto encontrado.</Text>
+            ) : (
+              productResults.map((product) => (
+                <Pressable
+                  key={product._id}
+                  style={styles.branchProductOption}
+                  onPress={() => {
+                    onSelectProduct(product._id);
+                    onChangeProductSearch(`${product.name} - ${product.ean}`);
+                  }}
+                >
+                  <Text style={styles.branchProductName}>{product.name}</Text>
+                  <Text style={styles.branchProductMeta}>EAN {product.ean} | Central: {product.quantity}</Text>
+                </Pressable>
+              ))
+            )}
+          </View>
+        )}
+
+        {selectedProduct && <Text style={styles.invoiceKey}>Produto selecionado: {selectedProduct.ean}</Text>}
+
+        <Text style={styles.fieldLabel}>Filial origem</Text>
+        <View style={styles.selectInputRow}>
+          <TextInput
+            value={sourceBranchSearch || `${sourceBranch.code} - ${sourceBranch.name}`}
+            onChangeText={onChangeSourceBranchSearch}
+            placeholder="Buscar filial origem por nome ou codigo"
+            style={styles.selectInput}
+          />
+          <Pressable style={styles.selectButton} onPress={() => setSelectModal("source")}>
+            <Ionicons name="business-outline" size={21} color="#0f766e" />
+          </Pressable>
+        </View>
+        {!!sourceBranchSearch.trim() && (
+          <BranchOptionList branches={sourceBranchResults} onSelect={onSelectSourceBranch} onClearSearch={onChangeSourceBranchSearch} />
+        )}
+
+        <Text style={styles.fieldLabel}>Filial destino</Text>
+        <View style={styles.selectInputRow}>
+          <TextInput
+            value={targetBranchSearch || (targetBranch ? `${targetBranch.code} - ${targetBranch.name}` : "")}
+            onChangeText={(value) => {
+              onChangeTargetBranchSearch(value);
+              onSelectTargetBranch(null);
+            }}
+            placeholder="Buscar filial destino por nome ou codigo"
+            style={styles.selectInput}
+          />
+          <Pressable style={styles.selectButton} onPress={() => setSelectModal("target")}>
+            <Ionicons name="business-outline" size={21} color="#0f766e" />
+          </Pressable>
+        </View>
+        {!!targetBranchSearch.trim() && (
+          <BranchOptionList branches={targetBranchResults} onSelect={onSelectTargetBranch} onClearSearch={onChangeTargetBranchSearch} />
+        )}
+
+        <TextInput
+          value={quantity}
+          onChangeText={onChangeQuantity}
+          placeholder="Quantidade"
+          keyboardType="decimal-pad"
+          style={styles.quantityInput}
+        />
+        <TextInput
+          value={lot}
+          onChangeText={onChangeLot}
+          placeholder="Lote"
+          style={styles.quantityInput}
+        />
+        <TextInput
+          value={observation}
+          onChangeText={onChangeObservation}
+          placeholder="Observacao da reserva"
+          multiline
+          style={[styles.quantityInput, styles.branchObservationInput]}
+        />
+
+        <Pressable style={[styles.primaryButton, loading && styles.disabledButton]} disabled={loading} onPress={onCreateTransfer}>
+          <Ionicons name="lock-closed-outline" size={18} color="#ffffff" />
+          <Text style={styles.primaryButtonText}>Reservar para filial</Text>
+        </Pressable>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.branchPanel}>
+        <Pressable style={styles.accordionHeader} onPress={() => setOpenSection(openSection === "movements" ? null : "movements")}>
+          <View style={styles.accordionTitleArea}>
+            <Text style={styles.sectionTitle}>Movimentacoes entre filiais</Text>
+            <Text style={styles.sectionSubtitle}>Acompanhe reservado, a caminho e entrada na filial.</Text>
+          </View>
+          <Ionicons name={openSection === "movements" ? "chevron-up-outline" : "chevron-down-outline"} size={22} color="#0f766e" />
+        </Pressable>
+
+        {openSection === "movements" && (
+          <View style={styles.accordionBody}>
+
+        <Text style={styles.fieldLabel}>Pesquisar movimentacao pelo ID</Text>
+        <TextInput
+          value={movementIdSearch}
+          onChangeText={setMovementIdSearch}
+          placeholder="Digite o ID da movimentacao"
+          style={styles.quantityInput}
+        />
+
+        <Text style={styles.fieldLabel}>Filtrar filial origem</Text>
+        <View style={styles.selectInputRow}>
+          <TextInput
+            value={filterSourceBranch ? `${filterSourceBranch.code} - ${filterSourceBranch.name}` : ""}
+            editable={false}
+            placeholder="Todas as origens"
+            style={styles.selectInput}
+          />
+          <Pressable style={styles.selectButton} onPress={() => setSelectModal("filterSource")}>
+            <Ionicons name="business-outline" size={21} color="#0f766e" />
+          </Pressable>
+        </View>
+
+        <Text style={styles.fieldLabel}>Filtrar filial destino</Text>
+        <View style={styles.selectInputRow}>
+          <TextInput
+            value={filterTargetBranch ? `${filterTargetBranch.code} - ${filterTargetBranch.name}` : ""}
+            editable={false}
+            placeholder="Todos os destinos"
+            style={styles.selectInput}
+          />
+          <Pressable style={styles.selectButton} onPress={() => setSelectModal("filterTarget")}>
+            <Ionicons name="business-outline" size={21} color="#0f766e" />
+          </Pressable>
+        </View>
+
+        {(movementIdSearch || filterSourceBranch || filterTargetBranch) && (
+          <Pressable
+            style={styles.clearFilterButton}
+            onPress={() => {
+              setMovementIdSearch("");
+              setFilterSourceBranch(null);
+              setFilterTargetBranch(null);
+            }}
+          >
+            <Ionicons name="close-outline" size={18} color="#475569" />
+            <Text style={styles.clearFilterText}>Limpar filtros</Text>
+          </Pressable>
+        )}
+
+        {filteredTransfers.length === 0 ? (
+          <Text style={styles.mutedText}>Nenhuma movimentacao de filial ainda.</Text>
+        ) : (
+          filteredTransfers.map((transfer) => (
+            <View key={transfer._id} style={styles.transferCard}>
+              <Text style={styles.transferId}>ID da movimentacao: {transfer._id}</Text>
+              <View style={styles.pendingTopRow}>
+                <View style={styles.pendingTitleArea}>
+                  <Text style={styles.pendingName}>{transfer.productName}</Text>
+                  <Text style={styles.eanBadge}>{getTransferStatusLabel(transfer.status)}</Text>
+                </View>
+                <Text style={styles.quantity}>{transfer.quantity}</Text>
+              </View>
+              <Text style={styles.meta}>
+                {transfer.sourceBranch || "Estoque central"} → {transfer.targetBranch}
+              </Text>
+              <Text style={styles.meta}>EAN: {transfer.ean}</Text>
+              {transfer.lot && <Text style={styles.meta}>Lote: {transfer.lot}</Text>}
+              {transfer.history?.map((item, index) => (
+                <Text key={`${item.status}-${index}`} style={styles.transferHistory}>
+                  {getTransferHistoryText(transfer, item)} - {formatDateTime(item.createdAt)}
+                </Text>
+              ))}
+
+              {transfer.status === "reserved" && (
+                <View style={styles.transferActions}>
+                  <Pressable style={styles.secondaryButton} onPress={() => onUpdateStatus(transfer._id, "in_transit")}>
+                    <Ionicons name="car-outline" size={18} color="#0f766e" />
+                    <Text style={styles.secondaryButtonText}>Produto a caminho</Text>
+                  </Pressable>
+                  <Pressable style={styles.cancelButton} onPress={() => onCancelTransfer(transfer._id)}>
+                    <Ionicons name="close-circle-outline" size={18} color="#991b1b" />
+                    <Text style={styles.cancelButtonText}>Cancelar movimentacao</Text>
+                  </Pressable>
+                </View>
+              )}
+
+              {transfer.status === "in_transit" && (
+                <View style={styles.transferActions}>
+                  <Pressable style={styles.primaryButton} onPress={() => onUpdateStatus(transfer._id, "received")}>
+                    <Ionicons name="checkmark-circle-outline" size={18} color="#ffffff" />
+                    <Text style={styles.primaryButtonText}>Dar entrada na filial</Text>
+                  </Pressable>
+                  <Pressable style={styles.cancelButton} onPress={() => onCancelTransfer(transfer._id)}>
+                    <Ionicons name="close-circle-outline" size={18} color="#991b1b" />
+                    <Text style={styles.cancelButtonText}>Cancelar movimentacao</Text>
+                  </Pressable>
+                </View>
+              )}
+            </View>
+          ))
+        )}
+          </View>
+        )}
+      </View>
+
+      <SelectorModal
+        visible={selectModal === "product"}
+        title="Selecionar produto"
+        onClose={() => setSelectModal(null)}
+      >
+        {products.map((product) => (
+          <Pressable
+            key={product._id}
+            style={styles.selectorItem}
+            onPress={() => {
+              onSelectProduct(product._id);
+              onChangeProductSearch(`${product.name} - ${product.ean}`);
+              setSelectModal(null);
+            }}
+          >
+            <Text style={styles.branchProductName}>{product.name}</Text>
+            <Text style={styles.branchProductMeta}>EAN {product.ean} | Central: {product.quantity}</Text>
+          </Pressable>
+        ))}
+      </SelectorModal>
+
+      <SelectorModal
+        visible={selectModal === "source"}
+        title="Selecionar origem"
+        onClose={() => setSelectModal(null)}
+      >
+        {branchOptions
+          .filter((branch) => branch.code !== targetBranch?.code)
+          .map((branch) => (
+            <Pressable
+              key={branch.code}
+              style={styles.selectorItem}
+              onPress={() => {
+                onSelectSourceBranch(branch);
+                onChangeSourceBranchSearch("");
+                setSelectModal(null);
+              }}
+            >
+              <Text style={styles.branchProductName}>{branch.name}</Text>
+              <Text style={styles.branchProductMeta}>Codigo: {branch.code}</Text>
+            </Pressable>
+          ))}
+      </SelectorModal>
+
+      <SelectorModal
+        visible={selectModal === "target"}
+        title="Selecionar destino"
+        onClose={() => setSelectModal(null)}
+      >
+        {branchOptions
+          .filter((branch) => branch.code !== sourceBranch.code)
+          .map((branch) => (
+            <Pressable
+              key={branch.code}
+              style={styles.selectorItem}
+              onPress={() => {
+                onSelectTargetBranch(branch);
+                onChangeTargetBranchSearch("");
+                setSelectModal(null);
+              }}
+            >
+              <Text style={styles.branchProductName}>{branch.name}</Text>
+              <Text style={styles.branchProductMeta}>Codigo: {branch.code}</Text>
+            </Pressable>
+          ))}
+      </SelectorModal>
+
+      <SelectorModal
+        visible={selectModal === "filterSource"}
+        title="Filtrar origem"
+        onClose={() => setSelectModal(null)}
+      >
+        <Pressable
+          style={styles.selectorItem}
+          onPress={() => {
+            setFilterSourceBranch(null);
+            setSelectModal(null);
+          }}
+        >
+          <Text style={styles.branchProductName}>Todas as origens</Text>
+          <Text style={styles.branchProductMeta}>Remover filtro de origem</Text>
+        </Pressable>
+        {branchOptions.map((branch) => (
+          <Pressable
+            key={branch.code}
+            style={styles.selectorItem}
+            onPress={() => {
+              setFilterSourceBranch(branch);
+              setSelectModal(null);
+            }}
+          >
+            <Text style={styles.branchProductName}>{branch.name}</Text>
+            <Text style={styles.branchProductMeta}>Codigo: {branch.code}</Text>
+          </Pressable>
+        ))}
+      </SelectorModal>
+
+      <SelectorModal
+        visible={selectModal === "filterTarget"}
+        title="Filtrar destino"
+        onClose={() => setSelectModal(null)}
+      >
+        <Pressable
+          style={styles.selectorItem}
+          onPress={() => {
+            setFilterTargetBranch(null);
+            setSelectModal(null);
+          }}
+        >
+          <Text style={styles.branchProductName}>Todos os destinos</Text>
+          <Text style={styles.branchProductMeta}>Remover filtro de destino</Text>
+        </Pressable>
+        {branchOptions.map((branch) => (
+          <Pressable
+            key={branch.code}
+            style={styles.selectorItem}
+            onPress={() => {
+              setFilterTargetBranch(branch);
+              setSelectModal(null);
+            }}
+          >
+            <Text style={styles.branchProductName}>{branch.name}</Text>
+            <Text style={styles.branchProductMeta}>Codigo: {branch.code}</Text>
+          </Pressable>
+        ))}
+      </SelectorModal>
+    </ScrollView>
+  );
+}
+
+function SelectorModal({
+  visible,
+  title,
+  children,
+  onClose
+}: {
+  visible: boolean;
+  title: string;
+  children: ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.selectorModal}>
+          <View style={styles.modalHeader}>
+            <View style={styles.modalTitleArea}>
+              <Text style={styles.modalTitle}>{title}</Text>
+              <Text style={styles.modalSubtitle}>Toque em uma opcao para selecionar.</Text>
+            </View>
+            <Pressable style={styles.headerIconButton} onPress={onClose}>
+              <Ionicons name="close-outline" size={24} color="#1f2937" />
+            </Pressable>
+          </View>
+          <ScrollView style={styles.selectorList} contentContainerStyle={styles.selectorListInner}>
+            {children}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function BranchOptionList({
+  branches,
+  onSelect,
+  onClearSearch
+}: {
+  branches: BranchOption[];
+  onSelect: (branch: BranchOption) => void;
+  onClearSearch: (value: string) => void;
+}) {
+  if (branches.length === 0) {
+    return <Text style={styles.mutedText}>Nenhuma filial encontrada.</Text>;
+  }
+
+  return (
+    <View style={styles.branchProductGrid}>
+      {branches.map((branch) => (
+        <Pressable
+          key={branch.code}
+          style={styles.branchProductOption}
+          onPress={() => {
+            onSelect(branch);
+            onClearSearch("");
+          }}
+        >
+          <Text style={styles.branchProductName}>{branch.name}</Text>
+          <Text style={styles.branchProductMeta}>Codigo: {branch.code}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 function getScreenTitle(screen: Screen, pendingInvoice: InvoiceResult | null) {
   if (screen === "scan") return "Scannear nota";
+  if (screen === "branches") return "Filial";
   if (screen === "products" && pendingInvoice) return "Revisar entrada";
   if (screen === "products") return "Produtos";
   return "Home";
+}
+
+function getTransferStatusLabel(status: BranchTransferStatus) {
+  if (status === "reserved") return "Reservado";
+  if (status === "in_transit") return "A caminho";
+  if (status === "cancelled") return "Cancelada";
+  return "Entrada na filial";
+}
+
+function getTransferHistoryText(transfer: BranchTransfer, item: { status: BranchTransferStatus; observation?: string }) {
+  if (item.status === "reserved") {
+    return item.observation || `Produto reservado para a filial ${transfer.targetBranch}`;
+  }
+
+  if (item.status === "cancelled") {
+    return item.observation || `Movimentacao cancelada. Estoque devolvido para ${transfer.sourceBranch}.`;
+  }
+
+  return item.observation || getTransferStatusLabel(item.status);
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "sem horario";
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function filterProducts(products: Product[], query: string) {
+  const normalizedQuery = normalizeSearch(query);
+
+  if (!normalizedQuery) {
+    return [];
+  }
+
+  return products.filter((product) =>
+    normalizeSearch(`${product.name} ${product.ean}`).includes(normalizedQuery)
+  );
+}
+
+function filterBranches(branches: BranchOption[], query: string) {
+  const normalizedQuery = normalizeSearch(query);
+
+  if (!normalizedQuery) {
+    return [];
+  }
+
+  return branches.filter((branch) =>
+    normalizeSearch(`${branch.code} ${branch.name}`).includes(normalizedQuery)
+  );
+}
+
+function filterTransfers(
+  transfers: BranchTransfer[],
+  movementId: string,
+  sourceBranch: BranchOption | null,
+  targetBranch: BranchOption | null
+) {
+  const normalizedId = normalizeSearch(movementId);
+
+  return transfers.filter((transfer) => {
+    const matchesId = normalizedId ? normalizeSearch(transfer._id).includes(normalizedId) : true;
+    const matchesSource = sourceBranch
+      ? transfer.sourceBranchCode === sourceBranch.code || transfer.sourceBranch === sourceBranch.name
+      : true;
+    const matchesTarget = targetBranch
+      ? transfer.targetBranchCode === targetBranch.code || transfer.targetBranch === targetBranch.name
+      : true;
+
+    return matchesId && matchesSource && matchesTarget;
+  });
+}
+
+function normalizeSearch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 function formatQuantity(value: number) {
@@ -962,6 +1701,11 @@ const styles = StyleSheet.create({
     color: "#5b6472",
     fontSize: 13
   },
+  meta: {
+    color: "#64748b",
+    fontSize: 13,
+    fontWeight: "700"
+  },
   pendingCount: {
     minWidth: 38,
     borderRadius: 8,
@@ -1000,6 +1744,13 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     lineHeight: 22
   },
+  quantity: {
+    minWidth: 58,
+    textAlign: "right",
+    color: "#0f766e",
+    fontSize: 18,
+    fontWeight: "900"
+  },
   editButton: {
     width: 42,
     height: 42,
@@ -1034,6 +1785,173 @@ const styles = StyleSheet.create({
     color: "#1f2937",
     backgroundColor: "#f8fafc",
     fontSize: 15
+  },
+  selectInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  selectInput: {
+    flex: 1,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    color: "#1f2937",
+    backgroundColor: "#f8fafc",
+    fontSize: 15
+  },
+  selectButton: {
+    width: 46,
+    height: 44,
+    borderWidth: 1,
+    borderColor: "#0f766e",
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#e8f3f0"
+  },
+  branchPanel: {
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "#d8dee9",
+    borderRadius: 8,
+    padding: 14,
+    backgroundColor: "#ffffff"
+  },
+  accordionHeader: {
+    minHeight: 54,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12
+  },
+  accordionTitleArea: {
+    flex: 1
+  },
+  accordionBody: {
+    gap: 12
+  },
+  branchProductGrid: {
+    gap: 8
+  },
+  branchProductOption: {
+    borderWidth: 1,
+    borderColor: "#d8dee9",
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: "#f8fafc"
+  },
+  selectorModal: {
+    maxHeight: "82%",
+    gap: 12,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    padding: 18,
+    backgroundColor: "#ffffff"
+  },
+  selectorList: {
+    maxHeight: 420
+  },
+  selectorListInner: {
+    gap: 8,
+    paddingBottom: 8
+  },
+  selectorItem: {
+    borderWidth: 1,
+    borderColor: "#d8dee9",
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: "#f8fafc"
+  },
+  branchProductOptionActive: {
+    borderColor: "#0f766e",
+    backgroundColor: "#e8f3f0"
+  },
+  branchProductName: {
+    color: "#1f2937",
+    fontSize: 14,
+    fontWeight: "900"
+  },
+  branchProductNameActive: {
+    color: "#0f766e"
+  },
+  branchProductMeta: {
+    marginTop: 4,
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  branchProductMetaActive: {
+    color: "#35524d"
+  },
+  branchObservationInput: {
+    minHeight: 76,
+    paddingTop: 10,
+    textAlignVertical: "top"
+  },
+  transferCard: {
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#d8dee9",
+    borderRadius: 8,
+    padding: 14,
+    backgroundColor: "#f8fafc"
+  },
+  transferId: {
+    alignSelf: "flex-start",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    overflow: "hidden",
+    color: "#334155",
+    backgroundColor: "#e2e8f0",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  transferHistory: {
+    borderLeftWidth: 3,
+    borderLeftColor: "#0f766e",
+    paddingLeft: 8,
+    color: "#475569",
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  transferActions: {
+    gap: 8
+  },
+  cancelButton: {
+    minHeight: 46,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    backgroundColor: "#fee2e2"
+  },
+  cancelButtonText: {
+    color: "#991b1b",
+    fontSize: 14,
+    fontWeight: "900"
+  },
+  clearFilterButton: {
+    minHeight: 42,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#e2e8f0"
+  },
+  clearFilterText: {
+    color: "#475569",
+    fontSize: 13,
+    fontWeight: "900"
   },
   inlineAlert: {
     flexDirection: "row",
