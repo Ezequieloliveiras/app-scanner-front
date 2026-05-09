@@ -6,21 +6,26 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "scheme": "appscanner",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Use a camera para ler o QR Code da nota fiscal."
+        "NSCameraUsageDescription": "Use a camera para ler codigo de barras e QRCode da nota fiscal."
       }
     },
     "android": {
-      "permissions": ["android.permission.CAMERA"]
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "package": "com.ezequieloliveira.appscannerfront"
     },
     "plugins": [
       [
         "expo-camera",
         {
-          "cameraPermission": "Use a camera para ler o QR Code da nota fiscal."
+          "cameraPermission": "Use a camera para ler codigo de barras e QRCode da nota fiscal."
         }
       ]
     ]

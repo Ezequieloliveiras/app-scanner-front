@@ -303,20 +303,179 @@ export const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.18)"
+    paddingHorizontal: 18,
+  },
+  scanModeBar: {
+    position: "absolute",
+    top: 16,
+    left: 14,
+    right: 14,
+    zIndex: 3,
+    flexDirection: "row",
+    gap: 8,
+    padding: 5,
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.92)"
+  },
+  scanModeButton: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2
+  },
+  scanModeButtonActive: {
+    backgroundColor: "#0f766e"
+  },
+  scanModeButtonText: {
+    color: "#0f766e",
+    fontSize: 10,
+    fontWeight: "900"
+  },
+  scanModeButtonTextActive: {
+    color: "#ffffff"
   },
   scanBox: {
     width: 230,
     height: 230,
     borderWidth: 3,
     borderColor: "#ffffff",
-    borderRadius: 8
+    borderRadius: 8,
+    zIndex: 2
+  },
+  scanBarcodeGuide: {
+    width: "86%",
+    height: 170,
+    alignSelf: "center",
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 2
+  },
+
+  scanBarcodeFocusLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1
+  },
+  scanBarcodeShade: {
+    flex: 1,
+  },
+  scanBarcodeFocusRow: {
+    height: 170,
+    flexDirection: "row",
+  },
+  scanBarcodeFocusHole: {
+    width: "86%",
+    height: 170,
+    backgroundColor: "transparent",
+  },
+  scanBarcodeLine: {
+    width: "82%",
+    height: 4,
+    borderRadius: 8,
+    backgroundColor: "#ffffff",
+  },
+  scanBarcodeCorner: {
+    position: "absolute",
+    width: 30,
+    height: 30,
+    borderColor: "#ffffff"
+  },
+  scanBarcodeCornerTopLeft: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 6,
+    borderLeftWidth: 6,
+    borderTopLeftRadius: 12
+  },
+  scanBarcodeCornerTopRight: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 6,
+    borderRightWidth: 6,
+    borderTopRightRadius: 12
+  },
+  scanBarcodeCornerBottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 6,
+    borderLeftWidth: 6,
+    borderBottomLeftRadius: 12
+  },
+  scanBarcodeCornerBottomRight: {
+    right: 0,
+    bottom: 0,
+    borderRightWidth: 6,
+    borderBottomWidth: 6,
+    borderBottomRightRadius: 12
+  },
+  scanReadButton: {
+    marginTop: 16,
+    alignSelf: "center",
+    width: 150,
+    height: 64,
+    borderRadius: 18,
+    backgroundColor: "#0f766e",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    zIndex: 3,
+    elevation: 3
+  },
+
+  scanBarcodeSideHint: {
+    marginTop: 12,
+    alignSelf: "center",
+    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    color: "#ffffff",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  scanReadButtonActive: {
+    backgroundColor: "rgba(245,158,11,0.96)"
+  },
+  scanReadButtonText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "900"
   },
   scanText: {
     marginTop: 14,
     color: "#ffffff",
     fontSize: 15,
-    fontWeight: "800"
+    fontWeight: "800",
+    zIndex: 2
+  },
+  scanManualPanel: {
+    width: "100%",
+    maxWidth: 420,
+    gap: 12,
+    borderRadius: 8,
+    padding: 16,
+    alignItems: "center",
+    backgroundColor: "#ffffff"
+  },
+  scanManualTitle: {
+    color: "#1f2937",
+    fontSize: 17,
+    fontWeight: "900"
+  },
+  scanManualInput: {
+    width: "100%",
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    color: "#1f2937",
+    backgroundColor: "#f8fafc",
+    fontSize: 15,
+    textAlign: "center"
   },
   scanSimulateButton: {
     marginTop: 18,
@@ -326,7 +485,8 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "rgba(15,118,110,0.92)"
+    backgroundColor: "rgba(15,118,110,0.92)",
+    zIndex: 2
   },
   scanSimulateText: {
     color: "#ffffff",

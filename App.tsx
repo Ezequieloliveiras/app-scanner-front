@@ -191,6 +191,26 @@ function MainApp() {
     handleInvoicePreview(() => api.scanInvoice(authToken, result.data));
   }
 
+  function handleManualInvoiceKey(value: string) {
+    if (!authToken || loading) return;
+    const accessKey = value.replace(/\D/g, "");
+
+    if (accessKey.length !== 44) {
+      Alert.alert("Chave invalida", "A chave de acesso da nota precisa ter 44 digitos.");
+      return;
+    }
+
+    setScannerEnabled(false);
+    handleInvoicePreview(() => api.scanInvoice(authToken, accessKey));
+  }
+
+  function handleCaptureWithAi() {
+    Alert.alert(
+      "Captura com IA",
+      "A foto foi capturada. O proximo passo e conectar OCR/IA no backend para extrair a chave de acesso."
+    );
+  }
+
   function goToScan() {
     if (!ensureModule("scan")) return;
     setError(null);
@@ -676,6 +696,8 @@ function MainApp() {
             topInset={insets.top}
             onRequestPermission={requestPermission}
             onBarcodeScanned={handleBarcodeScanned}
+            onManualSubmit={handleManualInvoiceKey}
+            onCaptureWithAi={handleCaptureWithAi}
             onSimulate={simulateInvoice}
           />
         )}
