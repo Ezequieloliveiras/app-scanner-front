@@ -13,6 +13,7 @@ export function SideMenu({
   onProducts,
   onBranches,
   onStockRequests,
+  onBilling,
   onProfile,
   onAccess,
   onLogout,
@@ -28,6 +29,7 @@ export function SideMenu({
   onProducts: () => void;
   onBranches: () => void;
   onStockRequests: () => void;
+  onBilling: () => void;
   onProfile: () => void;
   onAccess: () => void;
   onLogout: () => void;
@@ -48,6 +50,7 @@ export function SideMenu({
           </View>
           <MenuItem icon="home-outline" label="Início" onPress={onHome} />
           <MenuItem icon="person-circle-outline" label="Perfil" onPress={onProfile} />
+          <MenuItem icon="card-outline" label="Planos" onPress={onBilling} />
           {canAccessModule(user, "scan") && <MenuItem icon="camera-outline" label="Escanear" onPress={onScan} />}
           {canAccessModule(user, "products") && <MenuItem icon="cube-outline" label="Ver produtos" onPress={onProducts} />}
           {canAccessModule(user, "branches") && <MenuItem icon="git-compare-outline" label="Filial" onPress={onBranches} />}

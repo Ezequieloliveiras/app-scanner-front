@@ -7,12 +7,32 @@ export type Screen =
   | "branches"
   | "stock_requests"
   | "access"
+  | "billing"
   | "profile"
   | "notifications";
 export type AuthMode = "login" | "register" | "reset";
 export type UserRole = "main" | "master" | "default";
-export type UserPlan = "basic" | "premium" | "pro";
+export type UserPlan = "free" | "basic" | "premium" | "pro" | "custom";
 export type AppModule = "scan" | "products" | "branches" | "stock_requests" | "access";
+
+export type PlanDefinition = {
+  id: UserPlan;
+  label: string;
+  description: string;
+  monthlyPriceCents: number | null;
+  maxManagedUsers: number | null;
+  modules: AppModule[];
+  features: { key: string; label: string }[];
+  highlighted?: boolean;
+  contactRequired?: boolean;
+};
+
+export type BillingCheckoutResult = {
+  status: "free" | "pending" | "active" | "past_due" | "canceled" | "custom_requested";
+  plan: PlanDefinition;
+  checkoutUrl?: string;
+  message: string;
+};
 
 export type EditableInvoiceProduct = InvoicePreviewProduct & {
   quantityInput: string;

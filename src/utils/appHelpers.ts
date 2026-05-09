@@ -1,5 +1,5 @@
 import { BranchTransfer, BranchTransferStatus, InvoiceResult, Product } from "../types/product";
-import { AppModule, AuthUser, BranchOption, Screen } from "../types/app";
+import { AppModule, AuthUser, BranchOption, PlanDefinition, Screen, UserPlan } from "../types/app";
 
 export const MODULE_LABELS: Record<AppModule, string> = {
   scan: "Scanner",
@@ -12,24 +12,95 @@ export const MODULE_LABELS: Record<AppModule, string> = {
 export const APP_MODULES: AppModule[] = ["scan", "products", "branches", "stock_requests", "access"];
 
 export const PLAN_LABELS = {
+  free: "Free",
   basic: "Basic",
   premium: "Premium",
-  pro: "Pro"
+  pro: "Pro",
+  custom: "Personalizado"
 } as const;
 
 export const PLAN_LIMITS = {
+  free: 0,
   basic: 3,
   premium: 10,
-  pro: 30
+  pro: 30,
+  custom: Infinity
 } as const;
 
+export const PLAN_ORDER: UserPlan[] = ["free", "basic", "premium", "pro", "custom"];
+
+export const FALLBACK_PLANS: PlanDefinition[] = [
+  {
+    id: "free",
+    label: "Free",
+    description: "Para testar leitura e estoque central.",
+    monthlyPriceCents: 0,
+    maxManagedUsers: 0,
+    modules: ["scan", "products"],
+    features: [
+      { key: "scan", label: "Scanner de notas" },
+      { key: "products", label: "Produtos e estoque central" }
+    ]
+  },
+  {
+    id: "basic",
+    label: "Basic",
+    description: "Equipe pequena com controle de acessos.",
+    monthlyPriceCents: 4900,
+    maxManagedUsers: 3,
+    modules: ["scan", "products", "access"],
+    features: [
+      { key: "scan", label: "Scanner de notas" },
+      { key: "users", label: "Ate 3 usuarios" }
+    ]
+  },
+  {
+    id: "premium",
+    label: "Premium",
+    description: "Filiais e solicitações internas.",
+    monthlyPriceCents: 9900,
+    maxManagedUsers: 10,
+    modules: APP_MODULES,
+    features: [
+      { key: "branches", label: "Filiais" },
+      { key: "stock_requests", label: "Solicitações" }
+    ],
+    highlighted: true
+  },
+  {
+    id: "pro",
+    label: "Pro",
+    description: "Operação maior com todos os modulos.",
+    monthlyPriceCents: 19900,
+    maxManagedUsers: 30,
+    modules: APP_MODULES,
+    features: [
+      { key: "users", label: "Ate 30 usuarios" },
+      { key: "branches", label: "Filiais" }
+    ]
+  },
+  {
+    id: "custom",
+    label: "Personalizado",
+    description: "Limites e suporte sob contrato.",
+    monthlyPriceCents: null,
+    maxManagedUsers: null,
+    modules: APP_MODULES,
+    features: [{ key: "support", label: "Atendimento consultivo" }],
+    contactRequired: true
+  }
+];
+
 export function canManageAccess(user: AuthUser | null) {
-  return user?.role === "main" || user?.role === "master";
+  return (user?.role === "main" || user?.role === "master") && canAccessModule(user, "access");
 }
 
 export function canAccessModule(user: AuthUser | null, module: AppModule) {
   if (!user?.enabled) return false;
-  if (user.role === "main" || user.role === "master") return true;
+  if (user.role === "main" || user.role === "master") {
+    const plan = FALLBACK_PLANS.find((item) => item.id === user.plan);
+    return Boolean(plan?.modules.includes(module));
+  }
   return user.modules.includes(module);
 }
 
@@ -38,6 +109,7 @@ export function getScreenTitle(screen: Screen, pendingInvoice: InvoiceResult | n
   if (screen === "branches") return "Filial";
   if (screen === "stock_requests") return "Solicitações";
   if (screen === "access") return "Acessos";
+  if (screen === "billing") return "Planos";
   if (screen === "profile") return "Perfil";
   if (screen === "notifications") return "Notificações";
   if (screen === "products") return "Produtos";

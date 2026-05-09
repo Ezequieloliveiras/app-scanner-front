@@ -3,7 +3,7 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { styles } from "../styles/appStyles";
 import { AppModule, AuthUser, CreateManagedUserPayload, UserPlan, UserRole } from "../types/app";
-import { APP_MODULES, MODULE_LABELS, PLAN_LABELS, PLAN_LIMITS } from "../utils/appHelpers";
+import { APP_MODULES, MODULE_LABELS, PLAN_LABELS, PLAN_LIMITS, PLAN_ORDER } from "../utils/appHelpers";
 
 type AccessManagementScreenProps = {
   currentUser: AuthUser;
@@ -23,7 +23,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   default: "Padr\u00e3o"
 };
 
-const PLAN_OPTIONS: UserPlan[] = ["basic", "premium", "pro"];
+const PLAN_OPTIONS: UserPlan[] = PLAN_ORDER;
 
 export function AccessManagementScreen({
   currentUser,
@@ -44,10 +44,11 @@ export function AccessManagementScreen({
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [resetPasswords, setResetPasswords] = useState<Record<string, string>>({});
   const [newRole, setNewRole] = useState<UserRole>(currentUser.role === "main" ? "master" : "default");
-  const [newPlan, setNewPlan] = useState<UserPlan>("basic");
+  const [newPlan, setNewPlan] = useState<UserPlan>("free");
   const canCreateMaster = currentUser.role === "main";
   const masterLimit = currentUser.role === "master" ? PLAN_LIMITS[currentUser.plan] : null;
   const reachedPlanLimit = masterLimit !== null && users.length >= masterLimit;
+  const masterLimitText = masterLimit === Infinity ? "sem limite" : masterLimit;
   const normalizedSearch = normalizeSearch(search);
   const filteredUsers = normalizedSearch
     ? users.filter((user) => normalizeSearch(`${user.name} ${user.email}`).includes(normalizedSearch))
@@ -59,13 +60,13 @@ export function AccessManagementScreen({
       email,
       password,
       role: canCreateMaster ? newRole : "default",
-      plan: newRole === "master" ? newPlan : "basic"
+      plan: newRole === "master" ? newPlan : "free"
     });
     setName("");
     setEmail("");
     setPassword("");
     setNewRole(canCreateMaster ? "master" : "default");
-    setNewPlan("basic");
+    setNewPlan("free");
     setCreateModalOpen(false);
   }
 
@@ -83,7 +84,7 @@ export function AccessManagementScreen({
             <Text style={styles.sectionSubtitle}>
               {currentUser.role === "main"
                 ? "Principal controla masters e usu\u00e1rios padr\u00e3o."
-                : `Master controla os usu\u00e1rios padr\u00e3o que cadastrou (${users.length}/${masterLimit}).`}
+                : `Master controla os usu\u00e1rios padr\u00e3o que cadastrou (${users.length}/${masterLimitText}).`}
             </Text>
           </View>
           <View style={styles.headerActions}>

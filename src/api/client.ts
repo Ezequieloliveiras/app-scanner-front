@@ -2,7 +2,9 @@ import {
   AuthCredentials,
   AuthSession,
   AuthUser,
+  BillingCheckoutResult,
   CreateManagedUserPayload,
+  PlanDefinition,
   RegisterCredentials,
   UpdateProfilePayload,
   UpdateUserAccessPayload
@@ -63,6 +65,10 @@ export const api = {
     });
   },
 
+  getProfile(token: string) {
+    return request<AuthUser>("/api/auth/me", { token });
+  },
+
   listUsers(token: string) {
     return request<AuthUser[]>("/api/auth/users", { token });
   },
@@ -95,6 +101,18 @@ export const api = {
       method: "PATCH",
       token,
       body: JSON.stringify(payload)
+    });
+  },
+
+  listPlans() {
+    return request<PlanDefinition[]>("/api/billing/plans");
+  },
+
+  requestPlanCheckout(token: string, plan: PlanDefinition["id"]) {
+    return request<BillingCheckoutResult>("/api/billing/checkout", {
+      method: "POST",
+      token,
+      body: JSON.stringify({ plan })
     });
   },
 

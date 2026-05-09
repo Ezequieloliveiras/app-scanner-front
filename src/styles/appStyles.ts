@@ -915,6 +915,80 @@ export const styles = StyleSheet.create({
     padding: 14,
     backgroundColor: "#ffffff"
   },
+  planCard: {
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "#d8dee9",
+    borderRadius: 8,
+    padding: 14,
+    backgroundColor: "#ffffff"
+  },
+  planCardHighlighted: {
+    borderColor: "#0f766e",
+    backgroundColor: "#f0fdfa"
+  },
+  planCardActive: {
+    borderColor: "#99f6e4"
+  },
+  planTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12
+  },
+  planTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8
+  },
+  planBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    overflow: "hidden",
+    color: "#0f766e",
+    backgroundColor: "#ccfbf1",
+    fontSize: 11,
+    fontWeight: "900"
+  },
+  planPrice: {
+    color: "#0f766e",
+    fontSize: 16,
+    fontWeight: "900",
+    textAlign: "right"
+  },
+  planFeatureRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  planModuleGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8
+  },
+  planModulePill: {
+    minHeight: 38,
+    width: "48%",
+    borderWidth: 1,
+    borderColor: "#99f6e4",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#e8f3f0"
+  },
+  planModuleText: {
+    flex: 1,
+    flexShrink: 1,
+    color: "#0f766e",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "900"
+  },
   accessStatusButton: {
     minHeight: 38,
     borderRadius: 8,

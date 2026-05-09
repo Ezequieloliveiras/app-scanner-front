@@ -1,7 +1,7 @@
 import { BarcodeScanningResult, useCameraPermissions } from "expo-camera";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Text, View } from "react-native";
+import { Alert, Linking, Text, View } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "./src/api/client";
 import { AccessManagementScreen } from "./src/components/AccessManagementScreen";
@@ -15,6 +15,7 @@ import { AppNotification, NotificationsScreen } from "./src/components/Notificat
 import { ObservationModal } from "./src/components/ObservationModal";
 import { ProductsScreen } from "./src/components/ProductsScreen";
 import { ProfileScreen } from "./src/components/ProfileScreen";
+import { PlansScreen } from "./src/components/PlansScreen";
 import { ScanScreen } from "./src/components/ScanScreen";
 import { SideMenu } from "./src/components/SideMenu";
 import { StockRequestsScreen } from "./src/components/StockRequestsScreen";
@@ -25,6 +26,7 @@ import {
   BranchOption,
   CreateManagedUserPayload,
   EditableInvoiceProduct,
+  PlanDefinition,
   RegisterCredentials,
   Screen,
   UpdateProfilePayload,
@@ -32,7 +34,7 @@ import {
   UserRole
 } from "./src/types/app";
 import { BranchTransfer, BranchTransferStatus, InvoiceResult, Product, StockRequest } from "./src/types/product";
-import { canAccessModule, canManageAccess, formatQuantity, getScreenTitle, parseQuantity } from "./src/utils/appHelpers";
+import { FALLBACK_PLANS, canAccessModule, canManageAccess, formatQuantity, getScreenTitle, parseQuantity } from "./src/utils/appHelpers";
 
 const BRANCH_OPTIONS: BranchOption[] = [
   { code: "CENTRAL", name: "Estoque central" },
@@ -54,6 +56,7 @@ function MainApp() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [managedUsers, setManagedUsers] = useState<AuthUser[]>([]);
+  const [plans, setPlans] = useState<PlanDefinition[]>(FALLBACK_PLANS);
   const [screen, setScreen] = useState<Screen>("home");
   const [menuOpen, setMenuOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -92,6 +95,15 @@ function MainApp() {
     const data = await api.listStockRequests(authToken);
     setStockRequests(data);
   }, [authToken]);
+
+  const loadPlans = useCallback(async () => {
+    const data = await api.listPlans();
+    setPlans(data);
+  }, []);
+
+  useEffect(() => {
+    loadPlans().catch(() => undefined);
+  }, [loadPlans]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -260,6 +272,13 @@ function MainApp() {
     setError(null);
     setMenuOpen(false);
     setScreen("profile");
+  }
+
+  function goToBilling() {
+    setError(null);
+    setMenuOpen(false);
+    setScreen("billing");
+    loadPlans().catch(() => setPlans(FALLBACK_PLANS));
   }
 
   function simulateInvoice() {
@@ -579,6 +598,34 @@ function MainApp() {
     }
   }
 
+  async function requestPlanCheckout(plan: UserPlan) {
+    if (!authToken) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await api.requestPlanCheckout(authToken, plan);
+      const updatedUser = await api.getProfile(authToken);
+      setCurrentUser(updatedUser);
+
+      if (result.checkoutUrl) {
+        Alert.alert("Upgrade iniciado", result.message, [
+          { text: "Depois", style: "cancel" },
+          { text: "Abrir pagamento", onPress: () => Linking.openURL(result.checkoutUrl!) }
+        ]);
+        return;
+      }
+
+      Alert.alert("Planos", result.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao iniciar upgrade.";
+      setError(message);
+      Alert.alert("Upgrade nao iniciado", message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function requestPasswordReset(email: string) {
     try {
       setLoading(true);
@@ -684,6 +731,7 @@ function MainApp() {
             onBranches={goToBranches}
             onStockRequests={goToStockRequests}
             onAccess={goToAccess}
+            onBilling={goToBilling}
             onSimulate={simulateInvoice}
           />
         )}
@@ -765,11 +813,21 @@ function MainApp() {
           />
         )}
 
+        {screen === "billing" && (
+          <PlansScreen
+            user={currentUser}
+            plans={plans}
+            loading={loading}
+            onSelectPlan={requestPlanCheckout}
+          />
+        )}
+
         {screen === "profile" && (
           <ProfileScreen
             user={currentUser}
             loading={loading}
             onUpdateProfile={updateProfile}
+            onUpgradePlan={goToBilling}
           />
         )}
 
@@ -809,6 +867,7 @@ function MainApp() {
         onProducts={goToProducts}
         onBranches={goToBranches}
         onStockRequests={goToStockRequests}
+        onBilling={goToBilling}
         onProfile={goToProfile}
         onAccess={goToAccess}
         onLogout={logout}

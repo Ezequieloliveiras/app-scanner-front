@@ -10,9 +10,10 @@ type ProfileScreenProps = {
   user: AuthUser;
   loading: boolean;
   onUpdateProfile: (payload: UpdateProfilePayload) => Promise<void>;
+  onUpgradePlan: () => void;
 };
 
-export function ProfileScreen({ user, loading, onUpdateProfile }: ProfileScreenProps) {
+export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan }: ProfileScreenProps) {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   const [photoUrl, setPhotoUrl] = useState(user.photoUrl || "");
@@ -88,6 +89,10 @@ export function ProfileScreen({ user, loading, onUpdateProfile }: ProfileScreenP
           <Text style={styles.branchProductMeta}>
             {user.role.toUpperCase()} | Plano {PLAN_LABELS[user.plan]}
           </Text>
+          <Pressable style={styles.secondaryButton} onPress={onUpgradePlan}>
+            <Ionicons name="arrow-up-circle-outline" size={18} color="#0f766e" />
+            <Text style={styles.secondaryButtonText}>Ver planos e upgrades</Text>
+          </Pressable>
         </View>
 
         <View style={styles.accessCard}>
