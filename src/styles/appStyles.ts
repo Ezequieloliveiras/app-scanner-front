@@ -3,7 +3,7 @@ import { StyleSheet } from "react-native";
 export const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f4f7f6"
+    backgroundColor: "#ffffff"
   },
   screenBody: {
     flex: 1
@@ -24,8 +24,7 @@ export const styles = StyleSheet.create({
     height: 42,
     borderRadius: 8,
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#f1f5f9"
+    justifyContent: "center"
   },
   headerTitleArea: {
     flex: 1
@@ -48,16 +47,29 @@ export const styles = StyleSheet.create({
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8
+    justifyContent: "flex-end",
+    gap: 8,
+    minWidth: 42
   },
   notificationDot: {
     position: "absolute",
-    top: 9,
-    right: 9,
+    top: 8,
+    right: 8,
     width: 9,
     height: 9,
     borderRadius: 5,
     backgroundColor: "#ef4444"
+  },
+  notificationItem: {
+    minHeight: 58,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#f8fafc"
   },
   bottomNav: {
     flexDirection: "row",
@@ -104,6 +116,59 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 18,
     backgroundColor: "#102521"
+  },
+  authContainer: {
+    flexGrow: 1,
+    justifyContent: "center",
+    padding: 18,
+    gap: 16
+  },
+  authHero: {
+    borderRadius: 8,
+    padding: 18,
+    backgroundColor: "#102521",
+    gap: 8
+  },
+  authIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#e8f3f0"
+  },
+  authPanel: {
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "#d8dee9",
+    borderRadius: 8,
+    padding: 14,
+    backgroundColor: "#ffffff"
+  },
+  authTabs: {
+    flexDirection: "row",
+    gap: 8,
+    padding: 4,
+    borderRadius: 8,
+    backgroundColor: "#e2e8f0"
+  },
+  authTab: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  authTabActive: {
+    backgroundColor: "#ffffff"
+  },
+  authTabText: {
+    color: "#64748b",
+    fontSize: 13,
+    fontWeight: "900"
+  },
+  authTabTextActive: {
+    color: "#0f766e"
   },
   homeEyebrow: {
     color: "#99f6e4",
@@ -498,16 +563,52 @@ export const styles = StyleSheet.create({
     padding: 14,
     backgroundColor: "#f8fafc"
   },
-  transferId: {
+  transferIdRow: {
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: "#e2e8f0"
+  },
+  transferIdLabel: {
+    color: "#334155",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  transferIdValue: {
+    flexShrink: 1,
+    color: "#334155",
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  transferStatusBadge: {
     alignSelf: "flex-start",
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 5,
     overflow: "hidden",
-    color: "#334155",
-    backgroundColor: "#e2e8f0",
     fontSize: 12,
     fontWeight: "900"
+  },
+  transferStatusReserved: {
+    color: "#92400e",
+    backgroundColor: "#fef3c7"
+  },
+  transferStatusInTransit: {
+    color: "#1d4ed8",
+    backgroundColor: "#dbeafe"
+  },
+  transferStatusReceived: {
+    color: "#0f766e",
+    backgroundColor: "#ccfbf1"
+  },
+  transferStatusCancelled: {
+    color: "#991b1b",
+    backgroundColor: "#fee2e2"
   },
   transferHistory: {
     borderLeftWidth: 3,
@@ -551,6 +652,148 @@ export const styles = StyleSheet.create({
     color: "#475569",
     fontSize: 13,
     fontWeight: "900"
+  },
+  accessCard: {
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "#d8dee9",
+    borderRadius: 8,
+    padding: 14,
+    backgroundColor: "#ffffff"
+  },
+  accessStatusButton: {
+    minHeight: 38,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1
+  },
+  accessEnabled: {
+    borderColor: "#99f6e4",
+    backgroundColor: "#e8f3f0"
+  },
+  accessDisabled: {
+    borderColor: "#fecaca",
+    backgroundColor: "#fee2e2"
+  },
+  accessStatusText: {
+    color: "#0f766e",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  accessStatusTextDisabled: {
+    color: "#991b1b"
+  },
+  roleRow: {
+    flexDirection: "row",
+    gap: 8
+  },
+  roleButton: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#e2e8f0"
+  },
+  roleButtonActive: {
+    backgroundColor: "#0f766e"
+  },
+  roleButtonText: {
+    color: "#475569",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  roleButtonTextActive: {
+    color: "#ffffff"
+  },
+  moduleGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8
+  },
+  moduleButton: {
+    width: "48%",
+    minHeight: 42,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#f8fafc"
+  },
+  moduleButtonActive: {
+    borderColor: "#99f6e4",
+    backgroundColor: "#e8f3f0"
+  },
+  moduleButtonText: {
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  moduleButtonTextActive: {
+    color: "#0f766e"
+  },
+  userListItem: {
+    minHeight: 56,
+    borderWidth: 1,
+    borderColor: "#d8dee9",
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#f8fafc"
+  },
+  userListItemActive: {
+    borderColor: "#cbd5e1",
+    backgroundColor: "#f8fafc"
+  },
+  profileCard: {
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "#d8dee9",
+    borderRadius: 8,
+    padding: 18,
+    alignItems: "center",
+    backgroundColor: "#ffffff"
+  },
+  profileAvatarButton: {
+    width: 88,
+    height: 88,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  profileAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    backgroundColor: "#e8f3f0"
+  },
+  profileAvatarImage: {
+    width: "100%",
+    height: "100%"
+  },
+  profileCameraBadge: {
+    position: "absolute",
+    right: 3,
+    bottom: 3,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#ffffff",
+    backgroundColor: "#0f766e"
   },
   inlineAlert: {
     flexDirection: "row",
@@ -633,6 +876,20 @@ export const styles = StyleSheet.create({
     borderTopRightRadius: 8,
     padding: 18,
     backgroundColor: "#ffffff"
+  },
+  invoiceReviewModal: {
+    maxHeight: "88%",
+    gap: 12,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    padding: 18,
+    backgroundColor: "#ffffff"
+  },
+  invoiceReviewList: {
+    maxHeight: 430
+  },
+  invoiceReviewActions: {
+    gap: 8
   },
   modalHeader: {
     flexDirection: "row",

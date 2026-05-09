@@ -1,19 +1,25 @@
 import { ScrollView, Text, View } from "react-native";
 import { styles } from "../styles/appStyles";
+import { AuthUser } from "../types/app";
+import { canAccessModule, canManageAccess } from "../utils/appHelpers";
 import { HomeAction } from "./HomeAction";
 export function HomeScreen({
   productsCount,
   pendingCount,
+  user,
   onScan,
   onProducts,
   onBranches,
+  onAccess,
   onSimulate
 }: {
   productsCount: number;
   pendingCount: number;
+  user: AuthUser;
   onScan: () => void;
   onProducts: () => void;
   onBranches: () => void;
+  onAccess: () => void;
   onSimulate: () => void;
 }) {
   return (
@@ -34,10 +40,13 @@ export function HomeScreen({
       </View>
 
       <View style={styles.quickGrid}>
-        <HomeAction icon="camera-outline" title="Camera" text="Escannear nota" onPress={onScan} />
-        <HomeAction icon="cube-outline" title="Produtos" text="Ver estoque" onPress={onProducts} />
-        <HomeAction icon="git-compare-outline" title="Filial" text="Movimentar estoque" onPress={onBranches} />
-        <HomeAction icon="document-text-outline" title="XML" text="Simular leitura" onPress={onSimulate} />
+        {canAccessModule(user, "scan") && <HomeAction icon="camera-outline" title="Câmera" text="Escanear nota" onPress={onScan} />}
+        {canAccessModule(user, "products") && <HomeAction icon="cube-outline" title="Produtos" text="Ver estoque" onPress={onProducts} />}
+        {canAccessModule(user, "branches") && (
+          <HomeAction icon="git-compare-outline" title="Filial" text="Movimentar estoque" onPress={onBranches} />
+        )}
+        {canManageAccess(user) && <HomeAction icon="people-outline" title="Acessos" text="Gerenciar usuários" onPress={onAccess} />}
+        {canAccessModule(user, "scan") && <HomeAction icon="document-text-outline" title="XML" text="Simular leitura" onPress={onSimulate} />}
       </View>
     </ScrollView>
   );

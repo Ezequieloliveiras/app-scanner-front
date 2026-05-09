@@ -20,7 +20,7 @@ export function SelectorModal({
           <View style={styles.modalHeader}>
             <View style={styles.modalTitleArea}>
               <Text style={styles.modalTitle}>{title}</Text>
-              <Text style={styles.modalSubtitle}>Toque em uma opcao para selecionar.</Text>
+              <Text style={styles.modalSubtitle}>Toque em uma opção para selecionar.</Text>
             </View>
             <Pressable style={styles.headerIconButton} onPress={onClose}>
               <Ionicons name="close-outline" size={24} color="#1f2937" />

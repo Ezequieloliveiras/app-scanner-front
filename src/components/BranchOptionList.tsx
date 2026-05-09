@@ -26,7 +26,7 @@ export function BranchOptionList({
           }}
         >
           <Text style={styles.branchProductName}>{branch.name}</Text>
-          <Text style={styles.branchProductMeta}>Codigo: {branch.code}</Text>
+          <Text style={styles.branchProductMeta}>Código: {branch.code}</Text>
         </Pressable>
       ))}
     </View>

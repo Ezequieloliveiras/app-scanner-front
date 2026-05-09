@@ -1,6 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
+} from "react-native";
 import { Product, StockEntry } from "../types/product";
 
 type Props = {
@@ -29,7 +40,7 @@ export function ProductList({ products, onRegisterMissingDelivered }: Props) {
     const quantity = parseQuantity(quantityInput);
 
     if (quantity <= 0) {
-      Alert.alert("Quantidade invalida", "Informe a quantidade entregue depois.");
+      Alert.alert("Quantidade inválida", "Informe a quantidade entregue depois.");
       return;
     }
 
@@ -41,7 +52,7 @@ export function ProductList({ products, onRegisterMissingDelivered }: Props) {
       setSelectedProduct(null);
       Alert.alert("Entrada registrada", "A entrega faltante foi adicionada ao estoque.");
     } catch (error) {
-      Alert.alert("Nao foi possivel registrar", error instanceof Error ? error.message : "Tente novamente.");
+      Alert.alert("Não foi possível registrar", error instanceof Error ? error.message : "Tente novamente.");
     } finally {
       setSaving(false);
     }
@@ -75,7 +86,11 @@ export function ProductList({ products, onRegisterMissingDelivered }: Props) {
       </View>
 
       <Modal visible={!!selectedProduct} transparent animationType="slide" onRequestClose={() => setSelectedProduct(null)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 16 : 0}
+        >
           <View style={styles.detailModal}>
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleArea}>
@@ -98,8 +113,12 @@ export function ProductList({ products, onRegisterMissingDelivered }: Props) {
               </View>
             </View>
 
-            <Text style={styles.sectionTitle}>Historico completo</Text>
-            <ScrollView style={styles.historyList} contentContainerStyle={styles.historyInner}>
+            <Text style={styles.sectionTitle}>Histórico completo</Text>
+            <ScrollView
+              style={styles.historyList}
+              contentContainerStyle={styles.historyInner}
+              keyboardShouldPersistTaps="handled"
+            >
               {selectedProduct?.stockEntries?.map((entry, index) => (
                 <View key={`${entry.createdAt}-${index}`} style={styles.historyItem}>
                   <View style={styles.historyTopRow}>
@@ -120,14 +139,16 @@ export function ProductList({ products, onRegisterMissingDelivered }: Props) {
                 onChangeText={setQuantityInput}
                 keyboardType="decimal-pad"
                 placeholder="Quantidade entregue"
+                returnKeyType="next"
                 style={styles.input}
               />
               <TextInput
                 value={observationInput}
                 onChangeText={setObservationInput}
-                placeholder="Observacao da entrega faltante"
+                placeholder="Observação da entrega faltante"
                 style={[styles.input, styles.textArea]}
                 multiline
+                returnKeyType="done"
               />
               <Pressable style={[styles.saveButton, saving && styles.disabledButton]} disabled={saving} onPress={registerMissingDelivered}>
                 <Ionicons name="add-circle-outline" size={18} color="#ffffff" />
@@ -135,7 +156,7 @@ export function ProductList({ products, onRegisterMissingDelivered }: Props) {
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );
@@ -153,7 +174,7 @@ function formatDate(value: string) {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "Horario nao informado";
+    return "Horário não informado";
   }
 
   return date.toLocaleString("pt-BR", {

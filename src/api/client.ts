@@ -1,4 +1,13 @@
 import {
+  AuthCredentials,
+  AuthSession,
+  AuthUser,
+  CreateManagedUserPayload,
+  RegisterCredentials,
+  UpdateProfilePayload,
+  UpdateUserAccessPayload
+} from "../types/app";
+import {
   CommitStockPayload,
   CommitStockResult,
   BranchTransfer,
@@ -11,15 +20,17 @@ import {
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3333";
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+async function request<T>(path: string, options?: RequestInit & { token?: string }): Promise<T> {
   let response: Response;
 
   try {
     response = await fetch(`${API_URL}${path}`, {
       headers: {
         "Content-Type": "application/json",
+        ...(options?.token ? { Authorization: `Bearer ${options.token}` } : {}),
         ...(options?.headers || {})
       },
+      credentials: "include",
       ...options
     });
   } catch {
@@ -36,58 +47,127 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  scanInvoice(qrCodeContent: string) {
+  login(payload: AuthCredentials) {
+    return request<AuthSession>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+
+  register(payload: RegisterCredentials) {
+    return request<AuthSession>("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+
+  listUsers(token: string) {
+    return request<AuthUser[]>("/api/auth/users", { token });
+  },
+
+  updateProfile(token: string, payload: UpdateProfilePayload) {
+    return request<AuthUser>("/api/auth/me", {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload)
+    });
+  },
+
+  requestPasswordReset(email: string) {
+    return request<{ message: string; resetToken?: string }>("/api/auth/password-reset/request", {
+      method: "POST",
+      body: JSON.stringify({ email })
+    });
+  },
+
+  createUser(token: string, payload: CreateManagedUserPayload) {
+    return request<AuthUser>("/api/auth/users", {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload)
+    });
+  },
+
+  updateUserAccess(token: string, userId: string, payload: UpdateUserAccessPayload) {
+    return request<AuthUser>(`/api/auth/users/${userId}/access`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload)
+    });
+  },
+
+  adminResetPassword(token: string, userId: string, password: string) {
+    return request<AuthUser>(`/api/auth/users/${userId}/password`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify({ password })
+    });
+  },
+
+  scanInvoice(token: string, qrCodeContent: string) {
     return request<InvoiceResult>("/api/invoices/scan", {
       method: "POST",
+      token,
       body: JSON.stringify({ qrCodeContent })
     });
   },
 
-  simulateInvoice() {
+  simulateInvoice(token: string) {
     return request<InvoiceResult>("/api/invoices/simulate", {
-      method: "POST"
+      method: "POST",
+      token
     });
   },
 
-  commitStock(payload: CommitStockPayload) {
+  commitStock(token: string, payload: CommitStockPayload) {
     return request<CommitStockResult>("/api/invoices/commit", {
       method: "POST",
+      token,
       body: JSON.stringify(payload)
     });
   },
 
-  listProducts() {
-    return request<Product[]>("/api/products");
+  listProducts(token: string) {
+    return request<Product[]>("/api/products", { token });
   },
 
-  registerMissingDelivered(productId: string, payload: MissingDeliveredPayload) {
+  registerMissingDelivered(token: string, productId: string, payload: MissingDeliveredPayload) {
     return request<Product>(`/api/products/${productId}/missing-delivered`, {
       method: "POST",
+      token,
       body: JSON.stringify(payload)
     });
   },
 
-  listBranchTransfers() {
-    return request<BranchTransfer[]>("/api/branches/transfers");
+  listBranchTransfers(token: string) {
+    return request<BranchTransfer[]>("/api/branches/transfers", { token });
   },
 
-  createBranchTransfer(payload: CreateBranchTransferPayload) {
+  createBranchTransfer(token: string, payload: CreateBranchTransferPayload) {
     return request<BranchTransfer>("/api/branches/transfers", {
       method: "POST",
+      token,
       body: JSON.stringify(payload)
     });
   },
 
-  updateBranchTransferStatus(id: string, status: Exclude<BranchTransferStatus, "reserved">, observation?: string) {
+  updateBranchTransferStatus(
+    token: string,
+    id: string,
+    status: Exclude<BranchTransferStatus, "reserved">,
+    observation?: string
+  ) {
     return request<BranchTransfer>(`/api/branches/transfers/${id}/status`, {
       method: "PATCH",
+      token,
       body: JSON.stringify({ status, observation })
     });
   },
 
-  cancelBranchTransfer(id: string, observation?: string) {
+  cancelBranchTransfer(token: string, id: string, observation?: string) {
     return request<BranchTransfer>(`/api/branches/transfers/${id}/cancel`, {
       method: "PATCH",
+      token,
       body: JSON.stringify({ observation })
     });
   }

@@ -1,23 +1,33 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Modal, Pressable, Text, View } from "react-native";
 import { styles } from "../styles/appStyles";
+import { AuthUser } from "../types/app";
+import { canAccessModule, canManageAccess } from "../utils/appHelpers";
 import { MenuItem } from "./MenuItem";
 export function SideMenu({
   visible,
+  user,
   onClose,
   onHome,
   onScan,
   onProducts,
   onBranches,
+  onProfile,
+  onAccess,
+  onLogout,
   onSimulate,
   topInset
 }: {
   visible: boolean;
+  user: AuthUser;
   onClose: () => void;
   onHome: () => void;
   onScan: () => void;
   onProducts: () => void;
   onBranches: () => void;
+  onProfile: () => void;
+  onAccess: () => void;
+  onLogout: () => void;
   onSimulate: () => void;
   topInset: number;
 }) {
@@ -32,11 +42,14 @@ export function SideMenu({
               <Ionicons name="close-outline" size={24} color="#1f2937" />
             </Pressable>
           </View>
-          <MenuItem icon="home-outline" label="Home" onPress={onHome} />
-          <MenuItem icon="camera-outline" label="Scannear" onPress={onScan} />
-          <MenuItem icon="cube-outline" label="Ver produtos" onPress={onProducts} />
-          <MenuItem icon="git-compare-outline" label="Filial" onPress={onBranches} />
-          <MenuItem icon="document-text-outline" label="Siimular XML" onPress={onSimulate} />
+          <MenuItem icon="home-outline" label="Início" onPress={onHome} />
+          <MenuItem icon="person-circle-outline" label="Perfil" onPress={onProfile} />
+          {canAccessModule(user, "scan") && <MenuItem icon="camera-outline" label="Escanear" onPress={onScan} />}
+          {canAccessModule(user, "products") && <MenuItem icon="cube-outline" label="Ver produtos" onPress={onProducts} />}
+          {canAccessModule(user, "branches") && <MenuItem icon="git-compare-outline" label="Filial" onPress={onBranches} />}
+          {canManageAccess(user) && <MenuItem icon="people-outline" label="Gerenciar acessos" onPress={onAccess} />}
+          {canAccessModule(user, "scan") && <MenuItem icon="document-text-outline" label="Simular XML" onPress={onSimulate} />}
+          <MenuItem icon="log-out-outline" label="Sair" onPress={onLogout} />
         </View>
       </View>
     </Modal>

@@ -1,11 +1,45 @@
 import { BranchTransfer, BranchTransferStatus, InvoiceResult, Product } from "../types/product";
-import { BranchOption, Screen } from "../types/app";
+import { AppModule, AuthUser, BranchOption, Screen } from "../types/app";
+
+export const MODULE_LABELS: Record<AppModule, string> = {
+  scan: "Scanner",
+  products: "Produtos",
+  branches: "Filial",
+  access: "Acessos"
+};
+
+export const APP_MODULES: AppModule[] = ["scan", "products", "branches", "access"];
+
+export const PLAN_LABELS = {
+  basic: "Basic",
+  premium: "Premium",
+  pro: "Pro"
+} as const;
+
+export const PLAN_LIMITS = {
+  basic: 3,
+  premium: 10,
+  pro: 30
+} as const;
+
+export function canManageAccess(user: AuthUser | null) {
+  return user?.role === "main" || user?.role === "master";
+}
+
+export function canAccessModule(user: AuthUser | null, module: AppModule) {
+  if (!user?.enabled) return false;
+  if (user.role === "main" || user.role === "master") return true;
+  return user.modules.includes(module);
+}
+
 export function getScreenTitle(screen: Screen, pendingInvoice: InvoiceResult | null) {
-  if (screen === "scan") return "Scannear nota";
+  if (screen === "scan") return "Escanear nota";
   if (screen === "branches") return "Filial";
-  if (screen === "products" && pendingInvoice) return "Revisar entrada";
+  if (screen === "access") return "Acessos";
+  if (screen === "profile") return "Perfil";
+  if (screen === "notifications") return "Notificações";
   if (screen === "products") return "Produtos";
-  return "Home";
+  return "Início";
 }
 
 export function getTransferStatusLabel(status: BranchTransferStatus) {
@@ -21,7 +55,7 @@ export function getTransferHistoryText(transfer: BranchTransfer, item: { status:
   }
 
   if (item.status === "cancelled") {
-    return item.observation || `Movimentacao cancelada. Estoque devolvido para ${transfer.sourceBranch}.`;
+    return item.observation || `Movimentação cancelada. Estoque devolvido para ${transfer.sourceBranch}.`;
   }
 
   return item.observation || getTransferStatusLabel(item.status);
@@ -29,7 +63,7 @@ export function getTransferHistoryText(transfer: BranchTransfer, item: { status:
 
 export function formatDateTime(value: string) {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "sem horario";
+  if (Number.isNaN(date.getTime())) return "sem horário";
   return date.toLocaleString("pt-BR", {
     day: "2-digit",
     month: "2-digit",

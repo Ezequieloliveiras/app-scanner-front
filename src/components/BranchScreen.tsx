@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { styles } from "../styles/appStyles";
 import { BranchOption } from "../types/app";
 import { BranchTransfer, BranchTransferStatus, Product } from "../types/product";
@@ -76,12 +76,18 @@ export function BranchScreen({
   const filteredTransfers = filterTransfers(transfers, movementIdSearch, filterSourceBranch, filterTargetBranch);
 
   return (
-    <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
+    <KeyboardAvoidingView style={styles.screenBody} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <ScrollView
+      style={styles.content}
+      contentContainerStyle={styles.contentInner}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+    >
       <View style={styles.branchPanel}>
         <Pressable style={styles.accordionHeader} onPress={() => setOpenSection(openSection === "reserve" ? null : "reserve")}>
           <View style={styles.accordionTitleArea}>
             <Text style={styles.sectionTitle}>Reservar estoque para filial</Text>
-            <Text style={styles.sectionSubtitle}>Busque produto e filiais por nome ou codigo antes de reservar.</Text>
+            <Text style={styles.sectionSubtitle}>Busque produto e filiais por nome ou código antes de reservar.</Text>
           </View>
           <Ionicons name={openSection === "reserve" ? "chevron-up-outline" : "chevron-down-outline"} size={22} color="#0f766e" />
         </Pressable>
@@ -98,6 +104,7 @@ export function BranchScreen({
               onSelectProduct("");
             }}
             placeholder="Buscar produto por nome ou EAN"
+            returnKeyType="search"
             style={styles.selectInput}
           />
           <Pressable style={styles.selectButton} onPress={() => setSelectModal("product")}>
@@ -133,7 +140,8 @@ export function BranchScreen({
           <TextInput
             value={sourceBranchSearch || `${sourceBranch.code} - ${sourceBranch.name}`}
             onChangeText={onChangeSourceBranchSearch}
-            placeholder="Buscar filial origem por nome ou codigo"
+            placeholder="Buscar filial origem por nome ou código"
+            returnKeyType="search"
             style={styles.selectInput}
           />
           <Pressable style={styles.selectButton} onPress={() => setSelectModal("source")}>
@@ -152,7 +160,8 @@ export function BranchScreen({
               onChangeTargetBranchSearch(value);
               onSelectTargetBranch(null);
             }}
-            placeholder="Buscar filial destino por nome ou codigo"
+            placeholder="Buscar filial destino por nome ou código"
+            returnKeyType="search"
             style={styles.selectInput}
           />
           <Pressable style={styles.selectButton} onPress={() => setSelectModal("target")}>
@@ -168,19 +177,22 @@ export function BranchScreen({
           onChangeText={onChangeQuantity}
           placeholder="Quantidade"
           keyboardType="decimal-pad"
+          returnKeyType="next"
           style={styles.quantityInput}
         />
         <TextInput
           value={lot}
           onChangeText={onChangeLot}
           placeholder="Lote"
+          returnKeyType="next"
           style={styles.quantityInput}
         />
         <TextInput
           value={observation}
           onChangeText={onChangeObservation}
-          placeholder="Observacao da reserva"
+          placeholder="Observação da reserva"
           multiline
+          returnKeyType="done"
           style={[styles.quantityInput, styles.branchObservationInput]}
         />
 
@@ -195,7 +207,7 @@ export function BranchScreen({
       <View style={styles.branchPanel}>
         <Pressable style={styles.accordionHeader} onPress={() => setOpenSection(openSection === "movements" ? null : "movements")}>
           <View style={styles.accordionTitleArea}>
-            <Text style={styles.sectionTitle}>Movimentacoes entre filiais</Text>
+            <Text style={styles.sectionTitle}>{"Movimenta\u00e7\u00f5es entre filiais"}</Text>
             <Text style={styles.sectionSubtitle}>Acompanhe reservado, a caminho e entrada na filial.</Text>
           </View>
           <Ionicons name={openSection === "movements" ? "chevron-up-outline" : "chevron-down-outline"} size={22} color="#0f766e" />
@@ -204,11 +216,12 @@ export function BranchScreen({
         {openSection === "movements" && (
           <View style={styles.accordionBody}>
 
-        <Text style={styles.fieldLabel}>Pesquisar movimentacao pelo ID</Text>
+        <Text style={styles.fieldLabel}>Pesquisar movimentação pelo ID</Text>
         <TextInput
           value={movementIdSearch}
           onChangeText={setMovementIdSearch}
-          placeholder="Digite o ID da movimentacao"
+          placeholder="Digite o ID da movimentação"
+          returnKeyType="search"
           style={styles.quantityInput}
         />
 
@@ -253,15 +266,22 @@ export function BranchScreen({
         )}
 
         {filteredTransfers.length === 0 ? (
-          <Text style={styles.mutedText}>Nenhuma movimentacao de filial ainda.</Text>
+          <Text style={styles.mutedText}>Nenhuma movimentação de filial ainda.</Text>
         ) : (
           filteredTransfers.map((transfer) => (
             <View key={transfer._id} style={styles.transferCard}>
-              <Text style={styles.transferId}>ID da movimentacao: {transfer._id}</Text>
+              <View style={styles.transferIdRow}>
+                <Text style={styles.transferIdLabel}>ID</Text>
+                <Text selectable style={styles.transferIdValue}>
+                  {transfer._id}
+                </Text>
+              </View>
               <View style={styles.pendingTopRow}>
                 <View style={styles.pendingTitleArea}>
                   <Text style={styles.pendingName}>{transfer.productName}</Text>
-                  <Text style={styles.eanBadge}>{getTransferStatusLabel(transfer.status)}</Text>
+                  <Text style={[styles.transferStatusBadge, getTransferStatusStyle(transfer.status)]}>
+                    {getTransferStatusLabel(transfer.status)}
+                  </Text>
                 </View>
                 <Text style={styles.quantity}>{transfer.quantity}</Text>
               </View>
@@ -284,7 +304,7 @@ export function BranchScreen({
                   </Pressable>
                   <Pressable style={styles.cancelButton} onPress={() => onCancelTransfer(transfer._id)}>
                     <Ionicons name="close-circle-outline" size={18} color="#991b1b" />
-                    <Text style={styles.cancelButtonText}>Cancelar movimentacao</Text>
+                    <Text style={styles.cancelButtonText}>Cancelar movimentação</Text>
                   </Pressable>
                 </View>
               )}
@@ -297,7 +317,7 @@ export function BranchScreen({
                   </Pressable>
                   <Pressable style={styles.cancelButton} onPress={() => onCancelTransfer(transfer._id)}>
                     <Ionicons name="close-circle-outline" size={18} color="#991b1b" />
-                    <Text style={styles.cancelButtonText}>Cancelar movimentacao</Text>
+                    <Text style={styles.cancelButtonText}>Cancelar movimentação</Text>
                   </Pressable>
                 </View>
               )}
@@ -347,7 +367,7 @@ export function BranchScreen({
               }}
             >
               <Text style={styles.branchProductName}>{branch.name}</Text>
-              <Text style={styles.branchProductMeta}>Codigo: {branch.code}</Text>
+              <Text style={styles.branchProductMeta}>Código: {branch.code}</Text>
             </Pressable>
           ))}
       </SelectorModal>
@@ -370,7 +390,7 @@ export function BranchScreen({
               }}
             >
               <Text style={styles.branchProductName}>{branch.name}</Text>
-              <Text style={styles.branchProductMeta}>Codigo: {branch.code}</Text>
+              <Text style={styles.branchProductMeta}>Código: {branch.code}</Text>
             </Pressable>
           ))}
       </SelectorModal>
@@ -400,7 +420,7 @@ export function BranchScreen({
             }}
           >
             <Text style={styles.branchProductName}>{branch.name}</Text>
-            <Text style={styles.branchProductMeta}>Codigo: {branch.code}</Text>
+            <Text style={styles.branchProductMeta}>Código: {branch.code}</Text>
           </Pressable>
         ))}
       </SelectorModal>
@@ -430,10 +450,18 @@ export function BranchScreen({
             }}
           >
             <Text style={styles.branchProductName}>{branch.name}</Text>
-            <Text style={styles.branchProductMeta}>Codigo: {branch.code}</Text>
+            <Text style={styles.branchProductMeta}>Código: {branch.code}</Text>
           </Pressable>
         ))}
       </SelectorModal>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
+}
+
+function getTransferStatusStyle(status: BranchTransferStatus) {
+  if (status === "cancelled") return styles.transferStatusCancelled;
+  if (status === "received") return styles.transferStatusReceived;
+  if (status === "in_transit") return styles.transferStatusInTransit;
+  return styles.transferStatusReserved;
 }

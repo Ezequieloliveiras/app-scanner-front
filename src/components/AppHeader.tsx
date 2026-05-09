@@ -6,13 +6,15 @@ export function AppHeader({
   loading,
   topInset,
   hasNotification,
-  onMenuPress
+  onMenuPress,
+  onNotificationPress
 }: {
   title: string;
   loading: boolean;
   topInset: number;
   hasNotification: boolean;
   onMenuPress: () => void;
+  onNotificationPress: () => void;
 }) {
   return (
     <View style={[styles.header, { paddingTop: topInset + 8 }]}>
@@ -24,11 +26,11 @@ export function AppHeader({
         <Text style={styles.headerSubtitle}>Scanner de notas e estoque</Text>
       </View>
       <View style={styles.headerActions}>
-        <Pressable style={styles.headerIconButton}>
+        {loading && <ActivityIndicator color="#0f766e" />}
+        <Pressable style={styles.headerIconButton} onPress={onNotificationPress}>
           <Ionicons name="notifications-outline" size={22} color="#1f2937" />
           {hasNotification && <View style={styles.notificationDot} />}
         </Pressable>
-        <View style={styles.headerStatus}>{loading ? <ActivityIndicator color="#0f766e" /> : null}</View>
       </View>
     </View>
   );

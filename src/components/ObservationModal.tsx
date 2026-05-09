@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Modal, Pressable, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View } from "react-native";
 import { styles } from "../styles/appStyles";
 import { EditableInvoiceProduct } from "../types/app";
 export function ObservationModal({
@@ -15,11 +15,15 @@ export function ObservationModal({
 }) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 16 : 0}
+      >
         <View style={styles.observationModal}>
           <View style={styles.modalHeader}>
             <View style={styles.modalTitleArea}>
-              <Text style={styles.modalTitle}>Observacao</Text>
+              <Text style={styles.modalTitle}>Observação</Text>
               <Text style={styles.modalSubtitle}>{product?.name}</Text>
             </View>
             <Pressable style={styles.headerIconButton} onPress={onClose}>
@@ -33,19 +37,20 @@ export function ObservationModal({
             placeholder="Ex: faltaram 2 unidades na entrega"
             multiline
             autoFocus
+            returnKeyType="done"
           />
           {!!product?.observation?.trim() && (
             <View style={styles.inlineAlert}>
               <Ionicons name="alert-circle-outline" size={18} color="#92400e" />
-              <Text style={styles.inlineAlertText}>Essa observacao sera vinculada a entrada deste produto.</Text>
+              <Text style={styles.inlineAlertText}>Essa observação será vinculada à entrada deste produto.</Text>
             </View>
           )}
           <Pressable style={styles.primaryButton} onPress={onClose}>
             <Ionicons name="checkmark-outline" size={18} color="#ffffff" />
-            <Text style={styles.primaryButtonText}>Salvar observacao</Text>
+            <Text style={styles.primaryButtonText}>Salvar observação</Text>
           </Pressable>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -4,18 +4,34 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "./src/api/client";
+import { AccessManagementScreen } from "./src/components/AccessManagementScreen";
 import { AppHeader } from "./src/components/AppHeader";
+import { AuthScreen } from "./src/components/AuthScreen";
 import { BottomNav } from "./src/components/BottomNav";
 import { BranchScreen } from "./src/components/BranchScreen";
 import { HomeScreen } from "./src/components/HomeScreen";
+import { InvoiceReviewModal } from "./src/components/InvoiceReviewModal";
+import { AppNotification, NotificationsScreen } from "./src/components/NotificationsScreen";
 import { ObservationModal } from "./src/components/ObservationModal";
 import { ProductsScreen } from "./src/components/ProductsScreen";
+import { ProfileScreen } from "./src/components/ProfileScreen";
 import { ScanScreen } from "./src/components/ScanScreen";
 import { SideMenu } from "./src/components/SideMenu";
 import { styles } from "./src/styles/appStyles";
-import { BranchOption, EditableInvoiceProduct, Screen } from "./src/types/app";
+import {
+  AppModule,
+  AuthUser,
+  BranchOption,
+  CreateManagedUserPayload,
+  EditableInvoiceProduct,
+  RegisterCredentials,
+  Screen,
+  UpdateProfilePayload,
+  UserPlan,
+  UserRole
+} from "./src/types/app";
 import { BranchTransfer, BranchTransferStatus, InvoiceResult, Product } from "./src/types/product";
-import { formatQuantity, getScreenTitle, parseQuantity } from "./src/utils/appHelpers";
+import { canAccessModule, canManageAccess, formatQuantity, getScreenTitle, parseQuantity } from "./src/utils/appHelpers";
 
 const BRANCH_OPTIONS: BranchOption[] = [
   { code: "CENTRAL", name: "Estoque central" },
@@ -34,6 +50,9 @@ export default function App() {
 function MainApp() {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [managedUsers, setManagedUsers] = useState<AuthUser[]>([]);
   const [screen, setScreen] = useState<Screen>("home");
   const [menuOpen, setMenuOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -55,21 +74,83 @@ function MainApp() {
   const [scannerEnabled, setScannerEnabled] = useState(true);
 
   const loadProducts = useCallback(async () => {
-    const data = await api.listProducts();
+    if (!authToken) return;
+    const data = await api.listProducts(authToken);
     setProducts(data);
-  }, []);
+  }, [authToken]);
 
   const loadBranchTransfers = useCallback(async () => {
-    const data = await api.listBranchTransfers();
+    if (!authToken) return;
+    const data = await api.listBranchTransfers(authToken);
     setBranchTransfers(data);
-  }, []);
+  }, [authToken]);
 
   useEffect(() => {
+    if (!currentUser) return;
+
     loadProducts().catch(() => {
-      setError("Nao consegui conectar na API. Confira se o backend esta rodando.");
+      setError("Não consegui conectar na API. Confira se o backend está rodando.");
     });
-    loadBranchTransfers().catch(() => undefined);
-  }, [loadProducts, loadBranchTransfers]);
+    if (canAccessModule(currentUser, "branches")) {
+      loadBranchTransfers().catch(() => undefined);
+    }
+  }, [currentUser, loadProducts, loadBranchTransfers]);
+
+  const loadManagedUsers = useCallback(async () => {
+    if (!authToken) return;
+    const users = await api.listUsers(authToken);
+    setManagedUsers(users);
+  }, [authToken]);
+
+  async function handleLogin(email: string, password: string) {
+    try {
+      setLoading(true);
+      setError(null);
+      const session = await api.login({ email, password });
+      setAuthToken(session.token);
+      setCurrentUser(session.user);
+      setScreen("home");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao entrar.";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRegister(payload: RegisterCredentials) {
+    try {
+      setLoading(true);
+      setError(null);
+      const session = await api.register(payload);
+      setAuthToken(session.token);
+      setCurrentUser(session.user);
+      setScreen("home");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao criar acesso.";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function logout() {
+    setAuthToken(null);
+    setCurrentUser(null);
+    setManagedUsers([]);
+    setPendingInvoice(null);
+    setPendingProducts([]);
+    setEditingProductIndex(null);
+    setMenuOpen(false);
+    setScreen("home");
+    setError(null);
+  }
+
+  function ensureModule(module: AppModule) {
+    if (canAccessModule(currentUser, module)) return true;
+    Alert.alert("Acesso bloqueado", "Seu usuário não tem acesso a este módulo.");
+    return false;
+  }
 
   async function handleInvoicePreview(action: () => Promise<InvoiceResult>) {
     try {
@@ -84,24 +165,24 @@ function MainApp() {
           observation: ""
         }))
       );
-      setScreen("products");
       setScannerEnabled(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao processar nota.";
       setError(message);
-      Alert.alert("Leitura nao concluida", message);
+      Alert.alert("Leitura não concluída", message);
     } finally {
       setLoading(false);
     }
   }
 
   function handleBarcodeScanned(result: BarcodeScanningResult) {
-    if (!scannerEnabled || loading) return;
+    if (!authToken || !scannerEnabled || loading) return;
     setScannerEnabled(false);
-    handleInvoicePreview(() => api.scanInvoice(result.data));
+    handleInvoicePreview(() => api.scanInvoice(authToken, result.data));
   }
 
   function goToScan() {
+    if (!ensureModule("scan")) return;
     setError(null);
     setMenuOpen(false);
     setScannerEnabled(true);
@@ -109,17 +190,54 @@ function MainApp() {
   }
 
   function goToProducts() {
+    if (!ensureModule("products")) return;
     setError(null);
     setMenuOpen(false);
     setScreen("products");
-    loadProducts().catch(() => setError("Nao consegui atualizar os produtos."));
+    loadProducts().catch(() => setError("Não consegui atualizar os produtos."));
   }
 
   function goToBranches() {
+    if (!ensureModule("branches")) return;
     setError(null);
     setMenuOpen(false);
     setScreen("branches");
-    Promise.all([loadProducts(), loadBranchTransfers()]).catch(() => setError("Nao consegui atualizar filial."));
+    Promise.all([loadProducts(), loadBranchTransfers()]).catch(() => setError("Não consegui atualizar filial."));
+  }
+
+  function goToAccess() {
+    if (!canManageAccess(currentUser)) {
+      Alert.alert("Acesso bloqueado", "Apenas usuários principal ou master gerenciam acessos.");
+      return;
+    }
+
+    setError(null);
+    setMenuOpen(false);
+    setScreen("access");
+    loadManagedUsers().catch(() => setError("Não consegui carregar os usuários."));
+  }
+
+  function goToProfile() {
+    setError(null);
+    setMenuOpen(false);
+    setScreen("profile");
+  }
+
+  function simulateInvoice() {
+    if (!authToken || !ensureModule("scan")) return;
+    handleInvoicePreview(() => api.simulateInvoice(authToken));
+  }
+
+  function closeInvoiceReview() {
+    setPendingInvoice(null);
+    setPendingProducts([]);
+    setEditingProductIndex(null);
+    setScannerEnabled(true);
+  }
+
+  function backToScannerFromReview() {
+    closeInvoiceReview();
+    goToScan();
   }
 
   function updatePendingProduct(index: number, changes: Partial<EditableInvoiceProduct>) {
@@ -134,13 +252,13 @@ function MainApp() {
     const invalidProduct = pendingProducts.find((product) => parseQuantity(product.quantityInput) <= 0);
 
     if (invalidProduct) {
-      Alert.alert("Quantidade invalida", `Confira a quantidade de ${invalidProduct.name}.`);
+      Alert.alert("Quantidade inválida", `Confira a quantidade de ${invalidProduct.name}.`);
       return;
     }
 
     Alert.alert(
       "Enviar para o estoque?",
-      "Tem certeza que deseja enviar para o estoque? Apos essa acao nao podera ser desfeita.",
+      "Tem certeza que deseja enviar para o estoque? Após essa ação não poderá ser desfeita.",
       [
         { text: "Cancelar", style: "cancel" },
         { text: "Enviar", style: "destructive", onPress: commitStock }
@@ -149,13 +267,13 @@ function MainApp() {
   }
 
   async function commitStock() {
-    if (!pendingInvoice) return;
+    if (!pendingInvoice || !authToken) return;
 
     try {
       setLoading(true);
       setError(null);
 
-      await api.commitStock({
+      await api.commitStock(authToken, {
         invoiceKey: pendingInvoice.invoiceKey,
         source: pendingInvoice.source,
         products: pendingProducts.map((product) => ({
@@ -174,14 +292,16 @@ function MainApp() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao enviar produtos ao estoque.";
       setError(message);
-      Alert.alert("Entrada nao concluida", message);
+      Alert.alert("Entrada não concluída", message);
     } finally {
       setLoading(false);
     }
   }
 
   async function registerMissingDelivered(productId: string, quantity: number, observation?: string) {
-    await api.registerMissingDelivered(productId, {
+    if (!authToken) return;
+
+    await api.registerMissingDelivered(authToken, productId, {
       quantity,
       observation
     });
@@ -189,6 +309,8 @@ function MainApp() {
   }
 
   async function createBranchTransfer() {
+    if (!authToken) return;
+
     const quantity = parseQuantity(branchQuantity);
 
     if (!branchProductId || !targetBranch || quantity <= 0) {
@@ -199,7 +321,7 @@ function MainApp() {
     try {
       setLoading(true);
       setError(null);
-      await api.createBranchTransfer({
+      await api.createBranchTransfer(authToken, {
         productId: branchProductId,
         sourceBranch: sourceBranch.name,
         sourceBranchCode: sourceBranch.code,
@@ -223,22 +345,24 @@ function MainApp() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao reservar estoque.";
       setError(message);
-      Alert.alert("Reserva nao concluida", message);
+      Alert.alert("Reserva não concluída", message);
     } finally {
       setLoading(false);
     }
   }
 
   async function updateBranchTransferStatus(id: string, status: Exclude<BranchTransferStatus, "reserved">) {
+    if (!authToken) return;
+
     try {
       setLoading(true);
       setError(null);
-      await api.updateBranchTransferStatus(id, status);
+      await api.updateBranchTransferStatus(authToken, id, status);
       await Promise.all([loadProducts(), loadBranchTransfers()]);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao movimentar filial.";
       setError(message);
-      Alert.alert("Movimentacao nao concluida", message);
+      Alert.alert("Movimentação não concluída", message);
     } finally {
       setLoading(false);
     }
@@ -246,12 +370,12 @@ function MainApp() {
 
   function confirmCancelBranchTransfer(id: string) {
     Alert.alert(
-      "Cancelar movimentacao?",
-      "O estoque reservado sera devolvido para a filial de origem.",
+      "Cancelar movimentação?",
+      "O estoque reservado será devolvido para a filial de origem.",
       [
         { text: "Voltar", style: "cancel" },
         {
-          text: "Cancelar movimentacao",
+          text: "Cancelar movimentação",
           style: "destructive",
           onPress: () => cancelBranchTransfer(id)
         }
@@ -260,21 +384,187 @@ function MainApp() {
   }
 
   async function cancelBranchTransfer(id: string) {
+    if (!authToken) return;
+
     try {
       setLoading(true);
       setError(null);
-      await api.cancelBranchTransfer(id);
+      await api.cancelBranchTransfer(authToken, id);
       await Promise.all([loadProducts(), loadBranchTransfers()]);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao cancelar movimentacao.";
+      const message = err instanceof Error ? err.message : "Erro ao cancelar movimentação.";
       setError(message);
-      Alert.alert("Cancelamento nao concluido", message);
+      Alert.alert("Cancelamento não concluído", message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function updateManagedUser(user: AuthUser, changes: Partial<AuthUser>) {
+    if (!authToken) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const updatedUser = await api.updateUserAccess(authToken, user._id, {
+        role: changes.role,
+        plan: changes.plan,
+        enabled: changes.enabled,
+        modules: changes.modules
+      });
+      setManagedUsers((current) => current.map((item) => (item._id === updatedUser._id ? updatedUser : item)));
+      if (currentUser?._id === updatedUser._id) {
+        setCurrentUser(updatedUser);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao atualizar acesso.";
+      setError(message);
+      Alert.alert("Acesso não atualizado", message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function toggleUserEnabled(user: AuthUser) {
+    updateManagedUser(user, { enabled: !user.enabled });
+  }
+
+  function toggleUserModule(user: AuthUser, module: AppModule) {
+    const modules = user.modules.includes(module)
+      ? user.modules.filter((item) => item !== module)
+      : [...user.modules, module];
+
+    updateManagedUser(user, { modules });
+  }
+
+  function changeUserRole(user: AuthUser, role: UserRole) {
+    if (user.role === role) return;
+
+    const message =
+      role === "master"
+        ? "Tem certeza que deseja transformar este usuário em master? Ele terá acesso a todos os módulos e poderá gerenciar usuários padrão conforme o plano."
+        : "Tem certeza que deseja alterar a função deste usuário?";
+
+    Alert.alert("Alterar função?", message, [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Confirmar",
+        style: role === "master" ? "destructive" : "default",
+        onPress: () => updateManagedUser(user, { role })
+      }
+    ]);
+  }
+
+  function changeUserPlan(user: AuthUser, plan: UserPlan) {
+    updateManagedUser(user, { plan });
+  }
+
+  async function createManagedUser(payload: CreateManagedUserPayload) {
+    if (!authToken) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const createdUser = await api.createUser(authToken, payload);
+      setManagedUsers((current) => [createdUser, ...current]);
+      Alert.alert("Acesso cadastrado", `Usuário ${createdUser.email} foi cadastrado.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao cadastrar usuário.";
+      setError(message);
+      Alert.alert("Cadastro não concluído", message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function updateProfile(payload: UpdateProfilePayload) {
+    if (!authToken) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const updatedUser = await api.updateProfile(authToken, payload);
+      setCurrentUser(updatedUser);
+      Alert.alert("Perfil atualizado", "Suas informações foram salvas.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao atualizar perfil.";
+      setError(message);
+      Alert.alert("Perfil não atualizado", message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function requestPasswordReset(email: string) {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await api.requestPasswordReset(email);
+      Alert.alert("Redefinição solicitada", result.resetToken ? `${result.message}\nToken dev: ${result.resetToken}` : result.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao solicitar redefinição.";
+      setError(message);
+      Alert.alert("Redefinição não solicitada", message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function adminResetPassword(user: AuthUser, password: string) {
+    if (!authToken) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      await api.adminResetPassword(authToken, user._id, password);
+      Alert.alert("Senha atualizada", `A senha de ${user.email} foi redefinida.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao redefinir senha.";
+      setError(message);
+      Alert.alert("Senha não atualizada", message);
     } finally {
       setLoading(false);
     }
   }
 
   const editingProduct = editingProductIndex === null ? null : pendingProducts[editingProductIndex];
+  const notifications: AppNotification[] = [
+    ...(error
+      ? [
+          {
+            id: "error",
+            title: "Atenção",
+            text: error,
+            tone: "error" as const
+          }
+        ]
+      : []),
+    ...(pendingProducts.length > 0
+      ? [
+          {
+            id: "pending-products",
+            title: "Entrada pendente",
+            text: `${pendingProducts.length} produto(s) aguardando envio ao estoque.`,
+            tone: "warning" as const
+          }
+        ]
+      : [])
+  ];
+
+  if (!currentUser) {
+    return (
+      <View style={styles.safeArea}>
+        <StatusBar style="dark" />
+        <AuthScreen
+          loading={loading}
+          error={error}
+          onLogin={handleLogin}
+          onRegister={handleRegister}
+          onRequestPasswordReset={requestPasswordReset}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.safeArea}>
@@ -282,9 +572,13 @@ function MainApp() {
       <AppHeader
         title={getScreenTitle(screen, pendingInvoice)}
         onMenuPress={() => setMenuOpen(true)}
+        onNotificationPress={() => {
+          setError(null);
+          setScreen("notifications");
+        }}
         loading={loading}
         topInset={insets.top}
-        hasNotification={pendingProducts.length > 0 || !!error}
+        hasNotification={notifications.length > 0}
       />
 
       <View style={styles.screenBody}>
@@ -294,10 +588,12 @@ function MainApp() {
           <HomeScreen
             productsCount={products.length}
             pendingCount={pendingProducts.length}
+            user={currentUser}
             onScan={goToScan}
             onProducts={goToProducts}
             onBranches={goToBranches}
-            onSimulate={() => handleInvoicePreview(api.simulateInvoice)}
+            onAccess={goToAccess}
+            onSimulate={simulateInvoice}
           />
         )}
 
@@ -309,21 +605,15 @@ function MainApp() {
             topInset={insets.top}
             onRequestPermission={requestPermission}
             onBarcodeScanned={handleBarcodeScanned}
-            onSimulate={() => handleInvoicePreview(api.simulateInvoice)}
+            onSimulate={simulateInvoice}
           />
         )}
 
         {screen === "products" && (
           <ProductsScreen
-            pendingInvoice={pendingInvoice}
-            pendingProducts={pendingProducts}
             products={products}
-            loading={loading}
-            onUpdateProduct={updatePendingProduct}
-            onEditProduct={setEditingProductIndex}
-            onCommit={confirmCommitStock}
             onScan={goToScan}
-            onSimulate={() => handleInvoicePreview(api.simulateInvoice)}
+            onSimulate={simulateInvoice}
             onRegisterMissingDelivered={registerMissingDelivered}
           />
         )}
@@ -357,11 +647,36 @@ function MainApp() {
             onCancelTransfer={confirmCancelBranchTransfer}
           />
         )}
+
+        {screen === "access" && (
+          <AccessManagementScreen
+            currentUser={currentUser}
+            users={managedUsers}
+            loading={loading}
+            onCreateUser={createManagedUser}
+            onToggleEnabled={toggleUserEnabled}
+            onToggleModule={toggleUserModule}
+            onChangeRole={changeUserRole}
+            onChangePlan={changeUserPlan}
+            onAdminResetPassword={adminResetPassword}
+          />
+        )}
+
+        {screen === "profile" && (
+          <ProfileScreen
+            user={currentUser}
+            loading={loading}
+            onUpdateProfile={updateProfile}
+          />
+        )}
+
+        {screen === "notifications" && <NotificationsScreen notifications={notifications} />}
       </View>
 
       <BottomNav
         activeScreen={screen}
         bottomInset={insets.bottom}
+        user={currentUser}
         onHome={() => {
           setError(null);
           setScreen("home");
@@ -372,6 +687,7 @@ function MainApp() {
 
       <SideMenu
         visible={menuOpen}
+        user={currentUser}
         onClose={() => setMenuOpen(false)}
         onHome={() => {
           setScreen("home");
@@ -380,9 +696,12 @@ function MainApp() {
         onScan={goToScan}
         onProducts={goToProducts}
         onBranches={goToBranches}
+        onProfile={goToProfile}
+        onAccess={goToAccess}
+        onLogout={logout}
         onSimulate={() => {
           setMenuOpen(false);
-          handleInvoicePreview(api.simulateInvoice);
+          simulateInvoice();
         }}
         topInset={insets.top}
       />
@@ -397,6 +716,19 @@ function MainApp() {
           }
         }}
       />
+
+      <InvoiceReviewModal
+        visible={!!pendingInvoice}
+        pendingInvoice={pendingInvoice}
+        pendingProducts={pendingProducts}
+        loading={loading}
+        onUpdateProduct={updatePendingProduct}
+        onEditProduct={setEditingProductIndex}
+        onCommit={confirmCommitStock}
+        onClose={closeInvoiceReview}
+        onBackToScan={backToScannerFromReview}
+      />
+
     </View>
   );
 }
