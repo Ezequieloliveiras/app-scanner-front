@@ -7,12 +7,14 @@ export function ProductsScreen({
   products,
   onScan,
   onSimulate,
-  onRegisterMissingDelivered
+  onRegisterMissingDelivered,
+  onCreateStockRequest
 }: {
   products: Product[];
   onScan: () => void;
   onSimulate: () => void;
   onRegisterMissingDelivered: (productId: string, quantity: number, observation?: string) => Promise<void>;
+  onCreateStockRequest: (productId: string, quantity: number, observation?: string) => Promise<void>;
 }) {
   return (
     <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
@@ -28,7 +30,11 @@ export function ProductsScreen({
       </View>
 
       <Text style={styles.sectionTitle}>Produtos em estoque</Text>
-      <ProductList products={products} onRegisterMissingDelivered={onRegisterMissingDelivered} />
+      <ProductList
+        products={products}
+        onRegisterMissingDelivered={onRegisterMissingDelivered}
+        onCreateStockRequest={onCreateStockRequest}
+      />
     </ScrollView>
   );
 }

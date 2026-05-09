@@ -5,10 +5,11 @@ export const MODULE_LABELS: Record<AppModule, string> = {
   scan: "Scanner",
   products: "Produtos",
   branches: "Filial",
+  stock_requests: "Análise de solicitações",
   access: "Acessos"
 };
 
-export const APP_MODULES: AppModule[] = ["scan", "products", "branches", "access"];
+export const APP_MODULES: AppModule[] = ["scan", "products", "branches", "stock_requests", "access"];
 
 export const PLAN_LABELS = {
   basic: "Basic",
@@ -35,6 +36,7 @@ export function canAccessModule(user: AuthUser | null, module: AppModule) {
 export function getScreenTitle(screen: Screen, pendingInvoice: InvoiceResult | null) {
   if (screen === "scan") return "Escanear nota";
   if (screen === "branches") return "Filial";
+  if (screen === "stock_requests") return "Solicitações";
   if (screen === "access") return "Acessos";
   if (screen === "profile") return "Perfil";
   if (screen === "notifications") return "Notificações";

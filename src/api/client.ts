@@ -13,9 +13,11 @@ import {
   BranchTransfer,
   BranchTransferStatus,
   CreateBranchTransferPayload,
+  CreateStockRequestPayload,
   InvoiceResult,
   MissingDeliveredPayload,
-  Product
+  Product,
+  StockRequest
 } from "../types/product";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3333";
@@ -136,6 +138,26 @@ export const api = {
       method: "POST",
       token,
       body: JSON.stringify(payload)
+    });
+  },
+
+  listStockRequests(token: string) {
+    return request<StockRequest[]>("/api/stock-requests", { token });
+  },
+
+  createStockRequest(token: string, payload: CreateStockRequestPayload) {
+    return request<StockRequest>("/api/stock-requests", {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload)
+    });
+  },
+
+  updateStockRequestStatus(token: string, id: string, status: "approved" | "rejected", observation?: string) {
+    return request<StockRequest>(`/api/stock-requests/${id}/status`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify({ status, observation })
     });
   },
 

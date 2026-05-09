@@ -12,10 +12,12 @@ export function SideMenu({
   onScan,
   onProducts,
   onBranches,
+  onStockRequests,
   onProfile,
   onAccess,
   onLogout,
   onSimulate,
+  hasPendingStockRequests = false,
   topInset
 }: {
   visible: boolean;
@@ -25,10 +27,12 @@ export function SideMenu({
   onScan: () => void;
   onProducts: () => void;
   onBranches: () => void;
+  onStockRequests: () => void;
   onProfile: () => void;
   onAccess: () => void;
   onLogout: () => void;
   onSimulate: () => void;
+  hasPendingStockRequests?: boolean;
   topInset: number;
 }) {
   return (
@@ -47,6 +51,14 @@ export function SideMenu({
           {canAccessModule(user, "scan") && <MenuItem icon="camera-outline" label="Escanear" onPress={onScan} />}
           {canAccessModule(user, "products") && <MenuItem icon="cube-outline" label="Ver produtos" onPress={onProducts} />}
           {canAccessModule(user, "branches") && <MenuItem icon="git-compare-outline" label="Filial" onPress={onBranches} />}
+          {canAccessModule(user, "stock_requests") && (
+            <MenuItem
+              icon="file-tray-full-outline"
+              label="Solicitações"
+              hasBadge={hasPendingStockRequests}
+              onPress={onStockRequests}
+            />
+          )}
           {canManageAccess(user) && <MenuItem icon="people-outline" label="Gerenciar acessos" onPress={onAccess} />}
           {canAccessModule(user, "scan") && <MenuItem icon="document-text-outline" label="Simular XML" onPress={onSimulate} />}
           <MenuItem icon="log-out-outline" label="Sair" onPress={onLogout} />

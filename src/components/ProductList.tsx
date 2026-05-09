@@ -17,12 +17,18 @@ import { Product, StockEntry } from "../types/product";
 type Props = {
   products: Product[];
   onRegisterMissingDelivered: (productId: string, quantity: number, observation?: string) => Promise<void>;
+  onCreateStockRequest: (productId: string, quantity: number, observation?: string) => Promise<void>;
 };
 
-export function ProductList({ products, onRegisterMissingDelivered }: Props) {
+type ExpandedAction = "missing" | "withdraw" | null;
+
+export function ProductList({ products, onRegisterMissingDelivered, onCreateStockRequest }: Props) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantityInput, setQuantityInput] = useState("");
   const [observationInput, setObservationInput] = useState("");
+  const [withdrawQuantityInput, setWithdrawQuantityInput] = useState("");
+  const [withdrawObservationInput, setWithdrawObservationInput] = useState("");
+  const [expandedAction, setExpandedAction] = useState<ExpandedAction>(null);
   const [saving, setSaving] = useState(false);
 
   if (!products.length) {
@@ -49,10 +55,38 @@ export function ProductList({ products, onRegisterMissingDelivered }: Props) {
       await onRegisterMissingDelivered(selectedProduct._id, quantity, observationInput.trim() || "Entrada faltante entregue");
       setQuantityInput("");
       setObservationInput("");
-      setSelectedProduct(null);
+      setExpandedAction(null);
       Alert.alert("Entrada registrada", "A entrega faltante foi adicionada ao estoque.");
     } catch (error) {
       Alert.alert("Não foi possível registrar", error instanceof Error ? error.message : "Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function createStockRequest() {
+    if (!selectedProduct || saving) return;
+
+    const quantity = parseQuantity(withdrawQuantityInput);
+
+    if (quantity <= 0) {
+      Alert.alert("Quantidade invalida", "Informe a quantidade para retirada.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await onCreateStockRequest(
+        selectedProduct._id,
+        quantity,
+        withdrawObservationInput.trim() || "Solicitação de retirada de estoque"
+      );
+      setWithdrawQuantityInput("");
+      setWithdrawObservationInput("");
+      setExpandedAction(null);
+      Alert.alert("Solicitação enviada", "A retirada de estoque foi enviada para analise.");
+    } catch (error) {
+      Alert.alert("Nao foi possivel solicitar", error instanceof Error ? error.message : "Tente novamente.");
     } finally {
       setSaving(false);
     }
@@ -75,6 +109,9 @@ export function ProductList({ products, onRegisterMissingDelivered }: Props) {
                   setSelectedProduct(product);
                   setQuantityInput("");
                   setObservationInput("");
+                  setWithdrawQuantityInput("");
+                  setWithdrawObservationInput("");
+                  setExpandedAction(null);
                 }}
               >
                 <Ionicons name="information-circle-outline" size={22} color="#0f766e" />
@@ -123,7 +160,9 @@ export function ProductList({ products, onRegisterMissingDelivered }: Props) {
                 <View key={`${entry.createdAt}-${index}`} style={styles.historyItem}>
                   <View style={styles.historyTopRow}>
                     <Text style={styles.historyType}>{getEntryLabel(entry)}</Text>
-                    <Text style={styles.historyQuantity}>+{entry.quantity}</Text>
+                    <Text style={[styles.historyQuantity, isWithdrawalApproved(entry) && styles.historyQuantityOut]}>
+                      {getEntryQuantity(entry)}
+                    </Text>
                   </View>
                   <Text style={styles.historyMeta}>{formatDate(entry.createdAt)}</Text>
                   {entry.invoiceKey && <Text style={styles.historyMeta}>Chave: {entry.invoiceKey}</Text>}
@@ -132,8 +171,15 @@ export function ProductList({ products, onRegisterMissingDelivered }: Props) {
               ))}
             </ScrollView>
 
-            <View style={styles.missingBox}>
-              <Text style={styles.sectionTitle}>Faltante entregue</Text>
+            <View style={styles.actionArea}>
+              <ActionHeader
+                title="Incluir faltante"
+                icon="add-circle-outline"
+                expanded={expandedAction === "missing"}
+                onPress={() => setExpandedAction(expandedAction === "missing" ? null : "missing")}
+              />
+              {expandedAction === "missing" && (
+                <View style={styles.actionBody}>
               <TextInput
                 value={quantityInput}
                 onChangeText={setQuantityInput}
@@ -154,6 +200,39 @@ export function ProductList({ products, onRegisterMissingDelivered }: Props) {
                 <Ionicons name="add-circle-outline" size={18} color="#ffffff" />
                 <Text style={styles.saveButtonText}>Adicionar ao estoque</Text>
               </Pressable>
+                </View>
+              )}
+
+              <ActionHeader
+                title="Solicitar retirada de estoque"
+                icon="file-tray-full-outline"
+                expanded={expandedAction === "withdraw"}
+                onPress={() => setExpandedAction(expandedAction === "withdraw" ? null : "withdraw")}
+              />
+              {expandedAction === "withdraw" && (
+                <View style={styles.actionBody}>
+                  <TextInput
+                    value={withdrawQuantityInput}
+                    onChangeText={setWithdrawQuantityInput}
+                    keyboardType="decimal-pad"
+                    placeholder="Quantidade para retirada"
+                    returnKeyType="next"
+                    style={styles.input}
+                  />
+                  <TextInput
+                    value={withdrawObservationInput}
+                    onChangeText={setWithdrawObservationInput}
+                    placeholder="Observacao da solicitacao"
+                    style={[styles.input, styles.textArea]}
+                    multiline
+                    returnKeyType="done"
+                  />
+                  <Pressable style={[styles.saveButton, saving && styles.disabledButton]} disabled={saving} onPress={createStockRequest}>
+                    <Ionicons name="send-outline" size={18} color="#ffffff" />
+                    <Text style={styles.saveButtonText}>Enviar solicitacao</Text>
+                  </Pressable>
+                </View>
+              )}
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -162,12 +241,62 @@ export function ProductList({ products, onRegisterMissingDelivered }: Props) {
   );
 }
 
+function ActionHeader({
+  title,
+  icon,
+  expanded,
+  onPress
+}: {
+  title: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  expanded: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={styles.actionHeader} onPress={onPress}>
+      <View style={styles.actionHeaderTitle}>
+        <Ionicons name={icon} size={20} color="#0f766e" />
+        <Text style={styles.actionHeaderText}>{title}</Text>
+      </View>
+      <Ionicons name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={20} color="#0f766e" />
+    </Pressable>
+  );
+}
+
 function getEntryLabel(entry: StockEntry) {
   if (entry.type === "missing_delivered" || entry.source === "faltante_entregue") {
     return "Faltante entregue";
   }
 
+  if (entry.type === "stock_withdraw_requested") {
+    return "Retirada solicitada";
+  }
+
+  if (entry.type === "stock_withdraw_approved") {
+    return "Retirada aprovada";
+  }
+
+  if (entry.type === "stock_withdraw_rejected") {
+    return "Retirada reprovada";
+  }
+
   return "Entrada da nota";
+}
+
+function isWithdrawalApproved(entry: StockEntry) {
+  return entry.type === "stock_withdraw_approved";
+}
+
+function getEntryQuantity(entry: StockEntry) {
+  if (isWithdrawalApproved(entry)) {
+    return `-${entry.quantity}`;
+  }
+
+  if (entry.type === "stock_withdraw_requested" || entry.type === "stock_withdraw_rejected") {
+    return `${entry.quantity}`;
+  }
+
+  return `+${entry.quantity}`;
 }
 
 function formatDate(value: string) {
@@ -348,6 +477,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "900"
   },
+  historyQuantityOut: {
+    color: "#991b1b"
+  },
   historyMeta: {
     marginTop: 4,
     color: "#64748b",
@@ -366,11 +498,38 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18
   },
-  missingBox: {
+  actionArea: {
     gap: 8,
     borderTopWidth: 1,
     borderTopColor: "#e2e8f0",
     paddingTop: 12
+  },
+  actionHeader: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: "#d8dee9",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    backgroundColor: "#f8fafc"
+  },
+  actionHeaderTitle: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  actionHeaderText: {
+    flex: 1,
+    color: "#1f2937",
+    fontSize: 14,
+    fontWeight: "900"
+  },
+  actionBody: {
+    gap: 8
   },
   input: {
     minHeight: 44,

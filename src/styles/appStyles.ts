@@ -60,6 +60,12 @@ export const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: "#ef4444"
   },
+  menuNotificationDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: "#ef4444"
+  },
   notificationItem: {
     minHeight: 58,
     borderWidth: 1,
@@ -70,6 +76,43 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     backgroundColor: "#f8fafc"
+  },
+  notificationActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8
+  },
+  notificationActionButton: {
+    minHeight: 38,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#0f766e"
+  },
+  notificationActionText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  notificationRejectButton: {
+    minHeight: 38,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#fee2e2"
+  },
+  notificationRejectText: {
+    color: "#991b1b",
+    fontSize: 12,
+    fontWeight: "900"
   },
   bottomNav: {
     flexDirection: "row",
@@ -217,7 +260,17 @@ export const styles = StyleSheet.create({
     borderColor: "#d8dee9",
     borderRadius: 8,
     padding: 14,
+    position: "relative",
     backgroundColor: "#ffffff"
+  },
+  homeActionNotificationDot: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#ef4444"
   },
   homeActionIcon: {
     width: 48,
@@ -413,7 +466,8 @@ export const styles = StyleSheet.create({
     textAlign: "right",
     color: "#0f766e",
     fontSize: 18,
-    fontWeight: "900"
+    fontWeight: "900",
+    paddingRight: 6
   },
   editButton: {
     width: 42,
@@ -562,6 +616,46 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 14,
     backgroundColor: "#f8fafc"
+  },
+  stockRequestCard: {
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "#d8dee9",
+    borderRadius: 8,
+    padding: 14,
+    backgroundColor: "#f8fafc"
+  },
+  stockRequestStatus: {
+    alignSelf: "flex-start",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    overflow: "hidden",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  stockRequestObservation: {
+    borderLeftWidth: 4,
+    borderLeftColor: "#f59e0b",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    color: "#78350f",
+    backgroundColor: "#fffbeb",
+    fontSize: 13,
+    lineHeight: 18
+  },
+  stockRequestPending: {
+    color: "#92400e",
+    backgroundColor: "#fef3c7"
+  },
+  stockRequestApproved: {
+    color: "#0f766e",
+    backgroundColor: "#ccfbf1"
+  },
+  stockRequestRejected: {
+    color: "#991b1b",
+    backgroundColor: "#fee2e2"
   },
   transferIdRow: {
     alignSelf: "flex-start",
@@ -921,5 +1015,15 @@ export const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
     fontSize: 15,
     textAlignVertical: "top"
-  }
+  },
+  transferRightArea: {
+    alignItems: "flex-end",
+    gap: 8
+  },
+  transferFooterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 6
+  },
 });

@@ -1,7 +1,7 @@
 export type StockEntry = {
   quantity: number;
   source: string;
-  type?: "invoice_entry" | "missing_delivered";
+  type?: "invoice_entry" | "missing_delivered" | "stock_withdraw_requested" | "stock_withdraw_approved" | "stock_withdraw_rejected";
   invoiceKey?: string;
   observation?: string;
   createdAt: string;
@@ -83,5 +83,39 @@ export type CreateBranchTransferPayload = {
   targetBranch: string;
   targetBranchCode?: string;
   lot?: string;
+  observation?: string;
+};
+
+export type StockRequestStatus = "pending" | "approved" | "rejected";
+
+export type StockRequestHistory = {
+  status: StockRequestStatus;
+  observation?: string;
+  actorName?: string;
+  createdAt: string;
+};
+
+export type StockRequest = {
+  _id: string;
+  product: string;
+  productName: string;
+  ean: string;
+  quantity: number;
+  observation?: string;
+  status: StockRequestStatus;
+  requester: string;
+  requesterName: string;
+  requesterEmail: string;
+  reviewer?: string;
+  reviewerName?: string;
+  reviewedAt?: string;
+  reviewObservation?: string;
+  history: StockRequestHistory[];
+  createdAt: string;
+};
+
+export type CreateStockRequestPayload = {
+  productId: string;
+  quantity: number;
   observation?: string;
 };

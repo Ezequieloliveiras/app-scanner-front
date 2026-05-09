@@ -1,10 +1,18 @@
 import { InvoicePreviewProduct } from "./product";
 
-export type Screen = "home" | "scan" | "products" | "branches" | "access" | "profile" | "notifications";
+export type Screen =
+  | "home"
+  | "scan"
+  | "products"
+  | "branches"
+  | "stock_requests"
+  | "access"
+  | "profile"
+  | "notifications";
 export type AuthMode = "login" | "register" | "reset";
 export type UserRole = "main" | "master" | "default";
 export type UserPlan = "basic" | "premium" | "pro";
-export type AppModule = "scan" | "products" | "branches" | "access";
+export type AppModule = "scan" | "products" | "branches" | "stock_requests" | "access";
 
 export type EditableInvoiceProduct = InvoicePreviewProduct & {
   quantityInput: string;

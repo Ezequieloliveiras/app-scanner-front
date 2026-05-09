@@ -6,19 +6,23 @@ import { HomeAction } from "./HomeAction";
 export function HomeScreen({
   productsCount,
   pendingCount,
+  pendingStockRequestsCount = 0,
   user,
   onScan,
   onProducts,
   onBranches,
+  onStockRequests,
   onAccess,
   onSimulate
 }: {
   productsCount: number;
   pendingCount: number;
+  pendingStockRequestsCount?: number;
   user: AuthUser;
   onScan: () => void;
   onProducts: () => void;
   onBranches: () => void;
+  onStockRequests: () => void;
   onAccess: () => void;
   onSimulate: () => void;
 }) {
@@ -44,6 +48,15 @@ export function HomeScreen({
         {canAccessModule(user, "products") && <HomeAction icon="cube-outline" title="Produtos" text="Ver estoque" onPress={onProducts} />}
         {canAccessModule(user, "branches") && (
           <HomeAction icon="git-compare-outline" title="Filial" text="Movimentar estoque" onPress={onBranches} />
+        )}
+        {canAccessModule(user, "stock_requests") && (
+          <HomeAction
+            icon="file-tray-full-outline"
+            title="Solicitações"
+            text="Analisar retiradas"
+            hasBadge={pendingStockRequestsCount > 0}
+            onPress={onStockRequests}
+          />
         )}
         {canManageAccess(user) && <HomeAction icon="people-outline" title="Acessos" text="Gerenciar usuários" onPress={onAccess} />}
         {canAccessModule(user, "scan") && <HomeAction icon="document-text-outline" title="XML" text="Simular leitura" onPress={onSimulate} />}

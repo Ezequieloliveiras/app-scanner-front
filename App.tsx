@@ -17,6 +17,7 @@ import { ProductsScreen } from "./src/components/ProductsScreen";
 import { ProfileScreen } from "./src/components/ProfileScreen";
 import { ScanScreen } from "./src/components/ScanScreen";
 import { SideMenu } from "./src/components/SideMenu";
+import { StockRequestsScreen } from "./src/components/StockRequestsScreen";
 import { styles } from "./src/styles/appStyles";
 import {
   AppModule,
@@ -30,7 +31,7 @@ import {
   UserPlan,
   UserRole
 } from "./src/types/app";
-import { BranchTransfer, BranchTransferStatus, InvoiceResult, Product } from "./src/types/product";
+import { BranchTransfer, BranchTransferStatus, InvoiceResult, Product, StockRequest } from "./src/types/product";
 import { canAccessModule, canManageAccess, formatQuantity, getScreenTitle, parseQuantity } from "./src/utils/appHelpers";
 
 const BRANCH_OPTIONS: BranchOption[] = [
@@ -57,6 +58,7 @@ function MainApp() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [branchTransfers, setBranchTransfers] = useState<BranchTransfer[]>([]);
+  const [stockRequests, setStockRequests] = useState<StockRequest[]>([]);
   const [branchProductId, setBranchProductId] = useState("");
   const [branchProductSearch, setBranchProductSearch] = useState("");
   const [sourceBranch, setSourceBranch] = useState<BranchOption>(BRANCH_OPTIONS[0]);
@@ -85,16 +87,23 @@ function MainApp() {
     setBranchTransfers(data);
   }, [authToken]);
 
+  const loadStockRequests = useCallback(async () => {
+    if (!authToken) return;
+    const data = await api.listStockRequests(authToken);
+    setStockRequests(data);
+  }, [authToken]);
+
   useEffect(() => {
     if (!currentUser) return;
 
     loadProducts().catch(() => {
       setError("Não consegui conectar na API. Confira se o backend está rodando.");
     });
+    loadStockRequests().catch(() => undefined);
     if (canAccessModule(currentUser, "branches")) {
       loadBranchTransfers().catch(() => undefined);
     }
-  }, [currentUser, loadProducts, loadBranchTransfers]);
+  }, [currentUser, loadProducts, loadBranchTransfers, loadStockRequests]);
 
   const loadManagedUsers = useCallback(async () => {
     if (!authToken) return;
@@ -138,6 +147,7 @@ function MainApp() {
     setAuthToken(null);
     setCurrentUser(null);
     setManagedUsers([]);
+    setStockRequests([]);
     setPendingInvoice(null);
     setPendingProducts([]);
     setEditingProductIndex(null);
@@ -195,6 +205,7 @@ function MainApp() {
     setMenuOpen(false);
     setScreen("products");
     loadProducts().catch(() => setError("Não consegui atualizar os produtos."));
+    loadStockRequests().catch(() => undefined);
   }
 
   function goToBranches() {
@@ -203,6 +214,14 @@ function MainApp() {
     setMenuOpen(false);
     setScreen("branches");
     Promise.all([loadProducts(), loadBranchTransfers()]).catch(() => setError("Não consegui atualizar filial."));
+  }
+
+  function goToStockRequests() {
+    if (!ensureModule("stock_requests")) return;
+    setError(null);
+    setMenuOpen(false);
+    setScreen("stock_requests");
+    loadStockRequests().catch(() => setError("Nao consegui atualizar as solicitacoes."));
   }
 
   function goToAccess() {
@@ -306,6 +325,51 @@ function MainApp() {
       observation
     });
     await loadProducts();
+  }
+
+  async function createStockRequest(productId: string, quantity: number, observation?: string) {
+    if (!authToken) return;
+
+    await api.createStockRequest(authToken, {
+      productId,
+      quantity,
+      observation
+    });
+    await Promise.all([loadProducts(), loadStockRequests()]);
+  }
+
+  function confirmStockRequestStatus(id: string, status: "approved" | "rejected") {
+    const approved = status === "approved";
+
+    Alert.alert(
+      approved ? "Aceitar retirada?" : "Recusar retirada?",
+      approved ? "O estoque será baixado do produto." : "A solicitação será marcada como recusada.",
+      [
+        { text: "Voltar", style: "cancel" },
+        {
+          text: approved ? "Aceitar" : "Recusar",
+          style: approved ? "default" : "destructive",
+          onPress: () => updateStockRequestStatus(id, status)
+        }
+      ]
+    );
+  }
+
+  async function updateStockRequestStatus(id: string, status: "approved" | "rejected") {
+    if (!authToken) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      await api.updateStockRequestStatus(authToken, id, status);
+      await Promise.all([loadProducts(), loadStockRequests()]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao analisar solicitação.";
+      setError(message);
+      Alert.alert("Solicitação não atualizada", message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function createBranchTransfer() {
@@ -528,6 +592,10 @@ function MainApp() {
   }
 
   const editingProduct = editingProductIndex === null ? null : pendingProducts[editingProductIndex];
+  const canAnalyzeStockRequests = canAccessModule(currentUser, "stock_requests");
+  const pendingStockRequests = canAnalyzeStockRequests
+    ? stockRequests.filter((request) => request.status === "pending")
+    : [];
   const notifications: AppNotification[] = [
     ...(error
       ? [
@@ -550,6 +618,7 @@ function MainApp() {
         ]
       : [])
   ];
+  const hasNotifications = notifications.length + pendingStockRequests.length > 0;
 
   if (!currentUser) {
     return (
@@ -578,7 +647,7 @@ function MainApp() {
         }}
         loading={loading}
         topInset={insets.top}
-        hasNotification={notifications.length > 0}
+        hasNotification={hasNotifications}
       />
 
       <View style={styles.screenBody}>
@@ -588,10 +657,12 @@ function MainApp() {
           <HomeScreen
             productsCount={products.length}
             pendingCount={pendingProducts.length}
+            pendingStockRequestsCount={pendingStockRequests.length}
             user={currentUser}
             onScan={goToScan}
             onProducts={goToProducts}
             onBranches={goToBranches}
+            onStockRequests={goToStockRequests}
             onAccess={goToAccess}
             onSimulate={simulateInvoice}
           />
@@ -615,6 +686,7 @@ function MainApp() {
             onScan={goToScan}
             onSimulate={simulateInvoice}
             onRegisterMissingDelivered={registerMissingDelivered}
+            onCreateStockRequest={createStockRequest}
           />
         )}
 
@@ -648,6 +720,15 @@ function MainApp() {
           />
         )}
 
+        {screen === "stock_requests" && (
+          <StockRequestsScreen
+            requests={stockRequests}
+            loading={loading}
+            onApprove={(id) => confirmStockRequestStatus(id, "approved")}
+            onReject={(id) => confirmStockRequestStatus(id, "rejected")}
+          />
+        )}
+
         {screen === "access" && (
           <AccessManagementScreen
             currentUser={currentUser}
@@ -670,7 +751,16 @@ function MainApp() {
           />
         )}
 
-        {screen === "notifications" && <NotificationsScreen notifications={notifications} />}
+        {screen === "notifications" && (
+          <NotificationsScreen
+            notifications={notifications}
+            stockRequests={stockRequests}
+            canAnalyzeStockRequests={canAnalyzeStockRequests}
+            loading={loading}
+            onApproveStockRequest={(id) => confirmStockRequestStatus(id, "approved")}
+            onRejectStockRequest={(id) => confirmStockRequestStatus(id, "rejected")}
+          />
+        )}
       </View>
 
       <BottomNav
@@ -696,9 +786,11 @@ function MainApp() {
         onScan={goToScan}
         onProducts={goToProducts}
         onBranches={goToBranches}
+        onStockRequests={goToStockRequests}
         onProfile={goToProfile}
         onAccess={goToAccess}
         onLogout={logout}
+        hasPendingStockRequests={pendingStockRequests.length > 0}
         onSimulate={() => {
           setMenuOpen(false);
           simulateInvoice();
