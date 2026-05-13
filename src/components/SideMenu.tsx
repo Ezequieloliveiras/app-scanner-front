@@ -9,6 +9,7 @@ export function SideMenu({
   user,
   onClose,
   onHome,
+  onDashboard,
   onScan,
   onProducts,
   onBranches,
@@ -25,6 +26,7 @@ export function SideMenu({
   user: AuthUser;
   onClose: () => void;
   onHome: () => void;
+  onDashboard: () => void;
   onScan: () => void;
   onProducts: () => void;
   onBranches: () => void;
@@ -49,6 +51,7 @@ export function SideMenu({
             </Pressable>
           </View>
           <MenuItem icon="home-outline" label="Início" onPress={onHome} />
+          {canAccessModule(user, "dashboard") && <MenuItem icon="analytics-outline" label="Dashboard" onPress={onDashboard} />}
           <MenuItem icon="person-circle-outline" label="Perfil" onPress={onProfile} />
           <MenuItem icon="card-outline" label="Planos" onPress={onBilling} />
           {canAccessModule(user, "scan") && <MenuItem icon="camera-outline" label="Escanear" onPress={onScan} />}

@@ -2,6 +2,7 @@ import { BranchTransfer, BranchTransferStatus, InvoiceResult, Product } from "..
 import { AppModule, AuthUser, BranchOption, PlanDefinition, Screen, UserPlan } from "../types/app";
 
 export const MODULE_LABELS: Record<AppModule, string> = {
+  dashboard: "Dashboard",
   scan: "Scanner",
   products: "Produtos",
   branches: "Filial",
@@ -9,7 +10,7 @@ export const MODULE_LABELS: Record<AppModule, string> = {
   access: "Acessos"
 };
 
-export const APP_MODULES: AppModule[] = ["scan", "products", "branches", "stock_requests", "access"];
+export const APP_MODULES: AppModule[] = ["dashboard", "scan", "products", "branches", "stock_requests", "access"];
 
 export const PLAN_LABELS = {
   free: "Free",
@@ -36,8 +37,9 @@ export const FALLBACK_PLANS: PlanDefinition[] = [
     description: "Para testar leitura e estoque central.",
     monthlyPriceCents: 0,
     maxManagedUsers: 0,
-    modules: ["scan", "products"],
+    modules: ["dashboard", "scan", "products"],
     features: [
+      { key: "dashboard", label: "Dashboard de estoque" },
       { key: "scan", label: "Scanner de notas" },
       { key: "products", label: "Produtos e estoque central" }
     ]
@@ -48,8 +50,9 @@ export const FALLBACK_PLANS: PlanDefinition[] = [
     description: "Equipe pequena com controle de acessos.",
     monthlyPriceCents: 4900,
     maxManagedUsers: 3,
-    modules: ["scan", "products", "access"],
+    modules: ["dashboard", "scan", "products", "access"],
     features: [
+      { key: "dashboard", label: "Dashboard de estoque" },
       { key: "scan", label: "Scanner de notas" },
       { key: "users", label: "Ate 3 usuarios" }
     ]
@@ -105,6 +108,7 @@ export function canAccessModule(user: AuthUser | null, module: AppModule) {
 }
 
 export function getScreenTitle(screen: Screen, pendingInvoice: InvoiceResult | null) {
+  if (screen === "dashboard") return "Dashboard";
   if (screen === "scan") return "Escanear nota";
   if (screen === "branches") return "Filial";
   if (screen === "stock_requests") return "Solicitações";

@@ -9,6 +9,7 @@ import { AppHeader } from "./src/components/AppHeader";
 import { AuthScreen } from "./src/components/AuthScreen";
 import { BottomNav } from "./src/components/BottomNav";
 import { BranchScreen } from "./src/components/BranchScreen";
+import { DashboardScreen } from "./src/components/DashboardScreen";
 import { HomeScreen } from "./src/components/HomeScreen";
 import { InvoiceReviewModal } from "./src/components/InvoiceReviewModal";
 import { AppNotification, NotificationsScreen } from "./src/components/NotificationsScreen";
@@ -238,6 +239,13 @@ function MainApp() {
     setScreen("products");
     loadProducts().catch(() => setError("Não consegui atualizar os produtos."));
     loadStockRequests().catch(() => undefined);
+  }
+
+  function goToDashboard() {
+    if (!ensureModule("dashboard")) return;
+    setError(null);
+    setMenuOpen(false);
+    setScreen("dashboard");
   }
 
   function goToBranches() {
@@ -727,6 +735,7 @@ function MainApp() {
             pendingStockRequestsCount={pendingStockRequests.length}
             user={currentUser}
             onScan={goToScan}
+            onDashboard={goToDashboard}
             onProducts={goToProducts}
             onBranches={goToBranches}
             onStockRequests={goToStockRequests}
@@ -748,6 +757,10 @@ function MainApp() {
             onCaptureWithAi={handleCaptureWithAi}
             onSimulate={simulateInvoice}
           />
+        )}
+
+        {screen === "dashboard" && authToken && (
+          <DashboardScreen token={authToken} />
         )}
 
         {screen === "products" && (
@@ -851,6 +864,7 @@ function MainApp() {
           setError(null);
           setScreen("home");
         }}
+        onDashboard={goToDashboard}
         onScan={goToScan}
         onProducts={goToProducts}
       />
@@ -863,6 +877,7 @@ function MainApp() {
           setScreen("home");
           setMenuOpen(false);
         }}
+        onDashboard={goToDashboard}
         onScan={goToScan}
         onProducts={goToProducts}
         onBranches={goToBranches}

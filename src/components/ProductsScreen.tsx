@@ -23,10 +23,10 @@ export function ProductsScreen({
           <Ionicons name="camera-outline" size={18} color="#ffffff" />
           <Text style={styles.primaryButtonText}>Escanear</Text>
         </Pressable>
-        <Pressable style={styles.secondaryButton} onPress={onSimulate}>
+        {/* <Pressable style={styles.secondaryButton} onPress={onSimulate}>
           <Ionicons name="document-text-outline" size={18} color="#0f766e" />
           <Text style={styles.secondaryButtonText}>Simular leitura de XML</Text>
-        </Pressable>
+        </Pressable> */}
       </View>
 
       <Text style={styles.sectionTitle}>Produtos em estoque</Text>

@@ -9,6 +9,7 @@ export function HomeScreen({
   pendingStockRequestsCount = 0,
   user,
   onScan,
+  onDashboard,
   onProducts,
   onBranches,
   onStockRequests,
@@ -21,6 +22,7 @@ export function HomeScreen({
   pendingStockRequestsCount?: number;
   user: AuthUser;
   onScan: () => void;
+  onDashboard: () => void;
   onProducts: () => void;
   onBranches: () => void;
   onStockRequests: () => void;
@@ -46,6 +48,9 @@ export function HomeScreen({
       </View>
 
       <View style={styles.quickGrid}>
+        {canAccessModule(user, "dashboard") && (
+          <HomeAction icon="analytics-outline" title="Dashboard" text="Produtos parados" onPress={onDashboard} />
+        )}
         {canAccessModule(user, "scan") && <HomeAction icon="camera-outline" title="Câmera" text="Escanear nota" onPress={onScan} />}
         {canAccessModule(user, "products") && <HomeAction icon="cube-outline" title="Produtos" text="Ver estoque" onPress={onProducts} />}
         {canAccessModule(user, "branches") && (
@@ -62,7 +67,7 @@ export function HomeScreen({
         )}
         {canManageAccess(user) && <HomeAction icon="people-outline" title="Acessos" text="Gerenciar usuários" onPress={onAccess} />}
         <HomeAction icon="card-outline" title="Planos" text={`Atual: ${PLAN_LABELS[user.plan]}`} onPress={onBilling} />
-        {canAccessModule(user, "scan") && <HomeAction icon="document-text-outline" title="XML" text="Simular leitura" onPress={onSimulate} />}
+        {/* {canAccessModule(user, "scan") && <HomeAction icon="document-text-outline" title="XML" text="Simular leitura" onPress={onSimulate} />} */}
       </View>
     </ScrollView>
   );

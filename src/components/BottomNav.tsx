@@ -8,6 +8,7 @@ export function BottomNav({
   bottomInset,
   user,
   onHome,
+  onDashboard,
   onScan,
   onProducts
 }: {
@@ -15,12 +16,16 @@ export function BottomNav({
   bottomInset: number;
   user: AuthUser;
   onHome: () => void;
+  onDashboard: () => void;
   onScan: () => void;
   onProducts: () => void;
 }) {
   return (
     <View style={[styles.bottomNav, { paddingBottom: Math.max(bottomInset, 10) }]}>
       <BottomNavItem icon="home-outline" label="Início" active={activeScreen === "home"} onPress={onHome} />
+      {canAccessModule(user, "dashboard") && (
+        <BottomNavItem icon="analytics-outline" label="Dash" active={activeScreen === "dashboard"} onPress={onDashboard} />
+      )}
       {canAccessModule(user, "scan") && (
         <BottomNavItem icon="camera-outline" label="Câmera" active={activeScreen === "scan"} onPress={onScan} />
       )}

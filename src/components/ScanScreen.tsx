@@ -83,10 +83,10 @@ export function ScanScreen({
           <Ionicons name="key-outline" size={18} color="#ffffff" />
           <Text style={styles.primaryButtonText}>Liberar camera</Text>
         </Pressable>
-        <Pressable style={styles.secondaryButton} onPress={onSimulate}>
+        {/* <Pressable style={styles.secondaryButton} onPress={onSimulate}>
           <Ionicons name="document-text-outline" size={18} color="#0f766e" />
           <Text style={styles.secondaryButtonText}>Simular leitura de XML</Text>
-        </Pressable>
+        </Pressable> */}
       </View>
     );
   }

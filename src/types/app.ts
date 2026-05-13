@@ -2,6 +2,7 @@ import { InvoicePreviewProduct } from "./product";
 
 export type Screen =
   | "home"
+  | "dashboard"
   | "scan"
   | "products"
   | "branches"
@@ -13,7 +14,7 @@ export type Screen =
 export type AuthMode = "login" | "register" | "reset";
 export type UserRole = "main" | "master" | "default";
 export type UserPlan = "free" | "basic" | "premium" | "pro" | "custom";
-export type AppModule = "scan" | "products" | "branches" | "stock_requests" | "access";
+export type AppModule = "dashboard" | "scan" | "products" | "branches" | "stock_requests" | "access";
 
 export type PlanDefinition = {
   id: UserPlan;
@@ -32,6 +33,59 @@ export type BillingCheckoutResult = {
   plan: PlanDefinition;
   checkoutUrl?: string;
   message: string;
+};
+
+export type DashboardProductStatus = "out_of_stock" | "without_movement" | "stopped" | "attention" | "healthy";
+export type DashboardAgingBucket = "sem_estoque" | "sem_movimentacao" | "0_7" | "8_30" | "31_60" | "61_90" | "90_plus";
+
+export type DashboardProduct = {
+  id: string;
+  name: string;
+  ean: string;
+  centralQuantity: number;
+  branchQuantity: number;
+  totalQuantity: number;
+  branchStocks: Array<{
+    branchName: string;
+    quantity: number;
+  }>;
+  lastMovementAt?: string;
+  lastMovementType?: string;
+  lastMovementSource?: string;
+  daysStopped: number | null;
+  status: DashboardProductStatus;
+  agingBucket: DashboardAgingBucket;
+  managementHint: string;
+};
+
+export type InventoryDashboard = {
+  generatedAt: string;
+  filters: {
+    product?: string;
+    minStoppedDays?: number;
+    stoppedDaysTo?: number;
+    onlyWithStock: boolean;
+    stoppedThresholdDays: number;
+    sortBy: "daysStopped" | "quantity" | "name";
+    sortDir: "asc" | "desc";
+    limit: number;
+  };
+  metrics: {
+    totalProducts: number;
+    stockedProducts: number;
+    totalUnitsInStock: number;
+    stoppedProducts: number;
+    withoutMovementProducts: number;
+    averageStoppedDays: number;
+    oldestProduct: {
+      id: string;
+      name: string;
+      daysStopped: number | null;
+      totalQuantity: number;
+    } | null;
+  };
+  agingBuckets: Record<DashboardAgingBucket, number>;
+  products: DashboardProduct[];
 };
 
 export type EditableInvoiceProduct = InvoicePreviewProduct & {

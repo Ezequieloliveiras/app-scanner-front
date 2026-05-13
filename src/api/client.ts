@@ -4,6 +4,7 @@ import {
   AuthUser,
   BillingCheckoutResult,
   CreateManagedUserPayload,
+  InventoryDashboard,
   PlanDefinition,
   RegisterCredentials,
   UpdateProfilePayload,
@@ -149,6 +150,19 @@ export const api = {
 
   listProducts(token: string) {
     return request<Product[]>("/api/products", { token });
+  },
+
+  getInventoryDashboard(token: string, query?: Record<string, string | number | boolean | undefined>) {
+    const params = new URLSearchParams();
+
+    Object.entries(query || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== "") {
+        params.set(key, String(value));
+      }
+    });
+
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+    return request<InventoryDashboard>(`/api/dashboard${suffix}`, { token });
   },
 
   registerMissingDelivered(token: string, productId: string, payload: MissingDeliveredPayload) {
