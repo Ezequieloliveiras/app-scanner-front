@@ -13,7 +13,6 @@ import { DashboardScreen } from "./src/components/DashboardScreen";
 import { HomeScreen } from "./src/components/HomeScreen";
 import { InvoiceReviewModal } from "./src/components/InvoiceReviewModal";
 import { AppNotification, NotificationsScreen } from "./src/components/NotificationsScreen";
-import { ObservationModal } from "./src/components/ObservationModal";
 import { ProductsScreen } from "./src/components/ProductsScreen";
 import { ProfileScreen } from "./src/components/ProfileScreen";
 import { PlansScreen } from "./src/components/PlansScreen";
@@ -666,7 +665,6 @@ function MainApp() {
     }
   }
 
-  const editingProduct = editingProductIndex === null ? null : pendingProducts[editingProductIndex];
   const canAnalyzeStockRequests = canAccessModule(currentUser, "stock_requests");
   const pendingStockRequests = canAnalyzeStockRequests
     ? stockRequests.filter((request) => request.status === "pending")
@@ -894,24 +892,15 @@ function MainApp() {
         topInset={insets.top}
       />
 
-      <ObservationModal
-        product={editingProduct}
-        visible={!!editingProduct}
-        onClose={() => setEditingProductIndex(null)}
-        onChange={(observation) => {
-          if (editingProductIndex !== null) {
-            updatePendingProduct(editingProductIndex, { observation });
-          }
-        }}
-      />
-
       <InvoiceReviewModal
         visible={!!pendingInvoice}
         pendingInvoice={pendingInvoice}
         pendingProducts={pendingProducts}
+        editingProductIndex={editingProductIndex}
         loading={loading}
         onUpdateProduct={updatePendingProduct}
         onEditProduct={setEditingProductIndex}
+        onCloseEdit={() => setEditingProductIndex(null)}
         onCommit={confirmCommitStock}
         onClose={closeInvoiceReview}
         onBackToScan={backToScannerFromReview}

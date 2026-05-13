@@ -630,12 +630,18 @@ export const styles = StyleSheet.create({
     paddingRight: 6
   },
   editButton: {
-    width: 42,
-    height: 42,
+    minWidth: 52,
+    minHeight: 52,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#ccfbf1",
     backgroundColor: "#e8f3f0"
+  },
+  editButtonActive: {
+    borderColor: "#99f6e4",
+    backgroundColor: "#ccfbf1"
   },
   eanBadge: {
     alignSelf: "flex-start",
@@ -663,6 +669,13 @@ export const styles = StyleSheet.create({
     color: "#1f2937",
     backgroundColor: "#f8fafc",
     fontSize: 15
+  },
+  inlineEditor: {
+    gap: 8
+  },
+  inlineObservationInput: {
+    minHeight: 96,
+    paddingTop: 10
   },
   selectInputRow: {
     flexDirection: "row",
