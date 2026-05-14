@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, Tex
 import { styles } from "../styles/appStyles";
 import { EditableInvoiceProduct } from "../types/app";
 import { InvoiceResult } from "../types/product";
+import { formatQuantity, parseQuantity } from "../utils/appHelpers";
 
 type InvoiceReviewModalProps = {
   visible: boolean;
@@ -59,9 +60,12 @@ export function InvoiceReviewModal({
           >
             {pendingProducts.map((product, index) => {
               const isEditing = editingProductIndex === index;
+              const invoiceQuantity = product.quantity;
+              const countedQuantity = parseQuantity(product.quantityInput);
+              const hasDivergence = countedQuantity > 0 && countedQuantity !== invoiceQuantity;
 
               return (
-                <View key={`${product.ean}-${index}`} style={styles.pendingCard}>
+                <View key={`${product.ean}-${index}`} style={[styles.pendingCard, hasDivergence && styles.pendingCardDivergent]}>
                   <View style={styles.pendingTopRow}>
                     <Pressable
                       style={styles.pendingTitleArea}
@@ -72,28 +76,33 @@ export function InvoiceReviewModal({
                       <Text style={styles.pendingName}>{product.name}</Text>
                       <Text style={styles.eanBadge}>{product.ean}</Text>
                     </Pressable>
-                    <Pressable
-                      style={[styles.editButton, isEditing && styles.editButtonActive]}
-                      hitSlop={16}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${isEditing ? "Fechar" : "Editar"} observacao de ${product.name}`}
-                      onPress={() => (isEditing ? onCloseEdit() : onEditProduct(index))}
-                    >
-                      <Ionicons name={isEditing ? "checkmark-outline" : "pencil-outline"} size={20} color="#0f766e" />
-                    </Pressable>
                   </View>
 
-                  <Text style={styles.fieldLabel}>Quantidade que entrou</Text>
-                  <TextInput
-                    value={product.quantityInput}
-                    onChangeText={(value) => onUpdateProduct(index, { quantityInput: value })}
-                    keyboardType="decimal-pad"
-                    returnKeyType="done"
-                    style={styles.quantityInput}
-                    placeholder="0"
-                  />
+                  <View style={styles.quantityCompareRow}>
+                    <View style={styles.quantityCompareBox}>
+                      <Text style={styles.quantityCompareLabel}>Qtd. NF</Text>
+                      <Text style={styles.quantityCompareValue}>{formatQuantity(invoiceQuantity)}</Text>
+                    </View>
+                    <View style={[styles.quantityCompareBox, hasDivergence && styles.quantityCompareBoxDivergent]}>
+                      <Text style={styles.quantityCompareLabel}>Contagem</Text>
+                      <TextInput
+                        value={product.quantityInput}
+                        onChangeText={(value) => onUpdateProduct(index, { quantityInput: value })}
+                        keyboardType="decimal-pad"
+                        style={[styles.quantityCompareInput, hasDivergence && styles.quantityCompareInputDivergent]}
+                        placeholder="0"
+                      />
+                    </View>
+                  </View>
 
-                  {isEditing && (
+                  {hasDivergence && (
+                    <View style={styles.inlineAlert}>
+                      <Ionicons name="alert-circle-outline" size={18} color="#92400e" />
+                      <Text style={styles.inlineAlertText}>Divergência entre a NF e a contagem.</Text>
+                    </View>
+                  )}
+
+                  {(isEditing || hasDivergence) && (
                     <View style={styles.inlineEditor}>
                       <Text style={styles.fieldLabel}>Observação da entrada</Text>
                       <TextInput
@@ -108,7 +117,7 @@ export function InvoiceReviewModal({
                     </View>
                   )}
 
-                  {!!product.observation?.trim() && !isEditing && (
+                  {!!product.observation?.trim() && !isEditing && !hasDivergence && (
                     <View style={styles.inlineAlert}>
                       <Ionicons name="alert-circle-outline" size={18} color="#92400e" />
                       <Text style={styles.inlineAlertText}>Este produto tem observação.</Text>
@@ -120,13 +129,9 @@ export function InvoiceReviewModal({
           </ScrollView>
 
           <View style={styles.invoiceReviewActions}>
-            <Pressable style={styles.secondaryButton} onPress={onBackToScan}>
-              <Ionicons name="camera-outline" size={18} color="#0f766e" />
-              <Text style={styles.secondaryButtonText}>Voltar ao scanner</Text>
-            </Pressable>
-            <Pressable style={[styles.commitButton, loading && styles.disabledButton]} disabled={loading} onPress={onCommit}>
-              <Ionicons name="send-outline" size={18} color="#ffffff" />
-              <Text style={styles.commitButtonText}>Enviar para o estoque</Text>
+            <Pressable style={[styles.invoiceReviewCommitButton, loading && styles.disabledButton]} disabled={loading} onPress={onCommit}>
+              <Ionicons name="send-outline" size={17} color="#ffffff" />
+              <Text style={styles.invoiceReviewCommitText}>Enviar ao estoque</Text>
             </Pressable>
           </View>
         </View>

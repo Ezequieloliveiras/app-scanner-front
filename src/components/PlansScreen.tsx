@@ -16,8 +16,7 @@ export function PlansScreen({ user, plans, loading, onSelectPlan }: PlansScreenP
     <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
       <View style={styles.pendingHeader}>
         <View>
-          <Text style={styles.sectionTitle}>Planos</Text>
-          <Text style={styles.sectionSubtitle}>Seu plano atual e {plans.find((plan) => plan.id === user.plan)?.label || user.plan}.</Text>
+          <Text style={styles.sectionSubtitle}>Seu plano atual é {plans.find((plan) => plan.id === user.plan)?.label || user.plan}.</Text>
         </View>
       </View>
 

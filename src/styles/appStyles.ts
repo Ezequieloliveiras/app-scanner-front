@@ -606,6 +606,10 @@ export const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     gap: 8
   },
+  pendingCardDivergent: {
+    borderColor: "#f59e0b",
+    backgroundColor: "#fffbeb"
+  },
   pendingTopRow: {
     flexDirection: "row",
     gap: 10,
@@ -659,6 +663,49 @@ export const styles = StyleSheet.create({
     color: "#3f4b5b",
     fontSize: 13,
     fontWeight: "900"
+  },
+  quantityCompareRow: {
+    flexDirection: "row",
+    gap: 8
+  },
+  quantityCompareBox: {
+    flex: 1,
+    minHeight: 58,
+    borderWidth: 1,
+    borderColor: "#d8dee9",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: "#f8fafc"
+  },
+  quantityCompareBoxDivergent: {
+    borderColor: "#f59e0b",
+    backgroundColor: "#fef3c7"
+  },
+  quantityCompareLabel: {
+    color: "#64748b",
+    fontSize: 11,
+    fontWeight: "900"
+  },
+  quantityCompareValue: {
+    marginTop: 3,
+    color: "#1f2937",
+    fontSize: 18,
+    fontWeight: "900"
+  },
+  quantityCompareValueDivergent: {
+    color: "#92400e"
+  },
+  quantityCompareInput: {
+    marginTop: 3,
+    minHeight: 30,
+    padding: 0,
+    color: "#1f2937",
+    fontSize: 18,
+    fontWeight: "900"
+  },
+  quantityCompareInputDivergent: {
+    color: "#92400e"
   },
   quantityInput: {
     minHeight: 44,
@@ -1227,10 +1274,44 @@ export const styles = StyleSheet.create({
     backgroundColor: "#ffffff"
   },
   invoiceReviewList: {
-    maxHeight: 430
+    height: "100%",
   },
   invoiceReviewActions: {
-    gap: 8
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10
+  },
+  invoiceReviewBackButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    backgroundColor: "#f8fafc"
+  },
+  invoiceReviewBackText: {
+    color: "#0f766e",
+    fontSize: 13,
+    fontWeight: "900"
+  },
+  invoiceReviewCommitButton: {
+    flex: 1.25,
+    minHeight: 44,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    backgroundColor: "#b91c1c"
+  },
+  invoiceReviewCommitText: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "900"
   },
   modalHeader: {
     flexDirection: "row",
