@@ -80,7 +80,6 @@ export function AccessManagementScreen({
       >
         <View style={styles.pendingHeader}>
           <View>
-            <Text style={styles.sectionTitle}>Gerência de acessos</Text>
             <Text style={styles.sectionSubtitle}>
               {currentUser.role === "main"
                 ? "Principal controla masters e usu\u00e1rios padr\u00e3o."

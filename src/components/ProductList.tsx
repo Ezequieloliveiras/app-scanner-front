@@ -230,14 +230,14 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
                   <TextInput
                     value={withdrawObservationInput}
                     onChangeText={setWithdrawObservationInput}
-                    placeholder="Observacao da solicitacao"
+                    placeholder="Observacao da solicitação"
                     style={[styles.input, styles.textArea]}
                     multiline
                     returnKeyType="done"
                   />
                   <Pressable style={[styles.saveButton, saving && styles.disabledButton]} disabled={saving} onPress={createStockRequest}>
                     <Ionicons name="send-outline" size={18} color="#ffffff" />
-                    <Text style={styles.saveButtonText}>Enviar solicitacao</Text>
+                    <Text style={styles.saveButtonText}>Enviar solicitacão</Text>
                   </Pressable>
                 </View>
               )}

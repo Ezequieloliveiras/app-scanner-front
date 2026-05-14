@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { styles } from "../styles/appStyles";
+import { colors, styles } from "../styles/appStyles";
 import { AuthMode, RegisterCredentials } from "../types/app";
 
 type AuthScreenProps = {
@@ -45,15 +45,11 @@ export function AuthScreen({ loading, error, onLogin, onRegister, onRequestPassw
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.authHero}>
-          <View style={styles.authIcon}>
-            <Ionicons name="shield-checkmark-outline" size={30} color="#0f766e" />
+          <View style={styles.authLogoMark}>
+            <Ionicons name="barcode-outline" size={34} color={colors.white} />
           </View>
-          <Text style={styles.homeEyebrow}>Controle de acesso</Text>
-          <Text style={styles.homeTitle}>
-            {mode === "login" && "Entrar no estoque inteligente."}
-            {mode === "register" && "Criar acesso ao sistema."}
-            {mode === "reset" && "Redefinir senha da conta."}
-          </Text>
+          <Text style={styles.authAppName}>LogScan</Text>
+          <Text style={styles.authAppTagline}>Da nota ao estoque em segundos</Text>
         </View>
 
         <View style={styles.authPanel}>

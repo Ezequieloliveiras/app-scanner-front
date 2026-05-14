@@ -1,5 +1,12 @@
 import { StyleSheet } from "react-native";
 
+export const colors = {
+  primary: "#0f766e",
+  primarySoft: "#e8f3f0",
+  primaryDark: "#102521",
+  white: "#ffffff"
+};
+
 export const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -160,6 +167,36 @@ export const styles = StyleSheet.create({
     padding: 18,
     backgroundColor: "#102521"
   },
+  homeHeroTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12
+  },
+  homeHeroMark: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#e8f3f0"
+  },
+  homeHeroBrand: {
+    flex: 1
+  },
+  homeHeroName: {
+    marginTop: 2,
+    color: "#ffffff",
+    fontSize: 22,
+    lineHeight: 27,
+    fontWeight: "900"
+  },
+  homeHeroText: {
+    marginTop: 14,
+    color: "#d7ebe6",
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "800"
+  },
   authContainer: {
     flexGrow: 1,
     justifyContent: "center",
@@ -167,10 +204,18 @@ export const styles = StyleSheet.create({
     gap: 16
   },
   authHero: {
-    borderRadius: 8,
-    padding: 18,
-    backgroundColor: "#102521",
-    gap: 8
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 8
+  },
+  authLogoMark: {
+    width: 76,
+    height: 76,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primary
   },
   authIcon: {
     width: 52,
@@ -178,7 +223,17 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e8f3f0"
+    backgroundColor: colors.primarySoft
+  },
+  authAppName: {
+    color: colors.primaryDark,
+    fontSize: 26,
+    fontWeight: "900"
+  },
+  authAppTagline: {
+    color: "#35524d",
+    fontSize: 13,
+    fontWeight: "800"
   },
   authPanel: {
     gap: 12,

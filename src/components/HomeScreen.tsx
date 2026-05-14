@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { styles } from "../styles/appStyles";
 import { AuthUser } from "../types/app";
@@ -48,16 +49,24 @@ export function HomeScreen({
       }
     >
       <View style={styles.homeHero}>
-        <Text style={styles.homeEyebrow}>Entrada inteligente</Text>
-        <Text style={styles.homeTitle}>Controle a entrada antes de gravar no estoque.</Text>
+        <View style={styles.homeHeroTop}>
+          <View style={styles.homeHeroMark}>
+            <Ionicons name="barcode-outline" size={26} color="#0f766e" />
+          </View>
+          <View style={styles.homeHeroBrand}>
+            <Text style={styles.homeEyebrow}>LogScan</Text>
+            <Text style={styles.homeHeroName}>NF-e direto no estoque</Text>
+          </View>
+        </View>
+        <Text style={styles.homeHeroText}>Escaneie a nota, confira os produtos e finalize a entrada sem retrabalho.</Text>
         <View style={styles.metricRow}>
           <View style={styles.metricBox}>
             <Text style={styles.metricValue}>{productsCount}</Text>
-            <Text style={styles.metricLabel}>produtos</Text>
+            <Text style={styles.metricLabel}>produtos em estoque</Text>
           </View>
           <View style={styles.metricBox}>
             <Text style={styles.metricValue}>{pendingCount}</Text>
-            <Text style={styles.metricLabel}>pendentes</Text>
+            <Text style={styles.metricLabel}>itens para conferir</Text>
           </View>
         </View>
       </View>

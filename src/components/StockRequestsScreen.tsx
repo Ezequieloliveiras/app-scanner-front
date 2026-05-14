@@ -17,21 +17,17 @@ export function StockRequestsScreen({ requests, loading, onApprove, onReject }: 
   return (
     <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
       <View style={styles.pendingHeader}>
-        <View>
-          <Text style={styles.sectionTitle}>Solicitações</Text>
-          <Text style={styles.sectionSubtitle}>{pendingRequests.length} retirada(s) aguardando analise.</Text>
-        </View>
         {pendingRequests.length > 0 && <Text style={styles.pendingCount}>{pendingRequests.length}</Text>}
       </View>
 
       {requests.length === 0 ? (
-        <Text style={styles.mutedText}>Nenhuma solicitacao de estoque encontrada.</Text>
+        <Text style={styles.mutedText}>Nenhuma solicitacão de estoque encontrada.</Text>
       ) : (
         <>
           <View style={styles.pendingSection}>
             <Text style={styles.fieldLabel}>Pendentes</Text>
             {pendingRequests.length === 0 ? (
-              <Text style={styles.mutedText}>Nenhuma solicitacao pendente.</Text>
+              <Text style={styles.mutedText}>Nenhuma solicitacão pendente.</Text>
             ) : (
               pendingRequests.map((request) => (
                 <StockRequestCard
