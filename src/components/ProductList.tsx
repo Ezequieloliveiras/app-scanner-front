@@ -157,15 +157,23 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
               keyboardShouldPersistTaps="handled"
             >
               {selectedProduct?.stockEntries?.map((entry, index) => (
-                <View key={`${entry.createdAt}-${index}`} style={styles.historyItem}>
+                <View
+                  key={`${entry.createdAt}-${index}`}
+                  style={[styles.historyItem, isInvoiceDivergent(entry) && styles.historyItemDivergent]}
+                >
                   <View style={styles.historyTopRow}>
                     <Text style={styles.historyType}>{getEntryLabel(entry)}</Text>
-                    <Text style={[styles.historyQuantity, isWithdrawalApproved(entry) && styles.historyQuantityOut]}>
+                    <Text style={[styles.historyQuantity, getEntryQuantityStyle(entry)]}>
                       {getEntryQuantity(entry)}
                     </Text>
                   </View>
                   <Text style={styles.historyMeta}>{formatDate(entry.createdAt)}</Text>
                   {entry.invoiceKey && <Text style={styles.historyMeta}>Chave: {entry.invoiceKey}</Text>}
+                  {isInvoiceDivergent(entry) && (
+                    <Text style={styles.historyDivergence}>
+                      {getDivergenceText(entry)}
+                    </Text>
+                  )}
                   {entry.observation && <Text style={styles.historyObservation}>{entry.observation}</Text>}
                 </View>
               ))}
@@ -280,11 +288,19 @@ function getEntryLabel(entry: StockEntry) {
     return "Retirada reprovada";
   }
 
+  if (isInvoiceDivergent(entry)) {
+    return "Entrada divergente";
+  }
+
   return "Entrada da nota";
 }
 
 function isWithdrawalApproved(entry: StockEntry) {
   return entry.type === "stock_withdraw_approved";
+}
+
+function isInvoiceDivergent(entry: StockEntry) {
+  return entry.type === "invoice_entry" && Number(entry.divergenceQuantity || 0) !== 0;
 }
 
 function getEntryQuantity(entry: StockEntry) {
@@ -297,6 +313,37 @@ function getEntryQuantity(entry: StockEntry) {
   }
 
   return `+${entry.quantity}`;
+}
+
+function getEntryQuantityStyle(entry: StockEntry) {
+  if (isWithdrawalApproved(entry)) {
+    return styles.historyQuantityOut;
+  }
+
+  if (isInvoiceDivergent(entry)) {
+    return Number(entry.divergenceQuantity) < 0
+      ? styles.historyQuantityDivergentMissing
+      : styles.historyQuantityDivergentExtra;
+  }
+
+  return undefined;
+}
+
+function getDivergenceText(entry: StockEntry) {
+  const invoiceQuantity = entry.invoiceQuantity ?? entry.quantity;
+  const countedQuantity = entry.countedQuantity ?? entry.quantity;
+  const divergenceQuantity = entry.divergenceQuantity ?? countedQuantity - invoiceQuantity;
+  const absoluteDivergence = Math.abs(divergenceQuantity);
+
+  if (divergenceQuantity < 0) {
+    return `Faltante: ${formatQuantity(absoluteDivergence)} | NF: ${formatQuantity(invoiceQuantity)} | Entrou: ${formatQuantity(countedQuantity)}`;
+  }
+
+  return `Sobra: ${formatQuantity(absoluteDivergence)} | NF: ${formatQuantity(invoiceQuantity)} | Entrou: ${formatQuantity(countedQuantity)}`;
+}
+
+function formatQuantity(value: number) {
+  return Number.isInteger(value) ? String(value) : String(value).replace(".", ",");
 }
 
 function formatDate(value: string) {
@@ -461,6 +508,10 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: "#f8fafc"
   },
+  historyItemDivergent: {
+    borderColor: "#f59e0b",
+    backgroundColor: "#fffbeb"
+  },
   historyTopRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -480,6 +531,12 @@ const styles = StyleSheet.create({
   historyQuantityOut: {
     color: "#991b1b"
   },
+  historyQuantityDivergentMissing: {
+    color: "#b45309"
+  },
+  historyQuantityDivergentExtra: {
+    color: "#0f766e"
+  },
   historyMeta: {
     marginTop: 4,
     color: "#64748b",
@@ -497,6 +554,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#fffbeb",
     fontSize: 13,
     lineHeight: 18
+  },
+  historyDivergence: {
+    marginTop: 8,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    color: "#92400e",
+    backgroundColor: "#fef3c7",
+    fontSize: 13,
+    fontWeight: "900"
   },
   actionArea: {
     gap: 8,

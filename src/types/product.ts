@@ -4,6 +4,9 @@ export type StockEntry = {
   type?: "invoice_entry" | "missing_delivered" | "stock_withdraw_requested" | "stock_withdraw_approved" | "stock_withdraw_rejected";
   invoiceKey?: string;
   observation?: string;
+  invoiceQuantity?: number;
+  countedQuantity?: number;
+  divergenceQuantity?: number;
   createdAt: string;
 };
 

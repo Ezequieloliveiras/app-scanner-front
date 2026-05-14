@@ -76,6 +76,7 @@ function MainApp() {
   const [editingProductIndex, setEditingProductIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [homeRefreshing, setHomeRefreshing] = useState(false);
   const [scannerEnabled, setScannerEnabled] = useState(true);
 
   const loadProducts = useCallback(async () => {
@@ -122,6 +123,31 @@ function MainApp() {
     const users = await api.listUsers(authToken);
     setManagedUsers(users);
   }, [authToken]);
+
+  const refreshHome = useCallback(async () => {
+    if (!currentUser) return;
+
+    try {
+      setHomeRefreshing(true);
+      setError(null);
+
+      const tasks = [loadProducts(), loadStockRequests(), loadPlans()];
+
+      if (canAccessModule(currentUser, "branches")) {
+        tasks.push(loadBranchTransfers());
+      }
+
+      if (canManageAccess(currentUser)) {
+        tasks.push(loadManagedUsers());
+      }
+
+      await Promise.all(tasks);
+    } catch {
+      setError("Nao consegui atualizar a tela inicial.");
+    } finally {
+      setHomeRefreshing(false);
+    }
+  }, [currentUser, loadProducts, loadStockRequests, loadPlans, loadBranchTransfers, loadManagedUsers]);
 
   async function handleLogin(email: string, password: string) {
     try {
@@ -345,6 +371,7 @@ function MainApp() {
           name: product.name,
           ean: product.ean,
           quantity: parseQuantity(product.quantityInput),
+          invoiceQuantity: product.quantity,
           observation: product.observation?.trim() || undefined
         }))
       });
@@ -731,7 +758,9 @@ function MainApp() {
             productsCount={products.length}
             pendingCount={pendingProducts.length}
             pendingStockRequestsCount={pendingStockRequests.length}
+            refreshing={homeRefreshing}
             user={currentUser}
+            onRefresh={refreshHome}
             onScan={goToScan}
             onDashboard={goToDashboard}
             onProducts={goToProducts}

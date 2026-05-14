@@ -1,4 +1,4 @@
-import { ScrollView, Text, View } from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { styles } from "../styles/appStyles";
 import { AuthUser } from "../types/app";
 import { PLAN_LABELS, canAccessModule, canManageAccess } from "../utils/appHelpers";
@@ -7,7 +7,9 @@ export function HomeScreen({
   productsCount,
   pendingCount,
   pendingStockRequestsCount = 0,
+  refreshing = false,
   user,
+  onRefresh,
   onScan,
   onDashboard,
   onProducts,
@@ -20,7 +22,9 @@ export function HomeScreen({
   productsCount: number;
   pendingCount: number;
   pendingStockRequestsCount?: number;
+  refreshing?: boolean;
   user: AuthUser;
+  onRefresh: () => void;
   onScan: () => void;
   onDashboard: () => void;
   onProducts: () => void;
@@ -31,7 +35,18 @@ export function HomeScreen({
   onSimulate: () => void;
 }) {
   return (
-    <ScrollView style={styles.content} contentContainerStyle={styles.homeInner}>
+    <ScrollView
+      style={styles.content}
+      contentContainerStyle={styles.homeInner}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor="#0f766e"
+          colors={["#0f766e"]}
+        />
+      }
+    >
       <View style={styles.homeHero}>
         <Text style={styles.homeEyebrow}>Entrada inteligente</Text>
         <Text style={styles.homeTitle}>Controle a entrada antes de gravar no estoque.</Text>
