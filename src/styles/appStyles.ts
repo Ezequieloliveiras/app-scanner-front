@@ -336,6 +336,32 @@ export const styles = StyleSheet.create({
   scanModeButtonTextActive: {
     color: "#ffffff"
   },
+  scanTorchButton: {
+    position: "absolute",
+    top: 74,
+    right: 14,
+    zIndex: 4,
+    minHeight: 42,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    backgroundColor: "rgba(15,23,42,0.76)",
+    elevation: 4
+  },
+  scanTorchButtonActive: {
+    backgroundColor: "#fbbf24"
+  },
+  scanTorchButtonText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  scanTorchButtonTextActive: {
+    color: "#101820"
+  },
   scanBox: {
     width: 230,
     height: 230,

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BarcodeScanningResult, BarcodeType, CameraView } from "expo-camera";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from "react-native";
 import { styles } from "../styles/appStyles";
 
@@ -31,6 +31,8 @@ export function ScanScreen({
   const [mode, setMode] = useState<ScanMode>("barcode");
   const [manualInput, setManualInput] = useState("");
   const [barcodeScanArmed, setBarcodeScanArmed] = useState(false);
+  const [torchEnabled, setTorchEnabled] = useState(false);
+  const cameraActive = mode === "barcode" || mode === "qr" || mode === "ai";
   const barcodeTypes = useMemo(
     () =>
       mode === "qr"
@@ -39,9 +41,16 @@ export function ScanScreen({
     [mode]
   );
 
+  useEffect(() => {
+    if (!cameraActive && torchEnabled) {
+      setTorchEnabled(false);
+    }
+  }, [cameraActive, torchEnabled]);
+
   function handleBarcodeScanned(result: BarcodeScanningResult) {
     if (mode === "barcode" && !barcodeScanArmed) return;
     setBarcodeScanArmed(false);
+    setTorchEnabled(false);
     onBarcodeScanned(result);
   }
 
@@ -93,12 +102,13 @@ export function ScanScreen({
 
   return (
     <KeyboardAvoidingView style={styles.scanPage} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      {(mode === "barcode" || mode === "qr" || mode === "ai") && (
+      {cameraActive && (
         <CameraView
           ref={cameraRef}
           style={styles.camera}
           facing="back"
           autofocus="on"
+          enableTorch={torchEnabled}
           zoom={mode === "barcode" ? 0.08 : 0}
           barcodeScannerSettings={{ barcodeTypes }}
           onBarcodeScanned={mode !== "ai" && scannerEnabled && !loading ? handleBarcodeScanned : undefined}
@@ -112,6 +122,20 @@ export function ScanScreen({
           <ScanModeButton icon="create-outline" label="Manual" active={mode === "manual"} onPress={() => setMode("manual")} />
           <ScanModeButton icon="sparkles-outline" label="IA" active={mode === "ai"} onPress={() => setMode("ai")} />
         </View>
+
+        {cameraActive && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={torchEnabled ? "Desligar flash" : "Acender flash"}
+            style={[styles.scanTorchButton, torchEnabled && styles.scanTorchButtonActive]}
+            onPress={() => setTorchEnabled((enabled) => !enabled)}
+          >
+            <Ionicons name={torchEnabled ? "flashlight" : "flashlight-outline"} size={19} color={torchEnabled ? "#101820" : "#ffffff"} />
+            <Text style={[styles.scanTorchButtonText, torchEnabled && styles.scanTorchButtonTextActive]}>
+              {torchEnabled ? "Flash ligado" : "Flash"}
+            </Text>
+          </Pressable>
+        )}
 
         {mode === "manual" ? (
           <View style={styles.scanManualPanel}>
@@ -166,11 +190,11 @@ export function ScanScreen({
               <Pressable
                 style={[styles.scanReadButton, barcodeScanArmed && styles.scanReadButtonActive]}
                 disabled={loading}
-                onPress={() => setBarcodeScanArmed(true)}
+                onPress={() => setBarcodeScanArmed((armed) => !armed)}
               >
-                <Ionicons name="barcode-outline" size={20} color="#ffffff" />
+                <Ionicons name={barcodeScanArmed ? "stop-circle-outline" : "barcode-outline"} size={20} color="#ffffff" />
                 <Text style={styles.scanReadButtonText}>
-                  {barcodeScanArmed ? "Lendo" : "Ler NF"}
+                  {barcodeScanArmed ? "Parar" : "Ler NF"}
                 </Text>
               </Pressable>
             )}
