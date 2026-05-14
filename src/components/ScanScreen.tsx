@@ -182,7 +182,7 @@ export function ScanScreen({
             )}
 
             <Text style={styles.scanBarcodeSideHint}>
-              {mode === "barcode" && (barcodeScanArmed ? "Lendo codigo de barras da DANFE" : "Toque em Ler NF e posicione o codigo")}
+              {mode === "barcode" && (barcodeScanArmed ? "Lendo código de barras da DANFE" : "Toque em Ler NF e posicione o código")}
               {mode === "qr" && "Aponte para o QRCode da nota"}
               {mode === "ai" && "Capture uma imagem ruim para tentar ler com IA"}
             </Text>
@@ -207,10 +207,10 @@ export function ScanScreen({
           </>
         )}
 
-        <Pressable style={styles.scanSimulateButton} onPress={onSimulate}>
+        {/* <Pressable style={styles.scanSimulateButton} onPress={onSimulate}>
           <Ionicons name="document-text-outline" size={18} color="#ffffff" />
           <Text style={styles.scanSimulateText}>Simular leitura de XML</Text>
-        </Pressable>
+        </Pressable> */}
       </View>
     </KeyboardAvoidingView>
   );
