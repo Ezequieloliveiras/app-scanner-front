@@ -28,7 +28,10 @@ export function NotificationsScreen({
   const pendingRequests = canAnalyzeStockRequests
     ? stockRequests.filter((request) => request.status === "pending")
     : [];
-  const totalNotifications = notifications.length + pendingRequests.length;
+  const answeredRequests = canAnalyzeStockRequests
+    ? []
+    : stockRequests.filter((request) => request.status === "approved" || request.status === "rejected");
+  const totalNotifications = notifications.length + pendingRequests.length + answeredRequests.length;
 
   return (
     <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
@@ -73,6 +76,29 @@ export function NotificationsScreen({
               </View>
             </View>
           ))}
+
+          {answeredRequests.map((request) => {
+            const approved = request.status === "approved";
+
+            return (
+              <View key={request._id} style={styles.notificationItem}>
+                <Ionicons
+                  name={approved ? "checkmark-circle-outline" : "close-circle-outline"}
+                  size={22}
+                  color={approved ? "#0f766e" : "#991b1b"}
+                />
+                <View style={styles.pendingTitleArea}>
+                  <Text style={styles.branchProductName}>
+                    {approved ? "Retirada aprovada" : "Retirada reprovada"}
+                  </Text>
+                  <Text style={styles.branchProductMeta}>
+                    {request.quantity} unidade(s) de {request.productName}.
+                  </Text>
+                  {request.reviewObservation && <Text style={styles.branchProductMeta}>{request.reviewObservation}</Text>}
+                </View>
+              </View>
+            );
+          })}
 
           {notifications.map((notification) => (
             <View key={notification.id} style={styles.notificationItem}>

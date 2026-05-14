@@ -1,7 +1,7 @@
 import { BarcodeScanningResult, useCameraPermissions } from "expo-camera";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useState } from "react";
-import { Alert, Linking, Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Alert, AppState, Linking, Text, View } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "./src/api/client";
 import { AccessManagementScreen } from "./src/components/AccessManagementScreen";
@@ -43,6 +43,8 @@ const BRANCH_OPTIONS: BranchOption[] = [
   { code: "FILIAL-03", name: "Filial 03" }
 ];
 
+const LIVE_SYNC_INTERVAL_MS = 15000;
+
 export default function App() {
   return (
     <SafeAreaProvider>
@@ -62,6 +64,8 @@ function MainApp() {
   const [products, setProducts] = useState<Product[]>([]);
   const [branchTransfers, setBranchTransfers] = useState<BranchTransfer[]>([]);
   const [stockRequests, setStockRequests] = useState<StockRequest[]>([]);
+  const stockRequestStatusRef = useRef<Record<string, StockRequest["status"]>>({});
+  const liveSyncInFlightRef = useRef(false);
   const [branchProductId, setBranchProductId] = useState("");
   const [branchProductSearch, setBranchProductSearch] = useState("");
   const [sourceBranch, setSourceBranch] = useState<BranchOption>(BRANCH_OPTIONS[0]);
@@ -75,6 +79,7 @@ function MainApp() {
   const [pendingProducts, setPendingProducts] = useState<EditableInvoiceProduct[]>([]);
   const [editingProductIndex, setEditingProductIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [liveNotifications, setLiveNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const [homeRefreshing, setHomeRefreshing] = useState(false);
   const [scannerEnabled, setScannerEnabled] = useState(true);
@@ -149,6 +154,91 @@ function MainApp() {
     }
   }, [currentUser, loadProducts, loadStockRequests, loadPlans, loadBranchTransfers, loadManagedUsers]);
 
+  useEffect(() => {
+    if (
+      !currentUser ||
+      !authToken ||
+      (!canAccessModule(currentUser, "products") && !canAccessModule(currentUser, "stock_requests"))
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const refreshLiveData = async () => {
+      if (cancelled || liveSyncInFlightRef.current) return;
+
+      liveSyncInFlightRef.current = true;
+
+      try {
+        await loadStockRequests();
+      } finally {
+        liveSyncInFlightRef.current = false;
+      }
+    };
+
+    const interval = setInterval(() => {
+      if (AppState.currentState === "active") {
+        refreshLiveData().catch(() => undefined);
+      }
+    }, LIVE_SYNC_INTERVAL_MS);
+
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        refreshLiveData().catch(() => undefined);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      subscription.remove();
+    };
+  }, [authToken, currentUser?._id, currentUser?.role, currentUser?.plan, currentUser?.modules, loadStockRequests]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const previousStatuses = stockRequestStatusRef.current;
+    const nextStatuses: Record<string, StockRequest["status"]> = {};
+    const statusNotifications: AppNotification[] = [];
+
+    for (const request of stockRequests) {
+      nextStatuses[request._id] = request.status;
+
+      const previousStatus = previousStatuses[request._id];
+      const isRequester = request.requester === currentUser._id;
+
+      if (!previousStatus || previousStatus === request.status || !isRequester) {
+        continue;
+      }
+
+      if (request.status === "approved" || request.status === "rejected") {
+        const approved = request.status === "approved";
+
+        statusNotifications.push({
+          id: `stock-request-${request._id}-${request.status}`,
+          title: approved ? "Retirada aprovada" : "Retirada reprovada",
+          text: `${request.productName}: ${request.quantity} unidade(s).`,
+          tone: approved ? "info" : "warning"
+        });
+      }
+    }
+
+    stockRequestStatusRef.current = nextStatuses;
+
+    if (statusNotifications.length) {
+      setLiveNotifications((current) => [
+        ...statusNotifications.filter((notification) => !current.some((item) => item.id === notification.id)),
+        ...current
+      ]);
+
+      if (canAccessModule(currentUser, "products")) {
+        loadProducts().catch(() => undefined);
+      }
+    }
+  }, [currentUser, stockRequests, loadProducts]);
+
   async function handleLogin(email: string, password: string) {
     try {
       setLoading(true);
@@ -186,6 +276,8 @@ function MainApp() {
     setCurrentUser(null);
     setManagedUsers([]);
     setStockRequests([]);
+    stockRequestStatusRef.current = {};
+    setLiveNotifications([]);
     setPendingInvoice(null);
     setPendingProducts([]);
     setEditingProductIndex(null);
@@ -697,6 +789,7 @@ function MainApp() {
     ? stockRequests.filter((request) => request.status === "pending")
     : [];
   const notifications: AppNotification[] = [
+    ...liveNotifications,
     ...(error
       ? [
           {
@@ -743,6 +836,7 @@ function MainApp() {
         onMenuPress={() => setMenuOpen(true)}
         onNotificationPress={() => {
           setError(null);
+          setLiveNotifications([]);
           setScreen("notifications");
         }}
         loading={loading}
