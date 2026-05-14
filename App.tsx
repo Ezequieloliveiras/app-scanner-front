@@ -35,6 +35,7 @@ import {
 } from "./src/types/app";
 import { BranchTransfer, BranchTransferStatus, InvoiceResult, Product, StockRequest } from "./src/types/product";
 import { FALLBACK_PLANS, canAccessModule, canManageAccess, formatQuantity, getScreenTitle, parseQuantity } from "./src/utils/appHelpers";
+import { getExpoPushToken } from "./src/utils/pushNotifications";
 
 const BRANCH_OPTIONS: BranchOption[] = [
   { code: "CENTRAL", name: "Estoque central" },
@@ -66,6 +67,7 @@ function MainApp() {
   const [stockRequests, setStockRequests] = useState<StockRequest[]>([]);
   const stockRequestStatusRef = useRef<Record<string, StockRequest["status"]>>({});
   const liveSyncInFlightRef = useRef(false);
+  const registeredPushTokenRef = useRef<string | null>(null);
   const [branchProductId, setBranchProductId] = useState("");
   const [branchProductSearch, setBranchProductSearch] = useState("");
   const [sourceBranch, setSourceBranch] = useState<BranchOption>(BRANCH_OPTIONS[0]);
@@ -239,6 +241,27 @@ function MainApp() {
     }
   }, [currentUser, stockRequests, loadProducts]);
 
+  useEffect(() => {
+    if (!authToken || !currentUser) return;
+
+    let cancelled = false;
+
+    getExpoPushToken()
+      .then(async (expoPushToken) => {
+        if (!expoPushToken || cancelled || registeredPushTokenRef.current === expoPushToken) {
+          return;
+        }
+
+        await api.registerPushToken(authToken, expoPushToken);
+        registeredPushTokenRef.current = expoPushToken;
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authToken, currentUser?._id]);
+
   async function handleLogin(email: string, password: string) {
     try {
       setLoading(true);
@@ -277,6 +300,7 @@ function MainApp() {
     setManagedUsers([]);
     setStockRequests([]);
     stockRequestStatusRef.current = {};
+    registeredPushTokenRef.current = null;
     setLiveNotifications([]);
     setPendingInvoice(null);
     setPendingProducts([]);

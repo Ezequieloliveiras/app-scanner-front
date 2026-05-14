@@ -70,6 +70,14 @@ export const api = {
     return request<AuthUser>("/api/auth/me", { token });
   },
 
+  registerPushToken(token: string, expoPushToken: string, deviceId?: string) {
+    return request<{ ok: true }>("/api/auth/push-token", {
+      method: "POST",
+      token,
+      body: JSON.stringify({ token: expoPushToken, deviceId })
+    });
+  },
+
   listUsers(token: string) {
     return request<AuthUser[]>("/api/auth/users", { token });
   },

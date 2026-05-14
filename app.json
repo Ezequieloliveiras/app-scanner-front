@@ -12,12 +12,16 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Use a camera para ler codigo de barras e QRCode da nota fiscal."
-      }
+        "NSCameraUsageDescription": "Use a camera para ler codigo de barras e QRCode da nota fiscal.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.ezequieloliveira.appscannerfront"
     },
     "android": {
       "permissions": [
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO"
       ],
       "package": "com.ezequieloliveira.appscannerfront"
     },
@@ -27,7 +31,13 @@
         {
           "cameraPermission": "Use a camera para ler codigo de barras e QRCode da nota fiscal."
         }
-      ]
-    ]
+      ],
+      "expo-notifications"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "fb6cca49-6e4e-452d-acb9-82c4c983fad6"
+      }
+    }
   }
 }
