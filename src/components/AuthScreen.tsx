@@ -45,9 +45,7 @@ export function AuthScreen({ loading, error, onLogin, onRegister, onRequestPassw
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.authHero}>
-          <View style={styles.authLogoMark}>
-            <Ionicons name="barcode-outline" size={34} color={colors.white} />
-          </View>
+            <Ionicons name="barcode-outline" size={40} color={colors.primary} />
           <Text style={styles.authAppName}>LogScan</Text>
           <Text style={styles.authAppTagline}>Da nota ao estoque em segundos</Text>
         </View>

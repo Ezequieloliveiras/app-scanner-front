@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Modal, Pressable, Text, View } from "react-native";
 import { styles } from "../styles/appStyles";
 import { AuthUser } from "../types/app";
-import { canAccessModule, canManageAccess } from "../utils/appHelpers";
+import { canAccessModule, canManageAccess, canManageCertificate } from "../utils/appHelpers";
 import { MenuItem } from "./MenuItem";
 export function SideMenu({
   visible,
@@ -15,6 +15,7 @@ export function SideMenu({
   onBranches,
   onStockRequests,
   onBilling,
+  onCertificate,
   onProfile,
   onAccess,
   onLogout,
@@ -32,6 +33,7 @@ export function SideMenu({
   onBranches: () => void;
   onStockRequests: () => void;
   onBilling: () => void;
+  onCertificate: () => void;
   onProfile: () => void;
   onAccess: () => void;
   onLogout: () => void;
@@ -66,6 +68,7 @@ export function SideMenu({
             />
           )}
           {canManageAccess(user) && <MenuItem icon="people-outline" label="Gerenciar acessos" onPress={onAccess} />}
+          {canManageCertificate(user) && <MenuItem icon="shield-checkmark-outline" label="Certificado A1" onPress={onCertificate} />}
           {/* {canAccessModule(user, "scan") && <MenuItem icon="document-text-outline" label="Simular XML" onPress={onSimulate} />} */}
           <MenuItem icon="log-out-outline" label="Sair" onPress={onLogout} />
         </View>

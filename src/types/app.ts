@@ -8,6 +8,7 @@ export type Screen =
   | "branches"
   | "stock_requests"
   | "access"
+  | "certificate"
   | "billing"
   | "profile"
   | "notifications";
@@ -145,4 +146,37 @@ export type CreateManagedUserPayload = RegisterCredentials & {
   role?: UserRole;
   plan?: UserPlan;
   modules?: AppModule[];
+};
+
+export type CertificateDocumentType = "CNPJ" | "CPF";
+export type SefazEnvironment = "1" | "2";
+
+export type OrganizationCertificate = {
+  id: string;
+  owner: string;
+  documentType: CertificateDocumentType;
+  documentNumber: string;
+  cUFAutor?: string;
+  ambiente: SefazEnvironment;
+  originalFileName: string;
+  certificateValidFrom?: string;
+  certificateValidTo?: string;
+  certificateSubject?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type CertificateStatus = {
+  configured: boolean;
+  certificate: OrganizationCertificate | null;
+};
+
+export type UpsertCertificatePayload = {
+  fileName?: string;
+  fileBase64?: string;
+  password?: string;
+  documentType: CertificateDocumentType;
+  documentNumber: string;
+  cUFAutor?: string;
+  ambiente: SefazEnvironment;
 };

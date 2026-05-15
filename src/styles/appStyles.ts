@@ -215,7 +215,6 @@ export const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.primary
   },
   authIcon: {
     width: 52,
@@ -1155,6 +1154,51 @@ export const styles = StyleSheet.create({
   },
   accessStatusTextDisabled: {
     color: "#991b1b"
+  },
+  certificateStatusBadge: {
+    minHeight: 34,
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6
+  },
+  certificateStatusOk: {
+    backgroundColor: "#ccfbf1"
+  },
+  certificateStatusEmpty: {
+    backgroundColor: "#fef3c7"
+  },
+  certificateStatusText: {
+    color: "#0f766e",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  certificateStatusTextEmpty: {
+    color: "#92400e"
+  },
+  certificateMetaGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8
+  },
+  certificateInfoTile: {
+    width: "48%",
+    minHeight: 62,
+    borderWidth: 1,
+    borderColor: "#d8dee9",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: "#f8fafc"
+  },
+  certificateInfoValue: {
+    marginTop: 3,
+    color: "#1f2937",
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: "900"
   },
   roleRow: {
     flexDirection: "row",

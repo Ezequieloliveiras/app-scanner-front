@@ -3,11 +3,13 @@ import {
   AuthSession,
   AuthUser,
   BillingCheckoutResult,
+  CertificateStatus,
   CreateManagedUserPayload,
   InventoryDashboard,
   PlanDefinition,
   RegisterCredentials,
   UpdateProfilePayload,
+  UpsertCertificatePayload,
   UpdateUserAccessPayload
 } from "../types/app";
 import {
@@ -130,6 +132,25 @@ export const api = {
       method: "PATCH",
       token,
       body: JSON.stringify({ password })
+    });
+  },
+
+  getCertificateStatus(token: string) {
+    return request<CertificateStatus>("/api/certificates", { token });
+  },
+
+  saveCertificate(token: string, payload: UpsertCertificatePayload) {
+    return request<CertificateStatus["certificate"]>("/api/certificates", {
+      method: "PUT",
+      token,
+      body: JSON.stringify(payload)
+    });
+  },
+
+  deleteCertificate(token: string) {
+    return request<{ ok: true }>("/api/certificates", {
+      method: "DELETE",
+      token
     });
   },
 

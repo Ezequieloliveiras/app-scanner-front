@@ -98,6 +98,10 @@ export function canManageAccess(user: AuthUser | null) {
   return (user?.role === "main" || user?.role === "master") && canAccessModule(user, "access");
 }
 
+export function canManageCertificate(user: AuthUser | null) {
+  return user?.enabled && (user.role === "main" || user.role === "master");
+}
+
 export function canAccessModule(user: AuthUser | null, module: AppModule) {
   if (!user?.enabled) return false;
   if (user.role === "main" || user.role === "master") {
@@ -113,6 +117,7 @@ export function getScreenTitle(screen: Screen, pendingInvoice: InvoiceResult | n
   if (screen === "branches") return "Filial";
   if (screen === "stock_requests") return "Solicitações";
   if (screen === "access") return "Acessos";
+  if (screen === "certificate") return "Certificado A1";
   if (screen === "billing") return "Planos";
   if (screen === "profile") return "Perfil";
   if (screen === "notifications") return "Notificações";

@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { styles } from "../styles/appStyles";
 import { AuthUser } from "../types/app";
-import { PLAN_LABELS, canAccessModule, canManageAccess } from "../utils/appHelpers";
+import { PLAN_LABELS, canAccessModule, canManageAccess, canManageCertificate } from "../utils/appHelpers";
 import { HomeAction } from "./HomeAction";
 export function HomeScreen({
   productsCount,
@@ -17,6 +17,7 @@ export function HomeScreen({
   onBranches,
   onStockRequests,
   onAccess,
+  onCertificate,
   onBilling,
   onSimulate
 }: {
@@ -32,6 +33,7 @@ export function HomeScreen({
   onBranches: () => void;
   onStockRequests: () => void;
   onAccess: () => void;
+  onCertificate: () => void;
   onBilling: () => void;
   onSimulate: () => void;
 }) {
@@ -90,6 +92,9 @@ export function HomeScreen({
           />
         )}
         {canManageAccess(user) && <HomeAction icon="people-outline" title="Acessos" text="Gerenciar usuários" onPress={onAccess} />}
+        {canManageCertificate(user) && (
+          <HomeAction icon="shield-checkmark-outline" title="Certificado" text="A1 da organização" onPress={onCertificate} />
+        )}
         <HomeAction icon="card-outline" title="Planos" text={`Atual: ${PLAN_LABELS[user.plan]}`} onPress={onBilling} />
         {/* {canAccessModule(user, "scan") && <HomeAction icon="document-text-outline" title="XML" text="Simular leitura" onPress={onSimulate} />} */}
       </View>

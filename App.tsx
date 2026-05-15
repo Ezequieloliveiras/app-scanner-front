@@ -9,6 +9,7 @@ import { AppHeader } from "./src/components/AppHeader";
 import { AuthScreen } from "./src/components/AuthScreen";
 import { BottomNav } from "./src/components/BottomNav";
 import { BranchScreen } from "./src/components/BranchScreen";
+import { CertificateScreen } from "./src/components/CertificateScreen";
 import { DashboardScreen } from "./src/components/DashboardScreen";
 import { HomeScreen } from "./src/components/HomeScreen";
 import { InvoiceReviewModal } from "./src/components/InvoiceReviewModal";
@@ -24,17 +25,19 @@ import {
   AppModule,
   AuthUser,
   BranchOption,
+  CertificateStatus,
   CreateManagedUserPayload,
   EditableInvoiceProduct,
   PlanDefinition,
   RegisterCredentials,
   Screen,
   UpdateProfilePayload,
+  UpsertCertificatePayload,
   UserPlan,
   UserRole
 } from "./src/types/app";
 import { BranchTransfer, BranchTransferStatus, InvoiceResult, Product, StockRequest } from "./src/types/product";
-import { FALLBACK_PLANS, canAccessModule, canManageAccess, formatQuantity, getScreenTitle, parseQuantity } from "./src/utils/appHelpers";
+import { FALLBACK_PLANS, canAccessModule, canManageAccess, canManageCertificate, formatQuantity, getScreenTitle, parseQuantity } from "./src/utils/appHelpers";
 import { getExpoPushToken } from "./src/utils/pushNotifications";
 
 const BRANCH_OPTIONS: BranchOption[] = [
@@ -59,6 +62,7 @@ function MainApp() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [managedUsers, setManagedUsers] = useState<AuthUser[]>([]);
+  const [certificateStatus, setCertificateStatus] = useState<CertificateStatus | null>(null);
   const [plans, setPlans] = useState<PlanDefinition[]>(FALLBACK_PLANS);
   const [screen, setScreen] = useState<Screen>("home");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -113,6 +117,18 @@ function MainApp() {
     loadPlans().catch(() => undefined);
   }, [loadPlans]);
 
+  const loadManagedUsers = useCallback(async () => {
+    if (!authToken) return;
+    const users = await api.listUsers(authToken);
+    setManagedUsers(users);
+  }, [authToken]);
+
+  const loadCertificateStatus = useCallback(async () => {
+    if (!authToken) return;
+    const status = await api.getCertificateStatus(authToken);
+    setCertificateStatus(status);
+  }, [authToken]);
+
   useEffect(() => {
     if (!currentUser) return;
 
@@ -123,13 +139,10 @@ function MainApp() {
     if (canAccessModule(currentUser, "branches")) {
       loadBranchTransfers().catch(() => undefined);
     }
-  }, [currentUser, loadProducts, loadBranchTransfers, loadStockRequests]);
-
-  const loadManagedUsers = useCallback(async () => {
-    if (!authToken) return;
-    const users = await api.listUsers(authToken);
-    setManagedUsers(users);
-  }, [authToken]);
+    if (canManageCertificate(currentUser)) {
+      loadCertificateStatus().catch(() => undefined);
+    }
+  }, [currentUser, loadProducts, loadBranchTransfers, loadStockRequests, loadCertificateStatus]);
 
   const refreshHome = useCallback(async () => {
     if (!currentUser) return;
@@ -148,13 +161,17 @@ function MainApp() {
         tasks.push(loadManagedUsers());
       }
 
+      if (canManageCertificate(currentUser)) {
+        tasks.push(loadCertificateStatus());
+      }
+
       await Promise.all(tasks);
     } catch {
       setError("Nao consegui atualizar a tela inicial.");
     } finally {
       setHomeRefreshing(false);
     }
-  }, [currentUser, loadProducts, loadStockRequests, loadPlans, loadBranchTransfers, loadManagedUsers]);
+  }, [currentUser, loadProducts, loadStockRequests, loadPlans, loadBranchTransfers, loadManagedUsers, loadCertificateStatus]);
 
   useEffect(() => {
     if (
@@ -298,6 +315,7 @@ function MainApp() {
     setAuthToken(null);
     setCurrentUser(null);
     setManagedUsers([]);
+    setCertificateStatus(null);
     setStockRequests([]);
     stockRequestStatusRef.current = {};
     registeredPushTokenRef.current = null;
@@ -415,6 +433,18 @@ function MainApp() {
     setMenuOpen(false);
     setScreen("access");
     loadManagedUsers().catch(() => setError("Não consegui carregar os usuários."));
+  }
+
+  function goToCertificate() {
+    if (!canManageCertificate(currentUser)) {
+      Alert.alert("Acesso bloqueado", "Apenas usuários main ou master gerenciam o certificado.");
+      return;
+    }
+
+    setError(null);
+    setMenuOpen(false);
+    setScreen("certificate");
+    loadCertificateStatus().catch(() => setError("Não consegui carregar o certificado."));
   }
 
   function goToProfile() {
@@ -748,6 +778,42 @@ function MainApp() {
     }
   }
 
+  async function saveCertificate(payload: UpsertCertificatePayload) {
+    if (!authToken) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const certificate = await api.saveCertificate(authToken, payload);
+      setCertificateStatus({ configured: Boolean(certificate), certificate });
+      Alert.alert("Certificado salvo", "O certificado A1 foi vinculado a esta organizacão.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao salvar certificado.";
+      setError(message);
+      Alert.alert("Certificado não salvo", message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteCertificate() {
+    if (!authToken) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      await api.deleteCertificate(authToken);
+      setCertificateStatus({ configured: false, certificate: null });
+      Alert.alert("Certificado removido", "O certificado A1 foi removido desta organização.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao remover certificado.";
+      setError(message);
+      Alert.alert("Certificado não removido", message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function requestPlanCheckout(plan: UserPlan) {
     if (!authToken) return;
 
@@ -885,6 +951,7 @@ function MainApp() {
             onBranches={goToBranches}
             onStockRequests={goToStockRequests}
             onAccess={goToAccess}
+            onCertificate={goToCertificate}
             onBilling={goToBilling}
             onSimulate={simulateInvoice}
           />
@@ -971,6 +1038,16 @@ function MainApp() {
           />
         )}
 
+        {screen === "certificate" && (
+          <CertificateScreen
+            status={certificateStatus}
+            loading={loading}
+            onRefresh={loadCertificateStatus}
+            onSave={saveCertificate}
+            onDelete={deleteCertificate}
+          />
+        )}
+
         {screen === "billing" && (
           <PlansScreen
             user={currentUser}
@@ -1028,6 +1105,7 @@ function MainApp() {
         onBranches={goToBranches}
         onStockRequests={goToStockRequests}
         onBilling={goToBilling}
+        onCertificate={goToCertificate}
         onProfile={goToProfile}
         onAccess={goToAccess}
         onLogout={logout}
