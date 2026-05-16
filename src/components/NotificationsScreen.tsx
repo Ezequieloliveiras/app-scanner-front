@@ -79,6 +79,9 @@ export function NotificationsScreen({
 
           {answeredRequests.map((request) => {
             const approved = request.status === "approved";
+            const reviewerText = request.reviewerName
+              ? `${approved ? "Aprovada" : "Reprovada"} por ${request.reviewerName}`
+              : `${approved ? "Aprovada" : "Reprovada"} sem analista informado`;
 
             return (
               <View key={request._id} style={styles.notificationItem}>
@@ -94,7 +97,11 @@ export function NotificationsScreen({
                   <Text style={styles.branchProductMeta}>
                     {request.quantity} unidade(s) de {request.productName}.
                   </Text>
-                  {request.reviewObservation && <Text style={styles.branchProductMeta}>{request.reviewObservation}</Text>}
+                  <Text style={styles.branchProductMeta}>
+                    {reviewerText}
+                    {request.reviewedAt ? ` em ${formatNotificationDate(request.reviewedAt)}` : ""}
+                  </Text>
+                 
                 </View>
               </View>
             );
@@ -117,4 +124,19 @@ export function NotificationsScreen({
       )}
     </ScrollView>
   );
+}
+
+function formatNotificationDate(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "sem horario";
+  }
+
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }

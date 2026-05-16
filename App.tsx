@@ -238,7 +238,9 @@ function MainApp() {
         statusNotifications.push({
           id: `stock-request-${request._id}-${request.status}`,
           title: approved ? "Retirada aprovada" : "Retirada reprovada",
-          text: `${request.productName}: ${request.quantity} unidade(s).`,
+          text: `${request.productName}: ${request.quantity} unidade(s). ${
+            request.reviewerName ? `${approved ? "Aprovada" : "Reprovada"} por ${request.reviewerName}.` : ""
+          }`.trim(),
           tone: approved ? "info" : "warning"
         });
       }
