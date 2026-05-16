@@ -78,9 +78,9 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
     borderRadius: 8,
-    padding: 10,
+    padding: 12,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 10,
     backgroundColor: "#f8fafc"
   },

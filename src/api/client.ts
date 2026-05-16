@@ -135,6 +135,13 @@ export const api = {
     });
   },
 
+  deleteUser(token: string, userId: string) {
+    return request<{ ok: true }>(`/api/auth/users/${userId}`, {
+      method: "DELETE",
+      token
+    });
+  },
+
   getCertificateStatus(token: string) {
     return request<CertificateStatus>("/api/certificates", { token });
   },

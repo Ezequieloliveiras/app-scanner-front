@@ -15,6 +15,7 @@ type AccessManagementScreenProps = {
   onChangeRole: (user: AuthUser, role: UserRole) => void;
   onChangePlan: (user: AuthUser, plan: UserPlan) => void;
   onAdminResetPassword: (user: AuthUser, password: string) => Promise<void>;
+  onDeleteUser: (user: AuthUser) => void;
 };
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -34,7 +35,8 @@ export function AccessManagementScreen({
   onToggleModule,
   onChangeRole,
   onChangePlan,
-  onAdminResetPassword
+  onAdminResetPassword,
+  onDeleteUser
 }: AccessManagementScreenProps) {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -46,9 +48,9 @@ export function AccessManagementScreen({
   const [newRole, setNewRole] = useState<UserRole>(currentUser.role === "main" ? "master" : "default");
   const [newPlan, setNewPlan] = useState<UserPlan>("free");
   const canCreateMaster = currentUser.role === "main";
-  const masterLimit = currentUser.role === "master" ? PLAN_LIMITS[currentUser.plan] : null;
-  const reachedPlanLimit = masterLimit !== null && users.length >= masterLimit;
-  const masterLimitText = masterLimit === Infinity ? "sem limite" : masterLimit;
+  const managedUsersLimit = currentUser.role === "main" || currentUser.role === "master" ? PLAN_LIMITS[currentUser.plan] : null;
+  const reachedPlanLimit = managedUsersLimit !== null && users.length >= managedUsersLimit;
+  const managedUsersLimitText = managedUsersLimit === Infinity ? "sem limite" : managedUsersLimit;
   const normalizedSearch = normalizeSearch(search);
   const filteredUsers = normalizedSearch
     ? users.filter((user) => normalizeSearch(`${user.name} ${user.email}`).includes(normalizedSearch))
@@ -82,22 +84,26 @@ export function AccessManagementScreen({
           <View>
             <Text style={styles.sectionSubtitle}>
               {currentUser.role === "main"
-                ? "Principal controla masters e usu\u00e1rios padr\u00e3o."
-                : `Master controla os usu\u00e1rios padr\u00e3o que cadastrou (${users.length}/${masterLimitText}).`}
+                ? `Principal controla masters e usu\u00e1rios padr\u00e3o (${users.length}/${managedUsersLimitText}).`
+                : `Master controla os usu\u00e1rios padr\u00e3o que cadastrou (${users.length}/${managedUsersLimitText}).`}
             </Text>
-          </View>
-          <View style={styles.headerActions}>
-            <Pressable
-              style={[styles.headerIconButton, reachedPlanLimit && styles.disabledButton]}
-              disabled={reachedPlanLimit}
-              onPress={() => setCreateModalOpen(true)}
-            >
-              <Ionicons name="person-add-outline" size={22} color="#0f766e" />
-            </Pressable>
           </View>
         </View>
 
-        {reachedPlanLimit && <Text style={styles.inlineAlertText}>Limite do plano atingido. Fale com o acesso principal para ampliar.</Text>}
+        <Pressable
+          style={[styles.primaryButton, reachedPlanLimit && styles.disabledButton]}
+          disabled={reachedPlanLimit}
+          onPress={() => setCreateModalOpen(true)}
+        >
+          <Ionicons name="person-add-outline" size={18} color="#ffffff" />
+          <Text style={styles.primaryButtonText}>Novo usuário</Text>
+        </Pressable>
+
+        {reachedPlanLimit && (
+          <Text style={styles.inlineAlertText}>
+            Limite do plano atingido. {currentUser.role === "main" ? "Faca upgrade para ampliar." : "Fale com o acesso principal para ampliar."}
+          </Text>
+        )}
 
         <View style={styles.selectInputRow}>
           <TextInput
@@ -232,6 +238,16 @@ export function AccessManagementScreen({
                   <Text style={styles.secondaryButtonText}>Aplicar nova senha</Text>
                 </Pressable>
               </View>
+            )}
+            {expanded && (
+              <Pressable
+                style={[styles.cancelButton, loading && styles.disabledButton]}
+                disabled={loading}
+                onPress={() => onDeleteUser(user)}
+              >
+                <Ionicons name="trash-outline" size={18} color="#991b1b" />
+                <Text style={styles.cancelButtonText}>Excluir usuário</Text>
+              </Pressable>
             )}
           </View>
             );

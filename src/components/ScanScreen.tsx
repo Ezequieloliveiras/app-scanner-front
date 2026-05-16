@@ -118,9 +118,9 @@ export function ScanScreen({
       <View style={[styles.scannerOverlay, { paddingTop: topInset }]}>
         <View style={styles.scanModeBar}>
           <ScanModeButton icon="barcode-outline" label="Barras" active={mode === "barcode"} onPress={() => setMode("barcode")} />
-          <ScanModeButton icon="qr-code-outline" label="QRCode" active={mode === "qr"} onPress={() => setMode("qr")} />
+          {/* <ScanModeButton icon="qr-code-outline" label="QRCode" active={mode === "qr"} onPress={() => setMode("qr")} /> */}
           <ScanModeButton icon="create-outline" label="Manual" active={mode === "manual"} onPress={() => setMode("manual")} />
-          <ScanModeButton icon="sparkles-outline" label="IA" active={mode === "ai"} onPress={() => setMode("ai")} />
+          {/* <ScanModeButton icon="sparkles-outline" label="IA" active={mode === "ai"} onPress={() => setMode("ai")} /> */}
         </View>
 
         {cameraActive && (

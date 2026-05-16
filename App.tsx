@@ -744,6 +744,39 @@ function MainApp() {
     updateManagedUser(user, { plan });
   }
 
+  function confirmDeleteManagedUser(user: AuthUser) {
+    Alert.alert(
+      "Excluir usuário?",
+      `Tem certeza que deseja excluir ${user.name}? Esta ação não pode ser desfeita.`,
+      [
+        { text: "Voltar", style: "cancel" },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: () => deleteManagedUser(user)
+        }
+      ]
+    );
+  }
+
+  async function deleteManagedUser(user: AuthUser) {
+    if (!authToken) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      await api.deleteUser(authToken, user._id);
+      setManagedUsers((current) => current.filter((item) => item._id !== user._id));
+      Alert.alert("Usuário excluído", `${user.email} foi removido.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao excluir usuário.";
+      setError(message);
+      Alert.alert("Usuário não excluído", message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function createManagedUser(payload: CreateManagedUserPayload) {
     if (!authToken) return;
 
@@ -1037,6 +1070,7 @@ function MainApp() {
             onChangeRole={changeUserRole}
             onChangePlan={changeUserPlan}
             onAdminResetPassword={adminResetPassword}
+            onDeleteUser={confirmDeleteManagedUser}
           />
         )}
 
