@@ -48,6 +48,7 @@ const BRANCH_OPTIONS: BranchOption[] = [
 ];
 
 const LIVE_SYNC_INTERVAL_MS = 15000;
+const ERROR_AUTO_DISMISS_MS = 6000;
 
 export default function App() {
   return (
@@ -259,6 +260,16 @@ function MainApp() {
       }
     }
   }, [currentUser, stockRequests, loadProducts]);
+
+  useEffect(() => {
+    if (!error) return;
+
+    const timeout = setTimeout(() => {
+      setError(null);
+    }, ERROR_AUTO_DISMISS_MS);
+
+    return () => clearTimeout(timeout);
+  }, [error]);
 
   useEffect(() => {
     if (!authToken || !currentUser) return;

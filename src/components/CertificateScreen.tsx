@@ -110,7 +110,7 @@ export function CertificateScreen({ status, loading, onRefresh, onSave, onDelete
   }
 
   function confirmDelete() {
-    Alert.alert("Remover certificado?", "As proximas consultas SEFAZ deixarão de usar este A1.", [
+    Alert.alert("Remover certificado?", "As próximas consultas SEFAZ deixarão de usar este certificado.", [
       { text: "Voltar", style: "cancel" },
       {
         text: "Remover",
@@ -229,7 +229,7 @@ export function CertificateScreen({ status, loading, onRefresh, onSave, onDelete
           <TextInput
             value={password}
             onChangeText={setPassword}
-            placeholder={certificate ? "Senha do A1 (opcional se nào trocar)" : "Senha do A1"}
+            placeholder={certificate ? "Senha do certificado (opcional se não trocar)" : "Senha do certificado"}
             secureTextEntry
             style={styles.quantityInput}
             returnKeyType="done"
