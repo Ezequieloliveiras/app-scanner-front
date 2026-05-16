@@ -821,7 +821,7 @@ function MainApp() {
       setError(null);
       const certificate = await api.saveCertificate(authToken, payload);
       setCertificateStatus({ configured: Boolean(certificate), certificate });
-      Alert.alert("Certificado salvo", "O certificado A1 foi vinculado a esta organizacão.");
+      Alert.alert("Certificado salvo", "O certificado foi vinculado a esta organização.");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao salvar certificado.";
       setError(message);
@@ -839,7 +839,7 @@ function MainApp() {
       setError(null);
       await api.deleteCertificate(authToken);
       setCertificateStatus({ configured: false, certificate: null });
-      Alert.alert("Certificado removido", "O certificado A1 foi removido desta organização.");
+      Alert.alert("Certificado removido", "O certificado foi removido desta organização.");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao remover certificado.";
       setError(message);

@@ -117,7 +117,7 @@ export function getScreenTitle(screen: Screen, pendingInvoice: InvoiceResult | n
   if (screen === "branches") return "Filial";
   if (screen === "stock_requests") return "Solicitações";
   if (screen === "access") return "Acessos";
-  if (screen === "certificate") return "Certificado A1";
+  if (screen === "certificate") return "Certificado";
   if (screen === "billing") return "Planos";
   if (screen === "profile") return "Perfil";
   if (screen === "notifications") return "Notificações";

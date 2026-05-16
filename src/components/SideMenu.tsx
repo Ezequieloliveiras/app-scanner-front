@@ -68,7 +68,7 @@ export function SideMenu({
             />
           )}
           {canManageAccess(user) && <MenuItem icon="people-outline" label="Gerenciar acessos" onPress={onAccess} />}
-          {canManageCertificate(user) && <MenuItem icon="shield-checkmark-outline" label="Certificado A1" onPress={onCertificate} />}
+          {canManageCertificate(user) && <MenuItem icon="shield-checkmark-outline" label="Certificado" onPress={onCertificate} />}
           {/* {canAccessModule(user, "scan") && <MenuItem icon="document-text-outline" label="Simular XML" onPress={onSimulate} />} */}
           <MenuItem icon="log-out-outline" label="Sair" onPress={onLogout} />
         </View>

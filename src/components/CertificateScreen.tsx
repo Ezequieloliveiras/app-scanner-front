@@ -63,7 +63,7 @@ export function CertificateScreen({ status, loading, onRefresh, onSave, onDelete
     const normalizedName = fileName.toLowerCase();
 
     if (!normalizedName.endsWith(".pfx") && !normalizedName.endsWith(".p12")) {
-      Alert.alert("Formato inválidolido", "Envie um certificado A1 em .pfx ou .p12.");
+      Alert.alert("Formato inválidolido", "Envie um certificado em .pfx ou .p12.");
       return;
     }
 
@@ -92,7 +92,7 @@ export function CertificateScreen({ status, loading, onRefresh, onSave, onDelete
     }
 
     if (!certificate && (!selectedFile || !password.trim())) {
-      Alert.alert("Certificado incompleto", "Selecione o arquivo A1 e informe a senha.");
+      Alert.alert("Certificado incompleto", "Selecione o arquivo e informe a senha.");
       return;
     }
 
@@ -131,7 +131,7 @@ export function CertificateScreen({ status, loading, onRefresh, onSave, onDelete
         <View style={styles.accessCard}>
           <View style={styles.pendingHeader}>
             <View style={styles.pendingTitleArea}>
-              <Text style={styles.sectionTitle}>Certificado A1</Text>
+              <Text style={styles.sectionTitle}>Certificado</Text>
               <Text style={styles.sectionSubtitle}>
                 {certificate ? "Certificado configurado para esta organizacão." : "Nenhum certificado configurado."}
               </Text>
@@ -214,7 +214,7 @@ export function CertificateScreen({ status, loading, onRefresh, onSave, onDelete
 
           <Pressable style={styles.secondaryButton} disabled={loading} onPress={pickCertificate}>
             <Ionicons name="document-attach-outline" size={18} color="#0f766e" />
-            <Text style={styles.secondaryButtonText}>{selectedFile ? "Trocar arquivo A1" : "Selecionar arquivo A1"}</Text>
+            <Text style={styles.secondaryButtonText}>{selectedFile ? "Trocar arquivo" : "Selecionar arquivo"}</Text>
           </Pressable>
 
           {selectedFile && (
