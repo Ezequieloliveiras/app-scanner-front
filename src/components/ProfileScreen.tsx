@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { styles } from "../styles/appStyles";
 import { AuthUser, UpdateProfilePayload } from "../types/app";
@@ -13,18 +14,35 @@ type ProfileScreenProps = {
   onUpgradePlan: () => void;
 };
 
+type SelectedProfilePhoto = {
+  uri: string;
+  fileName: string;
+  mimeType: string;
+  base64: string;
+};
+
 export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan }: ProfileScreenProps) {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   const [photoUrl, setPhotoUrl] = useState(user.photoUrl || "");
+  const [selectedPhoto, setSelectedPhoto] = useState<SelectedProfilePhoto | null>(null);
+  const [removePhoto, setRemovePhoto] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+
+  useEffect(() => {
+    setName(user.name);
+    setEmail(user.email);
+    setPhotoUrl(user.photoUrl || "");
+    setSelectedPhoto(null);
+    setRemovePhoto(false);
+  }, [user._id, user.name, user.email, user.photoUrl]);
 
   async function pickProfilePhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert("Permissão necessária", "Libere acesso às fotos para anexar uma imagem de perfil.");
+      Alert.alert("Permissão necessária", "Libere acesso as fotos para anexar uma imagem de perfil.");
       return;
     }
 
@@ -40,25 +58,48 @@ export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan }:
     }
 
     const asset = result.assets[0];
-    const fileName = asset.fileName?.toLowerCase() || asset.uri.toLowerCase();
-    const isAcceptedImage = fileName.endsWith(".png") || fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || asset.mimeType?.startsWith("image/");
+    const fileName = asset.fileName || asset.uri.split("/").pop() || "profile-photo.jpg";
+    const mimeType = asset.mimeType || inferMimeType(fileName);
+    const isAcceptedImage = ["image/png", "image/jpeg", "image/jpg", "image/webp"].includes(mimeType);
 
     if (!isAcceptedImage) {
-      Alert.alert("Formato inválido", "Escolha uma imagem PNG, JPG ou JPEG.");
+      Alert.alert("Formato inválido", "Escolha uma imagem PNG, JPG, JPEG ou WEBP.");
       return;
     }
 
+    const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+      encoding: FileSystem.EncodingType.Base64
+    });
+
+    setSelectedPhoto({
+      uri: asset.uri,
+      fileName,
+      mimeType,
+      base64
+    });
+    setRemovePhoto(false);
     setPhotoUrl(asset.uri);
+  }
+
+  function clearProfilePhoto() {
+    setSelectedPhoto(null);
+    setRemovePhoto(true);
+    setPhotoUrl("");
   }
 
   async function submitProfile() {
     await onUpdateProfile({
       name,
       email,
-      photoUrl,
+      photoFileBase64: selectedPhoto?.base64,
+      photoFileName: selectedPhoto?.fileName,
+      photoMimeType: selectedPhoto?.mimeType,
+      removePhoto,
       currentPassword: currentPassword || undefined,
       newPassword: newPassword || undefined
     });
+    setSelectedPhoto(null);
+    setRemovePhoto(false);
     setCurrentPassword("");
     setNewPassword("");
   }
@@ -93,6 +134,12 @@ export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan }:
             <Ionicons name="arrow-up-circle-outline" size={18} color="#0f766e" />
             <Text style={styles.secondaryButtonText}>Ver planos e upgrades</Text>
           </Pressable>
+          {photoUrl && (
+            <Pressable style={[styles.cancelButton, loading && styles.disabledButton]} disabled={loading} onPress={clearProfilePhoto}>
+              <Ionicons name="trash-outline" size={18} color="#991b1b" />
+              <Text style={styles.cancelButtonText}>Remover foto</Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.accessCard}>
@@ -134,4 +181,12 @@ export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan }:
       </ScrollView>
     </KeyboardAvoidingView>
   );
+}
+
+function inferMimeType(fileName: string) {
+  const normalized = fileName.toLowerCase();
+
+  if (normalized.endsWith(".png")) return "image/png";
+  if (normalized.endsWith(".webp")) return "image/webp";
+  return "image/jpeg";
 }

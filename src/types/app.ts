@@ -138,6 +138,10 @@ export type UpdateProfilePayload = {
   name?: string;
   email?: string;
   photoUrl?: string;
+  photoFileBase64?: string;
+  photoFileName?: string;
+  photoMimeType?: string;
+  removePhoto?: boolean;
   currentPassword?: string;
   newPassword?: string;
 };
