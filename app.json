@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "LogScan",
-    "slug": "app-scanner-front",
+    "slug": "logscan",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
