@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "LogScan",
-    "slug": "logscan",
+    "slug": "app-scanner-front",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -39,6 +39,6 @@
         "projectId": "fb6cca49-6e4e-452d-acb9-82c4c983fad6"
       }
     },
-    "owner": "ezequielolive"
+    "owner": "ezequieloliveira"
   }
 }
