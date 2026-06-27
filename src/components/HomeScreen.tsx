@@ -96,7 +96,7 @@ export function HomeScreen({
           <HomeAction icon="shield-checkmark-outline" title="Certificado" text="A1 da organização" onPress={onCertificate} />
         )}
         <HomeAction icon="card-outline" title="Planos" text={`Atual: ${PLAN_LABELS[user.plan]}`} onPress={onBilling} />
-        {/* {canAccessModule(user, "scan") && <HomeAction icon="document-text-outline" title="XML" text="Simular leitura" onPress={onSimulate} />} */}
+         {canAccessModule(user, "scan") && <HomeAction icon="document-text-outline" title="XML" text="Simular leitura" onPress={onSimulate} />}
       </View>
     </ScrollView>
   );
