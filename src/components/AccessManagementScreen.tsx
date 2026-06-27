@@ -117,7 +117,7 @@ export function AccessManagementScreen({
           />
           {!!search && (
             <Pressable style={styles.selectButton} onPress={() => setSearch("")}>
-              <Ionicons name="close-outline" size={21} color="#0f766e" />
+              <Ionicons name="close-outline" size={21} color="#3b82f6" />
             </Pressable>
           )}
         </View>
@@ -138,7 +138,7 @@ export function AccessManagementScreen({
                       {ROLE_LABELS[user.role]}{user.role === "master" ? ` | ${PLAN_LABELS[user.plan]}` : ""}
                     </Text>
                   </View>
-                  <Ionicons name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={20} color="#0f766e" />
+                  <Ionicons name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={20} color="#3b82f6" />
                 </Pressable>
 
                 {expanded && (
@@ -150,7 +150,7 @@ export function AccessManagementScreen({
                     <Ionicons
                       name={user.enabled ? "checkmark-circle-outline" : "close-circle-outline"}
                       size={18}
-                      color={user.enabled ? "#0f766e" : "#991b1b"}
+                      color={user.enabled ? "#3b82f6" : "#991b1b"}
                     />
                     <Text style={[styles.accessStatusText, !user.enabled && styles.accessStatusTextDisabled]}>
                       {user.enabled ? "Habilitado" : "Cortado"}
@@ -206,7 +206,7 @@ export function AccessManagementScreen({
                     <Ionicons
                       name={active ? "toggle-outline" : "ellipse-outline"}
                       size={18}
-                      color={active ? "#0f766e" : "#64748b"}
+                      color={active ? "#3b82f6" : "#64748b"}
                     />
                     <Text style={[styles.moduleButtonText, active && styles.moduleButtonTextActive]}>
                       {MODULE_LABELS[module]}
@@ -234,7 +234,7 @@ export function AccessManagementScreen({
                     setResetPasswords((current) => ({ ...current, [user._id]: "" }));
                   }}
                 >
-                  <Ionicons name="key-outline" size={18} color="#0f766e" />
+                  <Ionicons name="key-outline" size={18} color="#3b82f6" />
                   <Text style={styles.secondaryButtonText}>Aplicar nova senha</Text>
                 </Pressable>
               </View>

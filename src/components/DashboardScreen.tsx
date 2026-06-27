@@ -23,7 +23,7 @@ const STATUS_META: Record<DashboardProductStatus, { label: string; color: string
   without_movement: { label: "Sem movimento", color: "#475569", backgroundColor: "#e2e8f0", icon: "help-circle-outline" },
   stopped: { label: "Parado", color: "#92400e", backgroundColor: "#fef3c7", icon: "pause-circle-outline" },
   attention: { label: "Atenção", color: "#1d4ed8", backgroundColor: "#dbeafe", icon: "time-outline" },
-  healthy: { label: "Giro recente", color: "#0f766e", backgroundColor: "#ccfbf1", icon: "checkmark-circle-outline" }
+  healthy: { label: "Giro recente", color: "#3b82f6", backgroundColor: "#dbeafe", icon: "checkmark-circle-outline" }
 };
 
 const BUCKET_LABELS = {
@@ -93,7 +93,7 @@ export function DashboardScreen({ token }: Props) {
     >
       <View style={localStyles.hero}>
         <View style={localStyles.heroIcon}>
-          <Ionicons name="analytics-outline" size={24} color="#0f766e" />
+          <Ionicons name="analytics-outline" size={24} color="#3b82f6" />
         </View>
         <View style={localStyles.heroText}>
           <Text style={localStyles.heroTitle}>Gestão de estoque</Text>
@@ -117,7 +117,7 @@ export function DashboardScreen({ token }: Props) {
             style={[localStyles.filterToggle, onlyStopped && localStyles.filterToggleActive]}
             onPress={() => setOnlyStopped((current) => !current)}
           >
-            <Ionicons name="pause-circle-outline" size={18} color={onlyStopped ? "#ffffff" : "#0f766e"} />
+            <Ionicons name="pause-circle-outline" size={18} color={onlyStopped ? "#ffffff" : "#3b82f6"} />
             <Text style={[localStyles.filterToggleText, onlyStopped && localStyles.filterToggleTextActive]}>Parados</Text>
           </Pressable>
 
@@ -133,7 +133,7 @@ export function DashboardScreen({ token }: Props) {
             style={[localStyles.filterToggle, onlyWithStock && localStyles.filterToggleActive]}
             onPress={() => setOnlyWithStock((current) => !current)}
           >
-            <Ionicons name="cube-outline" size={18} color={onlyWithStock ? "#ffffff" : "#0f766e"} />
+            <Ionicons name="cube-outline" size={18} color={onlyWithStock ? "#ffffff" : "#3b82f6"} />
             <Text style={[localStyles.filterToggleText, onlyWithStock && localStyles.filterToggleTextActive]}>Com estoque</Text>
           </Pressable>
         </View>
@@ -219,7 +219,7 @@ function MetricCard({
   return (
     <View style={localStyles.metricCard}>
       <View style={[localStyles.metricIcon, tone === "warning" && localStyles.metricIconWarning]}>
-        <Ionicons name={icon} size={20} color={tone === "warning" ? "#92400e" : "#0f766e"} />
+        <Ionicons name={icon} size={20} color={tone === "warning" ? "#92400e" : "#3b82f6"} />
       </View>
       <Text style={localStyles.metricNumber}>{value}</Text>
       <Text style={localStyles.metricText}>{label}</Text>
@@ -302,7 +302,7 @@ const localStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#102521"
+    backgroundColor: "#17263a"
   },
   heroIcon: {
     width: 50,
@@ -310,7 +310,7 @@ const localStyles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e8f3f0"
+    backgroundColor: "#eaf4ff"
   },
   heroText: {
     flex: 1
@@ -344,7 +344,7 @@ const localStyles = StyleSheet.create({
     flex: 1,
     minHeight: 44,
     borderWidth: 1,
-    borderColor: "#0f766e",
+    borderColor: "#3b82f6",
     borderRadius: 8,
     paddingHorizontal: 8,
     flexDirection: "row",
@@ -354,10 +354,10 @@ const localStyles = StyleSheet.create({
     backgroundColor: "#ffffff"
   },
   filterToggleActive: {
-    backgroundColor: "#0f766e"
+    backgroundColor: "#3b82f6"
   },
   filterToggleText: {
-    color: "#0f766e",
+    color: "#3b82f6",
     fontSize: 12,
     fontWeight: "900"
   },
@@ -389,7 +389,7 @@ const localStyles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e8f3f0"
+    backgroundColor: "#eaf4ff"
   },
   metricIconWarning: {
     backgroundColor: "#fef3c7"
@@ -456,7 +456,7 @@ const localStyles = StyleSheet.create({
     backgroundColor: "#f8fafc"
   },
   bucketValue: {
-    color: "#0f766e",
+    color: "#3b82f6",
     fontSize: 18,
     fontWeight: "900"
   },
@@ -579,8 +579,8 @@ const localStyles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 5,
     overflow: "hidden",
-    color: "#0f766e",
-    backgroundColor: "#e8f3f0",
+    color: "#3b82f6",
+    backgroundColor: "#eaf4ff",
     fontSize: 11,
     fontWeight: "900"
   }

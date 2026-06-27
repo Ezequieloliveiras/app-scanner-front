@@ -113,12 +113,12 @@ export function AuthScreen({ loading, error, onLogin, onRegister, onRequestPassw
 
           {mode === "login" ? (
             <Pressable style={styles.secondaryButton} disabled={loading} onPress={() => setMode("reset")}>
-              <Ionicons name="key-outline" size={18} color="#0f766e" />
+              <Ionicons name="key-outline" size={18} color="#3b82f6" />
               <Text style={styles.secondaryButtonText}>Redefinir senha</Text>
             </Pressable>
           ) : (
             <Pressable style={styles.secondaryButton} disabled={loading} onPress={() => setMode("login")}>
-              <Ionicons name="arrow-back-outline" size={18} color="#0f766e" />
+              <Ionicons name="arrow-back-outline" size={18} color="#3b82f6" />
               <Text style={styles.secondaryButtonText}>Voltar para login</Text>
             </Pressable>
           )}

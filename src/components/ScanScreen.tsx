@@ -85,16 +85,12 @@ export function ScanScreen({
   if (!permissionGranted) {
     return (
       <View style={styles.permissionPanel}>
-        <Ionicons name="camera-outline" size={42} color="#0f766e" />
+        <Ionicons name="camera-outline" size={42} color="#3b82f6" />
         <Text style={styles.permissionTitle}>Permitir camera</Text>
         <Text style={styles.mutedText}>Libere a camera para ler codigo de barras e QRCode da NF-e/NFC-e.</Text>
         <Pressable style={styles.primaryButton} onPress={onRequestPermission}>
           <Ionicons name="key-outline" size={18} color="#ffffff" />
           <Text style={styles.primaryButtonText}>Liberar camera</Text>
-        </Pressable>
-       <Pressable style={styles.secondaryButton} onPress={onSimulate}>
-          <Ionicons name="document-text-outline" size={18} color="#0f766e" />
-          <Text style={styles.secondaryButtonText}>Simular leitura de XML</Text>
         </Pressable>
       </View>
     );
@@ -130,7 +126,7 @@ export function ScanScreen({
             style={[styles.scanTorchButton, torchEnabled && styles.scanTorchButtonActive]}
             onPress={() => setTorchEnabled((enabled) => !enabled)}
           >
-            <Ionicons name={torchEnabled ? "flashlight" : "flashlight-outline"} size={19} color={torchEnabled ? "#101820" : "#ffffff"} />
+            <Ionicons name={torchEnabled ? "flashlight" : "flashlight-outline"} size={19} color={torchEnabled ? "#17263a" : "#ffffff"} />
             <Text style={[styles.scanTorchButtonText, torchEnabled && styles.scanTorchButtonTextActive]}>
               {torchEnabled ? "Flash ligado" : "Flash"}
             </Text>
@@ -139,7 +135,7 @@ export function ScanScreen({
 
         {mode === "manual" ? (
           <View style={styles.scanManualPanel}>
-            <Ionicons name="create-outline" size={28} color="#0f766e" />
+            <Ionicons name="create-outline" size={28} color="#3b82f6" />
             <Text style={styles.scanManualTitle}>Digitar chave de acesso</Text>
             <TextInput
               value={manualInput}
@@ -206,11 +202,6 @@ export function ScanScreen({
             )}
           </>
         )}
-
-        <Pressable style={styles.scanSimulateButton} onPress={onSimulate}>
-          <Ionicons name="document-text-outline" size={18} color="#ffffff" />
-          <Text style={styles.scanSimulateText}>Simular leitura de XML</Text>
-        </Pressable>
       </View>
     </KeyboardAvoidingView>
   );
@@ -229,7 +220,7 @@ function ScanModeButton({
 }) {
   return (
     <Pressable style={[styles.scanModeButton, active && styles.scanModeButtonActive]} onPress={onPress}>
-      <Ionicons name={icon} size={19} color={active ? "#ffffff" : "#0f766e"} />
+      <Ionicons name={icon} size={19} color={active ? "#ffffff" : "#3b82f6"} />
       <Text style={[styles.scanModeButtonText, active && styles.scanModeButtonTextActive]}>{label}</Text>
     </Pressable>
   );

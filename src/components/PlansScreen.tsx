@@ -41,7 +41,7 @@ export function PlansScreen({ user, plans, loading, onSelectPlan }: PlansScreenP
             <View style={styles.planModuleGrid}>
               {plan.modules.map((module) => (
                 <View key={module} style={styles.planModulePill}>
-                  <Ionicons name="checkmark-circle-outline" size={18} color="#0f766e" />
+                  <Ionicons name="checkmark-circle-outline" size={18} color="#3b82f6" />
                   <Text style={styles.planModuleText}>{MODULE_LABELS[module]}</Text>
                 </View>
               ))}
@@ -49,7 +49,7 @@ export function PlansScreen({ user, plans, loading, onSelectPlan }: PlansScreenP
 
             {plan.features.map((feature) => (
               <View key={feature.key} style={styles.planFeatureRow}>
-                <Ionicons name="checkmark-outline" size={17} color="#0f766e" />
+                <Ionicons name="checkmark-outline" size={17} color="#3b82f6" />
                 <Text style={styles.meta}>{feature.label}</Text>
               </View>
             ))}
@@ -59,7 +59,7 @@ export function PlansScreen({ user, plans, loading, onSelectPlan }: PlansScreenP
               disabled={loading || active}
               onPress={() => onSelectPlan(plan.id)}
             >
-              <Ionicons name={active ? "checkmark-circle-outline" : "arrow-up-circle-outline"} size={18} color={active ? "#0f766e" : "#ffffff"} />
+              <Ionicons name={active ? "checkmark-circle-outline" : "arrow-up-circle-outline"} size={18} color={active ? "#3b82f6" : "#ffffff"} />
               <Text style={active ? styles.secondaryButtonText : styles.primaryButtonText}>{buttonLabel}</Text>
             </Pressable>
           </View>

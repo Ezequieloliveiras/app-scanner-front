@@ -45,15 +45,15 @@ export function HomeScreen({
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor="#0f766e"
-          colors={["#0f766e"]}
+          tintColor="#3b82f6"
+          colors={["#3b82f6"]}
         />
       }
     >
       <View style={styles.homeHero}>
         <View style={styles.homeHeroTop}>
           <View style={styles.homeHeroMark}>
-            <Ionicons name="barcode-outline" size={26} color="#0f766e" />
+            <Ionicons name="barcode-outline" size={26} color="#3b82f6" />
           </View>
           <View style={styles.homeHeroBrand}>
             <Text style={styles.homeEyebrow}>LogScan</Text>
@@ -96,7 +96,6 @@ export function HomeScreen({
           <HomeAction icon="shield-checkmark-outline" title="Certificado" text="A1 da organização" onPress={onCertificate} />
         )}
         <HomeAction icon="card-outline" title="Planos" text={`Atual: ${PLAN_LABELS[user.plan]}`} onPress={onBilling} />
-         {canAccessModule(user, "scan") && <HomeAction icon="document-text-outline" title="XML" text="Simular leitura" onPress={onSimulate} />}
       </View>
     </ScrollView>
   );

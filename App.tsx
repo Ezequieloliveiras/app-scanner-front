@@ -1170,6 +1170,8 @@ function MainApp() {
         pendingProducts={pendingProducts}
         editingProductIndex={editingProductIndex}
         loading={loading}
+        topInset={insets.top}
+        bottomInset={insets.bottom}
         onUpdateProduct={updatePendingProduct}
         onEditProduct={setEditingProductIndex}
         onCloseEdit={() => setEditingProductIndex(null)}

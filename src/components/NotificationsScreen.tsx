@@ -48,7 +48,7 @@ export function NotificationsScreen({
         <>
           {pendingRequests.map((request) => (
             <View key={request._id} style={styles.notificationItem}>
-              <Ionicons name="file-tray-full-outline" size={22} color="#0f766e" />
+              <Ionicons name="file-tray-full-outline" size={22} color="#3b82f6" />
               <View style={styles.pendingTitleArea}>
                 <Text style={styles.branchProductName}>Solicitação de estoque</Text>
                 <Text style={styles.branchProductMeta}>
@@ -88,7 +88,7 @@ export function NotificationsScreen({
                 <Ionicons
                   name={approved ? "checkmark-circle-outline" : "close-circle-outline"}
                   size={22}
-                  color={approved ? "#0f766e" : "#991b1b"}
+                  color={approved ? "#3b82f6" : "#991b1b"}
                 />
                 <View style={styles.pendingTitleArea}>
                   <Text style={styles.branchProductName}>
@@ -112,7 +112,7 @@ export function NotificationsScreen({
               <Ionicons
                 name={notification.tone === "error" ? "alert-circle-outline" : "information-circle-outline"}
                 size={22}
-                color={notification.tone === "error" ? "#991b1b" : "#0f766e"}
+                color={notification.tone === "error" ? "#991b1b" : "#3b82f6"}
               />
               <View style={styles.pendingTitleArea}>
                 <Text style={styles.branchProductName}>{notification.title}</Text>

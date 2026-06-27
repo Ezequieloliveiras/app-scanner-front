@@ -140,7 +140,7 @@ export function CertificateScreen({ status, loading, onRefresh, onSave, onDelete
               <Ionicons
                 name={certificate ? "shield-checkmark-outline" : "shield-outline"}
                 size={17}
-                color={certificate ? "#0f766e" : "#92400e"}
+                color={certificate ? "#3b82f6" : "#92400e"}
               />
               <Text style={[styles.certificateStatusText, !certificate && styles.certificateStatusTextEmpty]}>
                 {certificate ? "Ativo" : "Pendente"}
@@ -213,7 +213,7 @@ export function CertificateScreen({ status, loading, onRefresh, onSave, onDelete
           />
 
           <Pressable style={styles.secondaryButton} disabled={loading} onPress={pickCertificate}>
-            <Ionicons name="document-attach-outline" size={18} color="#0f766e" />
+            <Ionicons name="document-attach-outline" size={18} color="#3b82f6" />
             <Text style={styles.secondaryButtonText}>{selectedFile ? "Trocar arquivo" : "Selecionar arquivo"}</Text>
           </Pressable>
 

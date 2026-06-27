@@ -14,7 +14,7 @@ export function MenuItem({
 }) {
   return (
     <Pressable style={styles.menuItem} onPress={onPress}>
-      <Ionicons name={icon} size={22} color="#0f766e" />
+      <Ionicons name={icon} size={22} color="#3b82f6" />
       <Text style={styles.menuItemText}>{label}</Text>
       {hasBadge && <View style={styles.menuNotificationDot} />}
       <Ionicons name="chevron-forward-outline" size={18} color="#94a3b8" />

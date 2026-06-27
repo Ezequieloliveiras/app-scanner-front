@@ -26,7 +26,7 @@ export function AppHeader({
         <Text style={styles.headerSubtitle}>Scanner de notas e estoque</Text>
       </View>
       <View style={styles.headerActions}>
-        {loading && <ActivityIndicator color="#0f766e" />}
+        {loading && <ActivityIndicator color="#3b82f6" />}
         <Pressable style={styles.headerIconButton} onPress={onNotificationPress}>
           <Ionicons name="notifications-outline" size={22} color="#1f2937" />
           {hasNotification && <View style={styles.notificationDot} />}

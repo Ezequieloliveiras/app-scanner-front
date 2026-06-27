@@ -17,7 +17,7 @@ export function HomeAction({
   return (
     <Pressable style={styles.homeAction} onPress={onPress}>
       <View style={styles.homeActionIcon}>
-        <Ionicons name={icon} size={26} color="#0f766e" />
+        <Ionicons name={icon} size={26} color="#3b82f6" />
       </View>
       {hasBadge && <View style={styles.homeActionNotificationDot} />}
       <Text style={styles.homeActionTitle}>{title}</Text>

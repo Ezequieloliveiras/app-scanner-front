@@ -118,7 +118,7 @@ export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan }:
               {photoUrl ? (
                 <Image source={{ uri: photoUrl }} style={styles.profileAvatarImage} />
               ) : (
-                <Ionicons name="person-outline" size={34} color="#0f766e" />
+                <Ionicons name="person-outline" size={34} color="#3b82f6" />
               )}
             </View>
             <View style={styles.profileCameraBadge}>
@@ -131,7 +131,7 @@ export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan }:
             {user.role.toUpperCase()} | Plano {PLAN_LABELS[user.plan]}
           </Text>
           <Pressable style={styles.secondaryButton} onPress={onUpgradePlan}>
-            <Ionicons name="arrow-up-circle-outline" size={18} color="#0f766e" />
+            <Ionicons name="arrow-up-circle-outline" size={18} color="#3b82f6" />
             <Text style={styles.secondaryButtonText}>Ver planos e upgrades</Text>
           </Pressable>
           {photoUrl && (

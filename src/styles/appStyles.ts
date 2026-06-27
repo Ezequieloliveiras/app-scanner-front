@@ -1,9 +1,9 @@
 import { StyleSheet } from "react-native";
 
 export const colors = {
-  primary: "#0f766e",
-  primarySoft: "#e8f3f0",
-  primaryDark: "#102521",
+  primary: "#3b82f6",
+  primarySoft: "#eaf4ff",
+  primaryDark: "#17263a",
   white: "#ffffff"
 };
 
@@ -97,7 +97,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: "#0f766e"
+    backgroundColor: "#3b82f6"
   },
   notificationActionText: {
     color: "#ffffff",
@@ -141,7 +141,7 @@ export const styles = StyleSheet.create({
     gap: 3
   },
   bottomNavItemActive: {
-    backgroundColor: "#0f766e"
+    backgroundColor: "#3b82f6"
   },
   bottomNavLabel: {
     color: "#64748b",
@@ -165,7 +165,7 @@ export const styles = StyleSheet.create({
   homeHero: {
     borderRadius: 8,
     padding: 18,
-    backgroundColor: "#102521"
+    backgroundColor: "#17263a"
   },
   homeHeroTop: {
     flexDirection: "row",
@@ -178,7 +178,7 @@ export const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e8f3f0"
+    backgroundColor: "#eaf4ff"
   },
   homeHeroBrand: {
     flex: 1
@@ -230,7 +230,7 @@ export const styles = StyleSheet.create({
     fontWeight: "900"
   },
   authAppTagline: {
-    color: "#35524d",
+    color: "#5d6f82",
     fontSize: 13,
     fontWeight: "800"
   },
@@ -265,10 +265,10 @@ export const styles = StyleSheet.create({
     fontWeight: "900"
   },
   authTabTextActive: {
-    color: "#0f766e"
+    color: "#3b82f6"
   },
   homeEyebrow: {
-    color: "#99f6e4",
+    color: "#bfdbfe",
     fontSize: 12,
     fontWeight: "900",
     textTransform: "uppercase"
@@ -332,7 +332,7 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e8f3f0"
+    backgroundColor: "#eaf4ff"
   },
   homeActionTitle: {
     marginTop: 14,
@@ -348,7 +348,7 @@ export const styles = StyleSheet.create({
   },
   scanPage: {
     flex: 1,
-    backgroundColor: "#101820"
+    backgroundColor: "#17263a"
   },
   camera: {
     ...StyleSheet.absoluteFillObject
@@ -380,10 +380,10 @@ export const styles = StyleSheet.create({
     gap: 2
   },
   scanModeButtonActive: {
-    backgroundColor: "#0f766e"
+    backgroundColor: "#3b82f6"
   },
   scanModeButtonText: {
-    color: "#0f766e",
+    color: "#3b82f6",
     fontSize: 10,
     fontWeight: "900"
   },
@@ -414,7 +414,7 @@ export const styles = StyleSheet.create({
     fontWeight: "900"
   },
   scanTorchButtonTextActive: {
-    color: "#101820"
+    color: "#17263a"
   },
   scanBox: {
     width: 230,
@@ -496,7 +496,7 @@ export const styles = StyleSheet.create({
     width: 150,
     height: 64,
     borderRadius: 18,
-    backgroundColor: "#0f766e",
+    backgroundColor: "#3b82f6",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -604,7 +604,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#0f766e"
+    backgroundColor: "#3b82f6"
   },
   primaryButtonText: {
     color: "#ffffff",
@@ -620,11 +620,11 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: "#0f766e",
+    borderColor: "#3b82f6",
     backgroundColor: "#ffffff"
   },
   secondaryButtonText: {
-    color: "#0f766e",
+    color: "#3b82f6",
     fontSize: 14,
     fontWeight: "900"
   },
@@ -671,7 +671,7 @@ export const styles = StyleSheet.create({
     overflow: "hidden",
     textAlign: "center",
     color: "#ffffff",
-    backgroundColor: "#0f766e",
+    backgroundColor: "#3b82f6",
     fontWeight: "900"
   },
   invoiceKey: {
@@ -708,7 +708,7 @@ export const styles = StyleSheet.create({
   quantity: {
     minWidth: 58,
     textAlign: "right",
-    color: "#0f766e",
+    color: "#3b82f6",
     fontSize: 18,
     fontWeight: "900",
     paddingRight: 6
@@ -720,12 +720,12 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#ccfbf1",
-    backgroundColor: "#e8f3f0"
+    borderColor: "#dbeafe",
+    backgroundColor: "#eaf4ff"
   },
   editButtonActive: {
-    borderColor: "#99f6e4",
-    backgroundColor: "#ccfbf1"
+    borderColor: "#bfdbfe",
+    backgroundColor: "#dbeafe"
   },
   eanBadge: {
     alignSelf: "flex-start",
@@ -733,8 +733,8 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     overflow: "hidden",
-    color: "#35524d",
-    backgroundColor: "#e8f3f0",
+    color: "#5d6f82",
+    backgroundColor: "#eaf4ff",
     fontSize: 12,
     fontWeight: "800"
   },
@@ -824,11 +824,11 @@ export const styles = StyleSheet.create({
     width: 46,
     height: 44,
     borderWidth: 1,
-    borderColor: "#0f766e",
+    borderColor: "#3b82f6",
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e8f3f0"
+    backgroundColor: "#eaf4ff"
   },
   branchPanel: {
     gap: 12,
@@ -884,8 +884,8 @@ export const styles = StyleSheet.create({
     backgroundColor: "#f8fafc"
   },
   branchProductOptionActive: {
-    borderColor: "#0f766e",
-    backgroundColor: "#e8f3f0"
+    borderColor: "#3b82f6",
+    backgroundColor: "#eaf4ff"
   },
   branchProductName: {
     color: "#1f2937",
@@ -893,7 +893,7 @@ export const styles = StyleSheet.create({
     fontWeight: "900"
   },
   branchProductNameActive: {
-    color: "#0f766e"
+    color: "#3b82f6"
   },
   branchProductMeta: {
     marginTop: 4,
@@ -902,7 +902,7 @@ export const styles = StyleSheet.create({
     fontWeight: "800"
   },
   branchProductMetaActive: {
-    color: "#35524d"
+    color: "#5d6f82"
   },
   branchObservationInput: {
     minHeight: 76,
@@ -950,8 +950,8 @@ export const styles = StyleSheet.create({
     backgroundColor: "#fef3c7"
   },
   stockRequestApproved: {
-    color: "#0f766e",
-    backgroundColor: "#ccfbf1"
+    color: "#3b82f6",
+    backgroundColor: "#dbeafe"
   },
   stockRequestRejected: {
     color: "#991b1b",
@@ -997,8 +997,8 @@ export const styles = StyleSheet.create({
     backgroundColor: "#dbeafe"
   },
   transferStatusReceived: {
-    color: "#0f766e",
-    backgroundColor: "#ccfbf1"
+    color: "#3b82f6",
+    backgroundColor: "#dbeafe"
   },
   transferStatusCancelled: {
     color: "#991b1b",
@@ -1006,7 +1006,7 @@ export const styles = StyleSheet.create({
   },
   transferHistory: {
     borderLeftWidth: 3,
-    borderLeftColor: "#0f766e",
+    borderLeftColor: "#3b82f6",
     paddingLeft: 8,
     color: "#475569",
     fontSize: 12,
@@ -1064,11 +1064,11 @@ export const styles = StyleSheet.create({
     backgroundColor: "#ffffff"
   },
   planCardHighlighted: {
-    borderColor: "#0f766e",
-    backgroundColor: "#f0fdfa"
+    borderColor: "#3b82f6",
+    backgroundColor: "#f7fbff"
   },
   planCardActive: {
-    borderColor: "#99f6e4"
+    borderColor: "#bfdbfe"
   },
   planTopRow: {
     flexDirection: "row",
@@ -1087,13 +1087,13 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     overflow: "hidden",
-    color: "#0f766e",
-    backgroundColor: "#ccfbf1",
+    color: "#3b82f6",
+    backgroundColor: "#dbeafe",
     fontSize: 11,
     fontWeight: "900"
   },
   planPrice: {
-    color: "#0f766e",
+    color: "#3b82f6",
     fontSize: 16,
     fontWeight: "900",
     textAlign: "right"
@@ -1112,19 +1112,19 @@ export const styles = StyleSheet.create({
     minHeight: 38,
     width: "48%",
     borderWidth: 1,
-    borderColor: "#99f6e4",
+    borderColor: "#bfdbfe",
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#e8f3f0"
+    backgroundColor: "#eaf4ff"
   },
   planModuleText: {
     flex: 1,
     flexShrink: 1,
-    color: "#0f766e",
+    color: "#3b82f6",
     fontSize: 12,
     lineHeight: 16,
     fontWeight: "900"
@@ -1140,15 +1140,15 @@ export const styles = StyleSheet.create({
     borderWidth: 1
   },
   accessEnabled: {
-    borderColor: "#99f6e4",
-    backgroundColor: "#e8f3f0"
+    borderColor: "#bfdbfe",
+    backgroundColor: "#eaf4ff"
   },
   accessDisabled: {
     borderColor: "#fecaca",
     backgroundColor: "#fee2e2"
   },
   accessStatusText: {
-    color: "#0f766e",
+    color: "#3b82f6",
     fontSize: 12,
     fontWeight: "900"
   },
@@ -1165,13 +1165,13 @@ export const styles = StyleSheet.create({
     gap: 6
   },
   certificateStatusOk: {
-    backgroundColor: "#ccfbf1"
+    backgroundColor: "#dbeafe"
   },
   certificateStatusEmpty: {
     backgroundColor: "#fef3c7"
   },
   certificateStatusText: {
-    color: "#0f766e",
+    color: "#3b82f6",
     fontSize: 12,
     fontWeight: "900"
   },
@@ -1213,7 +1213,7 @@ export const styles = StyleSheet.create({
     backgroundColor: "#e2e8f0"
   },
   roleButtonActive: {
-    backgroundColor: "#0f766e"
+    backgroundColor: "#3b82f6"
   },
   roleButtonText: {
     color: "#475569",
@@ -1241,8 +1241,8 @@ export const styles = StyleSheet.create({
     backgroundColor: "#f8fafc"
   },
   moduleButtonActive: {
-    borderColor: "#99f6e4",
-    backgroundColor: "#e8f3f0"
+    borderColor: "#bfdbfe",
+    backgroundColor: "#eaf4ff"
   },
   moduleButtonText: {
     color: "#64748b",
@@ -1250,7 +1250,7 @@ export const styles = StyleSheet.create({
     fontWeight: "900"
   },
   moduleButtonTextActive: {
-    color: "#0f766e"
+    color: "#3b82f6"
   },
   userListItem: {
     minHeight: 56,
@@ -1289,7 +1289,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    backgroundColor: "#e8f3f0"
+    backgroundColor: "#eaf4ff"
   },
   profileAvatarImage: {
     width: "100%",
@@ -1306,7 +1306,7 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 2,
     borderColor: "#ffffff",
-    backgroundColor: "#0f766e"
+    backgroundColor: "#3b82f6"
   },
   inlineAlert: {
     flexDirection: "row",
@@ -1358,6 +1358,13 @@ export const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 8
   },
+  sideMenuList: {
+    flex: 1
+  },
+  sideMenuListContent: {
+    gap: 8,
+    paddingBottom: 28
+  },
   sideMenuTitle: {
     color: "#1f2937",
     fontSize: 24,
@@ -1390,21 +1397,282 @@ export const styles = StyleSheet.create({
     padding: 18,
     backgroundColor: "#ffffff"
   },
+  invoiceReviewPage: {
+    flex: 1,
+    backgroundColor: "#ffffff"
+  },
+  invoiceReviewPageHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingTop: 0,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+    backgroundColor: "#ffffff"
+  },
+  invoiceReviewPageContent: {
+    gap: 12,
+    padding: 14,
+    paddingBottom: 12
+  },
   invoiceReviewModal: {
     maxHeight: "88%",
     gap: 12,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    padding: 18,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 18,
+    paddingTop: 20,
+    paddingBottom: 18,
     backgroundColor: "#ffffff"
   },
+  invoiceReviewHandle: {
+    alignSelf: "center",
+    width: 72,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#cbd5e1"
+  },
+  invoiceReviewCloseButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f1f5f9"
+  },
+  invoiceKeyArea: {
+    minHeight: 34,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  invoiceKeyLabel: {
+    color: "#475569",
+    fontSize: 11,
+    fontWeight: "800"
+  },
+  invoiceKeyBox: {
+    flex: 1,
+    minHeight: 32,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#f8fafc"
+  },
+  invoiceKeyValue: {
+    flex: 1,
+    color: "#64748b",
+    fontSize: 10,
+    fontWeight: "700"
+  },
   invoiceReviewList: {
-    height: "100%",
+    flex: 1
+  },
+  invoiceReviewListContent: {
+    gap: 16,
+    paddingBottom: 6
+  },
+  invoiceProductCard: {
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: "#ffffff"
+  },
+  invoiceProductCardDivergent: {
+    borderColor: "#bfdbfe",
+    backgroundColor: "#f7fbff"
+  },
+  invoiceProductTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8
+  },
+  invoiceProductHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10
+  },
+  invoiceProductInfo: {
+    flex: 1,
+    gap: 7
+  },
+  invoiceObservationButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#eaf4ff"
+  },
+  invoiceObservationButtonActive: {
+    backgroundColor: "#3b82f6"
+  },
+  invoiceProductNameRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8
+  },
+  invoiceProductInlineIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#eaf4ff"
+  },
+  invoiceProductName: {
+    flex: 1,
+    color: "#17263a",
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: "900"
+  },
+  invoiceProductMetaRow: {
+    marginLeft: 34,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5
+  },
+  invoiceProductMeta: {
+    flex: 1,
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  invoiceEanBadge: {
+    alignSelf: "flex-start",
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    overflow: "hidden",
+    color: "#3b82f6",
+    backgroundColor: "#dbeafe",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  invoiceQuantityRow: {
+    flexDirection: "row",
+    gap: 10
+  },
+  invoiceQuantityPanel: {
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#f8fafc"
+  },
+  invoiceQuantitySummary: {
+    width: 82,
+    gap: 3
+  },
+  invoiceQuantityValue: {
+    color: "#1f2937",
+    fontSize: 20,
+    fontWeight: "900"
+  },
+  invoiceCountEditor: {
+    flex: 1,
+    gap: 6
+  },
+  invoiceCountControls: {
+    minHeight: 38,
+    borderWidth: 1,
+    borderColor: "#d8dee9",
+    borderRadius: 8,
+    paddingHorizontal: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff"
+  },
+  invoiceCountControlsDivergent: {
+    borderColor: "#bfdbfe",
+    backgroundColor: "#ffffff"
+  },
+  invoiceQuantityBox: {
+    flex: 1,
+    minHeight: 86,
+    borderWidth: 1,
+    borderColor: "#d8dee9",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#ffffff"
+  },
+  invoiceQuantityBoxDivergent: {
+    borderColor: "#bfdbfe",
+    backgroundColor: "#eaf4ff"
+  },
+  invoiceQuantityInputRow: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  invoiceQuantityInput: {
+    flex: 1,
+    minHeight: 34,
+    padding: 0,
+    color: "#1f2937",
+    fontSize: 19,
+    fontWeight: "900",
+    textAlign: "center"
+  },
+  invoiceQuantityStepButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#e2e8f0"
+  },
+  invoiceReviewInfo: {
+    minHeight: 48,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#f8fafc"
+  },
+  invoiceReviewInfoIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#dbeafe"
+  },
+  invoiceReviewInfoText: {
+    flex: 1,
+    color: "#475569",
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "700"
   },
   invoiceReviewActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10
+  },
+  invoiceReviewFooter: {
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 0,
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+    backgroundColor: "#ffffff"
   },
   invoiceReviewBackButton: {
     flex: 1,
@@ -1418,24 +1686,24 @@ export const styles = StyleSheet.create({
     backgroundColor: "#f8fafc"
   },
   invoiceReviewBackText: {
-    color: "#0f766e",
+    color: "#3b82f6",
     fontSize: 13,
     fontWeight: "900"
   },
   invoiceReviewCommitButton: {
-    flex: 1.25,
+    flex: 1,
     minHeight: 44,
     borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 7,
-    backgroundColor: "#b91c1c"
+    gap: 9,
+    backgroundColor: "#2563eb"
   },
   invoiceReviewCommitText: {
     color: "#ffffff",
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "900"
   },
   modalHeader: {

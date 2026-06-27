@@ -114,7 +114,7 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
                   setExpandedAction(null);
                 }}
               >
-                <Ionicons name="information-circle-outline" size={22} color="#0f766e" />
+                <Ionicons name="information-circle-outline" size={22} color="#3b82f6" />
               </Pressable>
             </View>
             <Text style={styles.meta}>Entradas: {product.stockEntries?.length || 0}</Text>
@@ -263,10 +263,10 @@ function ActionHeader({
   return (
     <Pressable style={styles.actionHeader} onPress={onPress}>
       <View style={styles.actionHeaderTitle}>
-        <Ionicons name={icon} size={20} color="#0f766e" />
+        <Ionicons name={icon} size={20} color="#3b82f6" />
         <Text style={styles.actionHeaderText}>{title}</Text>
       </View>
-      <Ionicons name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={20} color="#0f766e" />
+      <Ionicons name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={20} color="#3b82f6" />
     </Pressable>
   );
 }
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
   quantity: {
     minWidth: 58,
     textAlign: "right",
-    color: "#0f766e",
+    color: "#3b82f6",
     fontSize: 18,
     fontWeight: "900"
   },
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e8f3f0"
+    backgroundColor: "#eaf4ff"
   },
   meta: {
     marginTop: 6,
@@ -478,15 +478,15 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 8,
     padding: 12,
-    backgroundColor: "#e8f3f0"
+    backgroundColor: "#eaf4ff"
   },
   summaryValue: {
-    color: "#0f766e",
+    color: "#3b82f6",
     fontSize: 22,
     fontWeight: "900"
   },
   summaryLabel: {
-    color: "#35524d",
+    color: "#5d6f82",
     fontSize: 12,
     fontWeight: "800"
   },
@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
     fontWeight: "900"
   },
   historyQuantity: {
-    color: "#0f766e",
+    color: "#3b82f6",
     fontSize: 15,
     fontWeight: "900"
   },
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
     color: "#b45309"
   },
   historyQuantityDivergentExtra: {
-    color: "#0f766e"
+    color: "#3b82f6"
   },
   historyMeta: {
     marginTop: 4,
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#0f766e"
+    backgroundColor: "#3b82f6"
   },
   saveButtonText: {
     color: "#ffffff",

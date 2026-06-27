@@ -90,7 +90,7 @@ export function BranchScreen({
               <Text style={styles.sectionTitle}>Reservar estoque para filial</Text>
               <Text style={styles.sectionSubtitle}>Busque produto e filiais por nome ou código antes de reservar.</Text>
             </View>
-            <Ionicons name={openSection === "reserve" ? "chevron-up-outline" : "chevron-down-outline"} size={22} color="#0f766e" />
+            <Ionicons name={openSection === "reserve" ? "chevron-up-outline" : "chevron-down-outline"} size={22} color="#3b82f6" />
           </Pressable>
 
           {openSection === "reserve" && (
@@ -109,7 +109,7 @@ export function BranchScreen({
                   style={styles.selectInput}
                 />
                 <Pressable style={styles.selectButton} onPress={() => setSelectModal("product")}>
-                  <Ionicons name="list-outline" size={22} color="#0f766e" />
+                  <Ionicons name="list-outline" size={22} color="#3b82f6" />
                 </Pressable>
               </View>
               {!!productSearch.trim() && !selectedProduct && (
@@ -146,7 +146,7 @@ export function BranchScreen({
                   style={styles.selectInput}
                 />
                 <Pressable style={styles.selectButton} onPress={() => setSelectModal("source")}>
-                  <Ionicons name="business-outline" size={21} color="#0f766e" />
+                  <Ionicons name="business-outline" size={21} color="#3b82f6" />
                 </Pressable>
               </View>
               {!!sourceBranchSearch.trim() && (
@@ -166,7 +166,7 @@ export function BranchScreen({
                   style={styles.selectInput}
                 />
                 <Pressable style={styles.selectButton} onPress={() => setSelectModal("target")}>
-                  <Ionicons name="business-outline" size={21} color="#0f766e" />
+                  <Ionicons name="business-outline" size={21} color="#3b82f6" />
                 </Pressable>
               </View>
               {!!targetBranchSearch.trim() && (
@@ -211,7 +211,7 @@ export function BranchScreen({
               <Text style={styles.sectionTitle}>{"Movimenta\u00e7\u00f5es entre filiais"}</Text>
               <Text style={styles.sectionSubtitle}>Acompanhe reservado, a caminho e entrada na filial.</Text>
             </View>
-            <Ionicons name={openSection === "movements" ? "chevron-up-outline" : "chevron-down-outline"} size={22} color="#0f766e" />
+            <Ionicons name={openSection === "movements" ? "chevron-up-outline" : "chevron-down-outline"} size={22} color="#3b82f6" />
           </Pressable>
 
           {openSection === "movements" && (
@@ -235,7 +235,7 @@ export function BranchScreen({
                   style={styles.selectInput}
                 />
                 <Pressable style={styles.selectButton} onPress={() => setSelectModal("filterSource")}>
-                  <Ionicons name="business-outline" size={21} color="#0f766e" />
+                  <Ionicons name="business-outline" size={21} color="#3b82f6" />
                 </Pressable>
               </View>
 
@@ -248,7 +248,7 @@ export function BranchScreen({
                   style={styles.selectInput}
                 />
                 <Pressable style={styles.selectButton} onPress={() => setSelectModal("filterTarget")}>
-                  <Ionicons name="business-outline" size={21} color="#0f766e" />
+                  <Ionicons name="business-outline" size={21} color="#3b82f6" />
                 </Pressable>
               </View>
 
@@ -297,7 +297,7 @@ export function BranchScreen({
                           <Ionicons
                             name={isExpanded ? "chevron-up-outline" : "chevron-down-outline"}
                             size={22}
-                            color="#0f766e"
+                            color="#3b82f6"
                           />
                         </Pressable>
                       </View>
@@ -325,7 +325,7 @@ export function BranchScreen({
                           {transfer.status === "reserved" && (
                             <View style={styles.transferActions}>
                               <Pressable style={styles.secondaryButton} onPress={() => onUpdateStatus(transfer._id, "in_transit")}>
-                                <Ionicons name="car-outline" size={18} color="#0f766e" />
+                                <Ionicons name="car-outline" size={18} color="#3b82f6" />
                                 <Text style={styles.secondaryButtonText}>Produto a caminho</Text>
                               </Pressable>
 
