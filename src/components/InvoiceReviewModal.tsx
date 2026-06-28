@@ -105,7 +105,7 @@ export function InvoiceReviewModal({
                   <Pressable
                     style={[styles.invoiceObservationButton, (isEditing || !!product.observation?.trim()) && styles.invoiceObservationButtonActive]}
                     accessibilityRole="button"
-                    accessibilityLabel={`${isEditing ? "Fechar" : "Abrir"} observacao de ${product.name}`}
+                    accessibilityLabel={`${isEditing ? "Fechar" : "Abrir"} observação de ${product.name}`}
                     onPress={() => (isEditing ? onCloseEdit() : onEditProduct(index))}
                   >
                     <Ionicons
@@ -156,7 +156,7 @@ export function InvoiceReviewModal({
 
                 {isEditing && (
                   <View style={styles.inlineEditor}>
-                    <Text style={styles.fieldLabel}>Observacao da entrada</Text>
+                    <Text style={styles.fieldLabel}>Observação da entrada</Text>
                     <TextInput
                       value={product.observation || ""}
                       onChangeText={(value) => onUpdateProduct(index, { observation: value })}

@@ -1,17 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
-} from "react-native";
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Product, StockEntry } from "../types/product";
 
 type Props = {
@@ -30,6 +19,12 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
   const [withdrawObservationInput, setWithdrawObservationInput] = useState("");
   const [expandedAction, setExpandedAction] = useState<ExpandedAction>(null);
   const [saving, setSaving] = useState(false);
+  const activeProduct = selectedProduct
+    ? products.find((product) => product._id === selectedProduct._id) ?? selectedProduct
+    : null;
+  const historyEntries = [...(activeProduct?.stockEntries ?? [])].sort(
+    (first, second) => getEntryTimestamp(second) - getEntryTimestamp(first)
+  );
 
   if (!products.length) {
     return (
@@ -40,8 +35,17 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
     );
   }
 
+  function openProduct(product: Product) {
+    setSelectedProduct(product);
+    setQuantityInput("");
+    setObservationInput("");
+    setWithdrawQuantityInput("");
+    setWithdrawObservationInput("");
+    setExpandedAction(null);
+  }
+
   async function registerMissingDelivered() {
-    if (!selectedProduct || saving) return;
+    if (!activeProduct || saving) return;
 
     const quantity = parseQuantity(quantityInput);
 
@@ -52,7 +56,7 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
 
     try {
       setSaving(true);
-      await onRegisterMissingDelivered(selectedProduct._id, quantity, observationInput.trim() || "Entrada faltante entregue");
+      await onRegisterMissingDelivered(activeProduct._id, quantity, observationInput.trim() || "Entrada faltante entregue");
       setQuantityInput("");
       setObservationInput("");
       setExpandedAction(null);
@@ -65,129 +69,164 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
   }
 
   async function createStockRequest() {
-    if (!selectedProduct || saving) return;
+    if (!activeProduct || saving) return;
 
     const quantity = parseQuantity(withdrawQuantityInput);
 
     if (quantity <= 0) {
-      Alert.alert("Quantidade invalida", "Informe a quantidade para retirada.");
+      Alert.alert("Quantidade inválida", "Informe a quantidade para retirada.");
       return;
     }
 
     try {
       setSaving(true);
       await onCreateStockRequest(
-        selectedProduct._id,
+        activeProduct._id,
         quantity,
         withdrawObservationInput.trim() || "Solicitação de retirada de estoque"
       );
       setWithdrawQuantityInput("");
       setWithdrawObservationInput("");
       setExpandedAction(null);
-      Alert.alert("Solicitação enviada", "A retirada de estoque foi enviada para analise.");
+      Alert.alert("Solicitação enviada", "A retirada de estoque foi enviada para análise.");
     } catch (error) {
-      Alert.alert("Nao foi possivel solicitar", error instanceof Error ? error.message : "Tente novamente.");
+      Alert.alert("Não foi possível solicitar", error instanceof Error ? error.message : "Tente novamente.");
     } finally {
       setSaving(false);
     }
   }
 
-  return (
-    <>
-      <View style={styles.list}>
-        {products.map((product) => (
-          <View key={product._id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.cardTitleArea}>
-                <Text style={styles.productName}>{product.name}</Text>
-                <Text style={styles.meta}>EAN: {product.ean}</Text>
-              </View>
-              <Text style={styles.quantity}>{product.quantity}</Text>
-              <Pressable
-                style={styles.detailButton}
-                onPress={() => {
-                  setSelectedProduct(product);
-                  setQuantityInput("");
-                  setObservationInput("");
-                  setWithdrawQuantityInput("");
-                  setWithdrawObservationInput("");
-                  setExpandedAction(null);
-                }}
-              >
-                <Ionicons name="information-circle-outline" size={22} color="#3b82f6" />
-              </Pressable>
-            </View>
-            <Text style={styles.meta}>Entradas: {product.stockEntries?.length || 0}</Text>
+  function renderActions() {
+    return (
+      <View style={styles.actionArea}>
+        <ActionHeader
+          title="Incluir faltante"
+          icon="add-circle-outline"
+          expanded={expandedAction === "missing"}
+          onPress={() => setExpandedAction(expandedAction === "missing" ? null : "missing")}
+        />
+        {expandedAction === "missing" && (
+          <View style={styles.actionBody}>
+            <TextInput
+              value={quantityInput}
+              onChangeText={setQuantityInput}
+              keyboardType="decimal-pad"
+              placeholder="Quantidade entregue"
+              returnKeyType="next"
+              style={styles.input}
+            />
+            <TextInput
+              value={observationInput}
+              onChangeText={setObservationInput}
+              placeholder="Observação da entrega faltante"
+              style={[styles.input, styles.textArea]}
+              multiline
+              returnKeyType="done"
+            />
+            <Pressable style={[styles.saveButton, saving && styles.disabledButton]} disabled={saving} onPress={registerMissingDelivered}>
+              <Ionicons name="add-circle-outline" size={18} color="#ffffff" />
+              <Text style={styles.saveButtonText}>Adicionar ao estoque</Text>
+            </Pressable>
           </View>
-        ))}
+        )}
+
+        <ActionHeader
+          title="Solicitar retirada de estoque"
+          icon="file-tray-full-outline"
+          expanded={expandedAction === "withdraw"}
+          onPress={() => setExpandedAction(expandedAction === "withdraw" ? null : "withdraw")}
+        />
+        {expandedAction === "withdraw" && (
+          <View style={styles.actionBody}>
+            <TextInput
+              value={withdrawQuantityInput}
+              onChangeText={setWithdrawQuantityInput}
+              keyboardType="decimal-pad"
+              placeholder="Quantidade para retirada"
+              returnKeyType="next"
+              style={styles.input}
+            />
+            <TextInput
+              value={withdrawObservationInput}
+              onChangeText={setWithdrawObservationInput}
+              placeholder="Observação da solicitação"
+              style={[styles.input, styles.textArea]}
+              multiline
+              returnKeyType="done"
+            />
+            <Pressable style={[styles.saveButton, saving && styles.disabledButton]} disabled={saving} onPress={createStockRequest}>
+              <Ionicons name="send-outline" size={18} color="#ffffff" />
+              <Text style={styles.saveButtonText}>Enviar solicitação</Text>
+            </Pressable>
+          </View>
+        )}
       </View>
+    );
+  }
 
-      <Modal visible={!!selectedProduct} transparent animationType="slide" onRequestClose={() => setSelectedProduct(null)}>
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 16 : 0}
-        >
-          <View style={styles.detailModal}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalTitleArea}>
-                <Text style={styles.modalTitle}>{selectedProduct?.name}</Text>
-                <Text style={styles.modalSubtitle}>EAN: {selectedProduct?.ean}</Text>
-              </View>
-              <Pressable style={styles.closeButton} onPress={() => setSelectedProduct(null)}>
-                <Ionicons name="close-outline" size={24} color="#1f2937" />
-              </Pressable>
-            </View>
+  if (activeProduct) {
+    return (
+      <View style={styles.detailScreen}>
+        <View style={styles.detailHeader}>
+          <Pressable style={styles.backButton} onPress={() => setSelectedProduct(null)}>
+            <Ionicons name="arrow-back-outline" size={23} color="#1f2937" />
+          </Pressable>
+          <View style={styles.titleArea}>
+            <Text style={styles.detailTitle}>{activeProduct.name}</Text>
+            <Text style={styles.detailSubtitle}>EAN: {activeProduct.ean}</Text>
+          </View>
+        </View>
 
-            <View style={styles.summaryRow}>
-              <View style={styles.summaryBox}>
-                <Text style={styles.summaryValue}>{selectedProduct?.quantity || 0}</Text>
-                <Text style={styles.summaryLabel}>em estoque</Text>
-              </View>
-              <View style={styles.summaryBox}>
-                <Text style={styles.summaryValue}>{selectedProduct?.stockEntries?.length || 0}</Text>
-                <Text style={styles.summaryLabel}>entradas</Text>
-              </View>
-            </View>
+        <View style={styles.detailSummary}>
+          <DetailMetric icon="cube-outline" value={activeProduct.quantity || 0} label="em estoque" />
+          <View style={styles.summaryDivider} />
+          <DetailMetric icon="file-tray-stacked-outline" value={historyEntries.length} label="entradas" />
+        </View>
 
+        {renderActions()}
+
+        <View style={styles.historySection}>
+          <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Histórico completo</Text>
-            <ScrollView
-              style={styles.historyList}
-              contentContainerStyle={styles.historyInner}
-              keyboardShouldPersistTaps="handled"
-            >
-              {selectedProduct?.stockEntries?.map((entry, index) => (
+            <Text style={styles.sectionCount}>{historyEntries.length} registro(s)</Text>
+          </View>
+
+          {historyEntries.length === 0 ? (
+            <View style={styles.emptyHistory}>
+              <Ionicons name="time-outline" size={20} color="#64748b" />
+              <Text style={styles.emptyHistoryText}>Nenhuma movimentação registrada para este produto.</Text>
+            </View>
+          ) : (
+            <View style={styles.historyInner}>
+              {historyEntries.map((entry, index) => (
                 <View
                   key={`${entry.createdAt}-${index}`}
                   style={[styles.historyItem, isInvoiceDivergent(entry) && styles.historyItemDivergent]}
                 >
                   <View style={styles.historyTopRow}>
                     <Text style={styles.historyType}>{getEntryLabel(entry)}</Text>
-                    <Text style={[styles.historyQuantity, getEntryQuantityStyle(entry)]}>
-                      {getEntryQuantity(entry)}
-                    </Text>
+                    <Text style={[styles.historyQuantity, getEntryQuantityStyle(entry)]}>{getEntryQuantity(entry)}</Text>
                   </View>
                   <Text style={styles.historyMeta}>{formatDate(entry.createdAt)}</Text>
                   {entry.invoiceKey && <Text style={styles.historyMeta}>Chave: {entry.invoiceKey}</Text>}
-                  {isInvoiceDivergent(entry) && (
-                    <Text style={styles.historyDivergence}>
-                      {getDivergenceText(entry)}
-                    </Text>
-                  )}
+                  {isInvoiceDivergent(entry) && <Text style={styles.historyDivergence}>{getDivergenceText(entry)}</Text>}
                   {entry.observation && <Text style={styles.historyObservation}>{entry.observation}</Text>}
                 </View>
               ))}
-            </ScrollView>
+            </View>
+          )}
+        </View>
 
-            <View style={styles.actionArea}>
-              <ActionHeader
-                title="Incluir faltante"
-                icon="add-circle-outline"
-                expanded={expandedAction === "missing"}
-                onPress={() => setExpandedAction(expandedAction === "missing" ? null : "missing")}
-              />
-              {expandedAction === "missing" && (
-                <View style={styles.actionBody}>
+        {/*
+        <View style={styles.actionArea}>
+          <ActionHeader
+            title="Incluir faltante"
+            icon="add-circle-outline"
+            expanded={expandedAction === "missing"}
+            onPress={() => setExpandedAction(expandedAction === "missing" ? null : "missing")}
+          />
+          {expandedAction === "missing" && (
+            <View style={styles.actionBody}>
               <TextInput
                 value={quantityInput}
                 onChangeText={setQuantityInput}
@@ -208,44 +247,81 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
                 <Ionicons name="add-circle-outline" size={18} color="#ffffff" />
                 <Text style={styles.saveButtonText}>Adicionar ao estoque</Text>
               </Pressable>
-                </View>
-              )}
-
-              <ActionHeader
-                title="Solicitar retirada de estoque"
-                icon="file-tray-full-outline"
-                expanded={expandedAction === "withdraw"}
-                onPress={() => setExpandedAction(expandedAction === "withdraw" ? null : "withdraw")}
-              />
-              {expandedAction === "withdraw" && (
-                <View style={styles.actionBody}>
-                  <TextInput
-                    value={withdrawQuantityInput}
-                    onChangeText={setWithdrawQuantityInput}
-                    keyboardType="decimal-pad"
-                    placeholder="Quantidade para retirada"
-                    returnKeyType="next"
-                    style={styles.input}
-                  />
-                  <TextInput
-                    value={withdrawObservationInput}
-                    onChangeText={setWithdrawObservationInput}
-                    placeholder="Observacao da solicitação"
-                    style={[styles.input, styles.textArea]}
-                    multiline
-                    returnKeyType="done"
-                  />
-                  <Pressable style={[styles.saveButton, saving && styles.disabledButton]} disabled={saving} onPress={createStockRequest}>
-                    <Ionicons name="send-outline" size={18} color="#ffffff" />
-                    <Text style={styles.saveButtonText}>Enviar solicitacão</Text>
-                  </Pressable>
-                </View>
-              )}
             </View>
+          )}
+
+          <ActionHeader
+            title="Solicitar retirada de estoque"
+            icon="file-tray-full-outline"
+            expanded={expandedAction === "withdraw"}
+            onPress={() => setExpandedAction(expandedAction === "withdraw" ? null : "withdraw")}
+          />
+          {expandedAction === "withdraw" && (
+            <View style={styles.actionBody}>
+              <TextInput
+                value={withdrawQuantityInput}
+                onChangeText={setWithdrawQuantityInput}
+                keyboardType="decimal-pad"
+                placeholder="Quantidade para retirada"
+                returnKeyType="next"
+                style={styles.input}
+              />
+              <TextInput
+                value={withdrawObservationInput}
+                onChangeText={setWithdrawObservationInput}
+                placeholder="Observação da solicitação"
+                style={[styles.input, styles.textArea]}
+                multiline
+                returnKeyType="done"
+              />
+              <Pressable style={[styles.saveButton, saving && styles.disabledButton]} disabled={saving} onPress={createStockRequest}>
+                <Ionicons name="send-outline" size={18} color="#ffffff" />
+                <Text style={styles.saveButtonText}>Enviar solicitação</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+        */}
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.list}>
+      {products.map((product) => (
+        <View key={product._id} style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitleArea}>
+              <Text style={styles.productName}>{product.name}</Text>
+              <Text style={styles.meta}>EAN: {product.ean}</Text>
+            </View>
+            <Text style={styles.quantity}>{product.quantity}</Text>
+            <Pressable style={styles.detailButton} onPress={() => openProduct(product)}>
+              <Ionicons name="chevron-forward-outline" size={22} color="#3b82f6" />
+            </Pressable>
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
-    </>
+          <Text style={styles.meta}>Entradas: {product.stockEntries?.length || 0}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function DetailMetric({
+  icon,
+  value,
+  label
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  value: number | string;
+  label: string;
+}) {
+  return (
+    <View style={styles.detailMetric}>
+      <Ionicons name={icon} size={18} color="#3b82f6" />
+      <Text style={styles.summaryValue}>{value}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
+    </View>
   );
 }
 
@@ -346,6 +422,11 @@ function formatQuantity(value: number) {
   return Number.isInteger(value) ? String(value) : String(value).replace(".", ",");
 }
 
+function getEntryTimestamp(entry: StockEntry) {
+  const timestamp = new Date(entry.createdAt).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
 function formatDate(value: string) {
   const date = new Date(value);
 
@@ -369,10 +450,12 @@ function parseQuantity(value: string) {
 
 const styles = StyleSheet.create({
   list: {
+    width: "100%",
     gap: 10,
     paddingBottom: 24
   },
   card: {
+    width: "100%",
     borderWidth: 1,
     borderColor: "#d8dee9",
     borderRadius: 8,
@@ -381,19 +464,22 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
-    alignItems: "center"
+    alignItems: "flex-start"
   },
   cardTitleArea: {
-    flex: 1
+    flex: 1,
+    minWidth: 0
   },
   productName: {
     color: "#1f2937",
     fontSize: 15,
+    lineHeight: 20,
     fontWeight: "800"
   },
   quantity: {
-    minWidth: 58,
+    minWidth: 44,
     textAlign: "right",
     color: "#3b82f6",
     fontSize: 18,
@@ -413,6 +499,7 @@ const styles = StyleSheet.create({
     fontSize: 13
   },
   emptyState: {
+    width: "100%",
     borderWidth: 1,
     borderColor: "#d8dee9",
     borderRadius: 8,
@@ -430,76 +517,112 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(15,23,42,0.45)"
+  detailScreen: {
+    width: "100%",
+    gap: 10,
+    paddingBottom: 24
   },
-  detailModal: {
-    maxHeight: "88%",
-    gap: 12,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    padding: 18,
-    backgroundColor: "#ffffff"
-  },
-  modalHeader: {
+  detailHeader: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 12
+    alignItems: "flex-start",
+    gap: 8
   },
-  modalTitleArea: {
-    flex: 1
-  },
-  modalTitle: {
-    color: "#1f2937",
-    fontSize: 19,
-    fontWeight: "900"
-  },
-  modalSubtitle: {
-    marginTop: 3,
-    color: "#64748b",
-    fontSize: 13,
-    fontWeight: "700"
-  },
-  closeButton: {
-    width: 42,
-    height: 42,
+  backButton: {
+    width: 38,
+    height: 38,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#f1f5f9"
   },
-  summaryRow: {
+  titleArea: {
+    flex: 1,
+    minWidth: 0
+  },
+  detailTitle: {
+    color: "#1f2937",
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "900"
+  },
+  detailSubtitle: {
+    marginTop: 2,
+    color: "#64748b",
+    fontSize: 13,
+    fontWeight: "700"
+  },
+  detailSummary: {
+    minHeight: 48,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingVertical: 8,
     flexDirection: "row",
+    alignItems: "center",
     gap: 10
   },
-  summaryBox: {
+  detailMetric: {
     flex: 1,
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: "#eaf4ff"
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 7
+  },
+  summaryDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: "#e2e8f0"
   },
   summaryValue: {
     color: "#3b82f6",
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "900"
   },
   summaryLabel: {
+    flexShrink: 1,
     color: "#5d6f82",
     fontSize: 12,
     fontWeight: "800"
   },
+  historySection: {
+    gap: 10
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10
+  },
   sectionTitle: {
     color: "#1f2937",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "900"
   },
-  historyList: {
-    maxHeight: 220
+  sectionCount: {
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: "800"
   },
   historyInner: {
     gap: 8
+  },
+  emptyHistory: {
+    minHeight: 74,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#f8fafc"
+  },
+  emptyHistoryText: {
+    flex: 1,
+    color: "#64748b",
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "700"
   },
   historyItem: {
     borderWidth: 1,
@@ -519,6 +642,8 @@ const styles = StyleSheet.create({
     gap: 10
   },
   historyType: {
+    flex: 1,
+    minWidth: 0,
     color: "#1f2937",
     fontSize: 13,
     fontWeight: "900"
@@ -541,6 +666,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: "#64748b",
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: "700"
   },
   historyObservation: {

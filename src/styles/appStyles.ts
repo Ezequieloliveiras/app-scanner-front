@@ -158,6 +158,13 @@ export const styles = StyleSheet.create({
     padding: 18,
     gap: 14
   },
+  productListScreenInner: {
+    width: "100%",
+    paddingHorizontal: 8,
+    paddingTop: 10,
+    paddingBottom: 14,
+    gap: 10
+  },
   homeInner: {
     padding: 18,
     gap: 16
@@ -697,6 +704,7 @@ export const styles = StyleSheet.create({
   },
   pendingTitleArea: {
     flex: 1,
+    minWidth: 0,
     gap: 7
   },
   pendingName: {
@@ -831,6 +839,7 @@ export const styles = StyleSheet.create({
     backgroundColor: "#eaf4ff"
   },
   branchPanel: {
+    width: "100%",
     gap: 12,
     borderWidth: 1,
     borderColor: "#d8dee9",
@@ -852,9 +861,11 @@ export const styles = StyleSheet.create({
     gap: 12
   },
   branchProductGrid: {
+    width: "100%",
     gap: 8
   },
   branchProductOption: {
+    width: "100%",
     borderWidth: 1,
     borderColor: "#d8dee9",
     borderRadius: 8,
@@ -862,11 +873,14 @@ export const styles = StyleSheet.create({
     backgroundColor: "#f8fafc"
   },
   selectorModal: {
-    maxHeight: "82%",
+    width: "100%",
+    maxHeight: "92%",
     gap: 12,
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
-    padding: 18,
+    paddingHorizontal: 10,
+    paddingTop: 14,
+    paddingBottom: 12,
     backgroundColor: "#ffffff"
   },
   selectorList: {
@@ -877,6 +891,7 @@ export const styles = StyleSheet.create({
     paddingBottom: 8
   },
   selectorItem: {
+    width: "100%",
     borderWidth: 1,
     borderColor: "#d8dee9",
     borderRadius: 8,
@@ -888,6 +903,7 @@ export const styles = StyleSheet.create({
     backgroundColor: "#eaf4ff"
   },
   branchProductName: {
+    flexShrink: 1,
     color: "#1f2937",
     fontSize: 14,
     fontWeight: "900"
@@ -910,6 +926,7 @@ export const styles = StyleSheet.create({
     textAlignVertical: "top"
   },
   transferCard: {
+    width: "100%",
     gap: 8,
     borderWidth: 1,
     borderColor: "#d8dee9",
@@ -1405,7 +1422,7 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
     paddingTop: 0,
     paddingBottom: 10,
     borderBottomWidth: 1,
@@ -1414,7 +1431,8 @@ export const styles = StyleSheet.create({
   },
   invoiceReviewPageContent: {
     gap: 12,
-    padding: 14,
+    paddingHorizontal: 8,
+    paddingTop: 10,
     paddingBottom: 12
   },
   invoiceReviewModal: {
@@ -1479,6 +1497,7 @@ export const styles = StyleSheet.create({
     paddingBottom: 6
   },
   invoiceProductCard: {
+    width: "100%",
     gap: 12,
     borderWidth: 1,
     borderColor: "#e2e8f0",
@@ -1497,11 +1516,13 @@ export const styles = StyleSheet.create({
   },
   invoiceProductHeaderRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "flex-start",
     gap: 10
   },
   invoiceProductInfo: {
     flex: 1,
+    minWidth: 0,
     gap: 7
   },
   invoiceObservationButton: {
@@ -1568,12 +1589,14 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 12,
     backgroundColor: "#f8fafc"
   },
   invoiceQuantitySummary: {
     width: 82,
+    minWidth: 74,
     gap: 3
   },
   invoiceQuantityValue: {
@@ -1583,6 +1606,7 @@ export const styles = StyleSheet.create({
   },
   invoiceCountEditor: {
     flex: 1,
+    minWidth: 174,
     gap: 6
   },
   invoiceCountControls: {
@@ -1667,7 +1691,7 @@ export const styles = StyleSheet.create({
     gap: 10
   },
   invoiceReviewFooter: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
     paddingTop: 8,
     paddingBottom: 0,
     borderTopWidth: 1,

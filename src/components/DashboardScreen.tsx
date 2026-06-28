@@ -87,7 +87,7 @@ export function DashboardScreen({ token }: Props) {
   return (
     <ScrollView
       style={styles.content}
-      contentContainerStyle={styles.contentInner}
+      contentContainerStyle={[styles.contentInner, styles.productListScreenInner]}
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadDashboard("refresh")} />}
     >
@@ -337,11 +337,13 @@ const localStyles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     alignItems: "center"
   },
   filterToggle: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: 116,
     minHeight: 44,
     borderWidth: 1,
     borderColor: "#3b82f6",
@@ -365,8 +367,8 @@ const localStyles = StyleSheet.create({
     color: "#ffffff"
   },
   daysInput: {
-    width: 74,
-    flex: 0,
+    width: 78,
+    flexGrow: 0,
     textAlign: "center"
   },
   metricsGrid: {
@@ -469,6 +471,7 @@ const localStyles = StyleSheet.create({
   },
   listHeader: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 10
@@ -490,6 +493,7 @@ const localStyles = StyleSheet.create({
     fontWeight: "900"
   },
   productCard: {
+    width: "100%",
     gap: 10,
     borderWidth: 1,
     borderColor: "#d8dee9",
@@ -499,12 +503,14 @@ const localStyles = StyleSheet.create({
   },
   productTop: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 10
   },
   productTitleArea: {
-    flex: 1
+    flex: 1,
+    minWidth: 0
   },
   productName: {
     color: "#1f2937",
@@ -519,6 +525,7 @@ const localStyles = StyleSheet.create({
     fontWeight: "800"
   },
   statusBadge: {
+    alignSelf: "flex-start",
     minHeight: 30,
     borderRadius: 8,
     paddingHorizontal: 8,
@@ -532,10 +539,13 @@ const localStyles = StyleSheet.create({
   },
   productNumbers: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8
   },
   smallNumber: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: "23%",
+    minWidth: 68,
     minHeight: 58,
     borderRadius: 8,
     padding: 8,
