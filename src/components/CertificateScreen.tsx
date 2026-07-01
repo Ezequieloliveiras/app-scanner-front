@@ -140,7 +140,7 @@ export function CertificateScreen({ status, loading, onRefresh, onSave, onDelete
               <Ionicons
                 name={certificate ? "shield-checkmark-outline" : "shield-outline"}
                 size={17}
-                color={certificate ? "#3b82f6" : "#92400e"}
+                color={certificate ? "#3b82f6" : "#B45309"}
               />
               <Text style={[styles.certificateStatusText, !certificate && styles.certificateStatusTextEmpty]}>
                 {certificate ? "Ativo" : "Pendente"}

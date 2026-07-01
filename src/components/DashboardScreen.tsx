@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -21,7 +22,7 @@ type Props = {
 const STATUS_META: Record<DashboardProductStatus, { label: string; color: string; backgroundColor: string; icon: keyof typeof Ionicons.glyphMap }> = {
   out_of_stock: { label: "Sem estoque", color: "#991b1b", backgroundColor: "#fee2e2", icon: "alert-circle-outline" },
   without_movement: { label: "Sem movimento", color: "#475569", backgroundColor: "#e2e8f0", icon: "help-circle-outline" },
-  stopped: { label: "Parado", color: "#92400e", backgroundColor: "#fef3c7", icon: "pause-circle-outline" },
+  stopped: { label: "Parado", color: "#B45309", backgroundColor: "#FFF4D6", icon: "pause-circle-outline" },
   attention: { label: "Atenção", color: "#1d4ed8", backgroundColor: "#dbeafe", icon: "time-outline" },
   healthy: { label: "Giro recente", color: "#3b82f6", backgroundColor: "#dbeafe", icon: "checkmark-circle-outline" }
 };
@@ -36,26 +37,29 @@ const BUCKET_LABELS = {
   "90_plus": "+90 dias"
 };
 
+const DEFAULT_STOPPED_DAYS = 30;
+
 export function DashboardScreen({ token }: Props) {
   const [dashboard, setDashboard] = useState<InventoryDashboard | null>(null);
   const [productQuery, setProductQuery] = useState("");
-  const [minStoppedDays, setMinStoppedDays] = useState("30");
   const [onlyStopped, setOnlyStopped] = useState(false);
   const [onlyWithStock, setOnlyWithStock] = useState(true);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchFocusAnim = useRef(new Animated.Value(0)).current;
 
   const query = useMemo(
     () => ({
       product: productQuery.trim() || undefined,
-      minStoppedDays: onlyStopped ? Number(minStoppedDays.replace(/\D/g, "") || 0) : undefined,
+      minStoppedDays: onlyStopped ? DEFAULT_STOPPED_DAYS : undefined,
       onlyWithStock,
       sortBy: "daysStopped",
       sortDir: "desc",
       limit: 100
     }),
-    [minStoppedDays, onlyStopped, onlyWithStock, productQuery]
+    [onlyStopped, onlyWithStock, productQuery]
   );
 
   const loadDashboard = useCallback(
@@ -84,6 +88,29 @@ export function DashboardScreen({ token }: Props) {
     loadDashboard().catch(() => undefined);
   }, [loadDashboard]);
 
+  useEffect(() => {
+    Animated.timing(searchFocusAnim, {
+      toValue: searchFocused ? 1 : 0,
+      duration: 180,
+      useNativeDriver: false
+    }).start();
+  }, [searchFocusAnim, searchFocused]);
+
+  const searchBorderColor = searchFocusAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["#e4eaf2", "#8ab4ff"]
+  });
+
+  const searchShadowOpacity = searchFocusAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.03, 0.1]
+  });
+
+  function showAllProducts() {
+    setOnlyStopped(false);
+    setOnlyWithStock(false);
+  }
+
   return (
     <ScrollView
       style={styles.content}
@@ -91,56 +118,65 @@ export function DashboardScreen({ token }: Props) {
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadDashboard("refresh")} />}
     >
-      <View style={localStyles.hero}>
-        <View style={localStyles.heroIcon}>
-          <Ionicons name="analytics-outline" size={24} color="#3b82f6" />
-        </View>
-        <View style={localStyles.heroText}>
-          <Text style={localStyles.heroTitle}>Gestão de estoque</Text>
-          <Text style={localStyles.heroSubtitle}>Veja produtos parados, risco de encalhe e giro por tempo sem movimentação.</Text>
-        </View>
-      </View>
-
       <View style={localStyles.filterPanel}>
-        <Text style={styles.fieldLabel}>Produto</Text>
-        <TextInput
-          value={productQuery}
-          onChangeText={setProductQuery}
-          placeholder="Filtrar por nome ou EAN"
-          returnKeyType="search"
-          style={styles.selectInput}
-          onSubmitEditing={() => loadDashboard()}
-        />
-
-        <View style={localStyles.filterRow}>
-          <Pressable
-            style={[localStyles.filterToggle, onlyStopped && localStyles.filterToggleActive]}
-            onPress={() => setOnlyStopped((current) => !current)}
-          >
-            <Ionicons name="pause-circle-outline" size={18} color={onlyStopped ? "#ffffff" : "#3b82f6"} />
-            <Text style={[localStyles.filterToggleText, onlyStopped && localStyles.filterToggleTextActive]}>Parados</Text>
-          </Pressable>
-
-          <TextInput
-            value={minStoppedDays}
-            onChangeText={(value) => setMinStoppedDays(value.replace(/\D/g, ""))}
-            placeholder="Dias"
-            keyboardType="number-pad"
-            style={[styles.selectInput, localStyles.daysInput]}
-          />
-
-          <Pressable
-            style={[localStyles.filterToggle, onlyWithStock && localStyles.filterToggleActive]}
-            onPress={() => setOnlyWithStock((current) => !current)}
-          >
-            <Ionicons name="cube-outline" size={18} color={onlyWithStock ? "#ffffff" : "#3b82f6"} />
-            <Text style={[localStyles.filterToggleText, onlyWithStock && localStyles.filterToggleTextActive]}>Com estoque</Text>
-          </Pressable>
+        <View style={localStyles.filterHeader}>
+          <Text style={localStyles.filterTitle}>Produto</Text>
+          <Text style={localStyles.filterHint}>Filtros rápidos</Text>
         </View>
 
-        <Pressable style={styles.primaryButton} onPress={() => loadDashboard()} disabled={loading}>
+        <Animated.View
+          style={[
+            localStyles.searchBox,
+            {
+              borderColor: searchBorderColor,
+              shadowOpacity: searchShadowOpacity
+            }
+          ]}
+        >
+          <Ionicons name="search-outline" size={18} color={searchFocused ? "#3b82f6" : "#8a95a5"} />
+          <TextInput
+            value={productQuery}
+            onChangeText={setProductQuery}
+            placeholder="Buscar produto ou EAN"
+            placeholderTextColor="#8a95a5"
+            returnKeyType="search"
+            style={localStyles.searchInput}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            onSubmitEditing={() => loadDashboard()}
+          />
+        </Animated.View>
+
+        <View style={localStyles.statusGroup}>
+          <Text style={localStyles.groupLabel}>Status</Text>
+          <View style={localStyles.chipRow}>
+            <FilterChip label="Todos" icon="apps-outline" selected={!onlyStopped && !onlyWithStock} onPress={showAllProducts} />
+            <FilterChip
+              label="Parados"
+              icon="pause-circle-outline"
+              selected={onlyStopped}
+              onPress={() => setOnlyStopped((current) => !current)}
+            />
+            <FilterChip
+              label="Em estoque"
+              icon="cube-outline"
+              selected={onlyWithStock}
+              onPress={() => setOnlyWithStock((current) => !current)}
+            />
+          </View>
+        </View>
+
+        <Pressable
+          style={({ pressed }) => [
+            localStyles.filterButton,
+            pressed && !loading && localStyles.filterButtonPressed,
+            loading && localStyles.filterButtonDisabled
+          ]}
+          onPress={() => loadDashboard()}
+          disabled={loading}
+        >
           {loading ? <ActivityIndicator color="#ffffff" /> : <Ionicons name="search-outline" size={18} color="#ffffff" />}
-          <Text style={styles.primaryButtonText}>Aplicar filtros</Text>
+          <Text style={localStyles.filterButtonText}>Aplicar filtros</Text>
         </Pressable>
       </View>
 
@@ -150,15 +186,15 @@ export function DashboardScreen({ token }: Props) {
         <>
           <View style={localStyles.metricsGrid}>
             <MetricCard label="Produtos" value={dashboard.metrics.totalProducts} icon="cube-outline" />
-            <MetricCard label="Unidades" value={dashboard.metrics.totalUnitsInStock} icon="layers-outline" />
             <MetricCard label="Parados" value={dashboard.metrics.stoppedProducts} icon="pause-circle-outline" tone="warning" />
             <MetricCard label="Média parada" value={`${dashboard.metrics.averageStoppedDays}d`} icon="time-outline" />
+            <MetricCard label="Unidades" value={dashboard.metrics.totalUnitsInStock} icon="layers-outline" />
           </View>
 
           {dashboard.metrics.oldestProduct && (
             <View style={localStyles.insightCard}>
               <View style={localStyles.insightIcon}>
-                <Ionicons name="trending-down-outline" size={22} color="#92400e" />
+                <Ionicons name="trending-down-outline" size={22} color="#B45309" />
               </View>
               <View style={localStyles.insightText}>
                 <Text style={localStyles.insightTitle}>Maior tempo parado</Text>
@@ -205,6 +241,34 @@ export function DashboardScreen({ token }: Props) {
   );
 }
 
+function FilterChip({
+  label,
+  icon,
+  selected,
+  onPress
+}: {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        localStyles.filterChip,
+        selected && localStyles.filterChipSelected,
+        pressed && localStyles.filterChipPressed
+      ]}
+      onPress={onPress}
+    >
+      <Ionicons name={icon} size={15} color={selected ? "#ffffff" : "#5f6d7d"} />
+      <Text style={[localStyles.filterChipText, selected && localStyles.filterChipTextSelected]} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 function MetricCard({
   label,
   value,
@@ -218,11 +282,17 @@ function MetricCard({
 }) {
   return (
     <View style={localStyles.metricCard}>
-      <View style={[localStyles.metricIcon, tone === "warning" && localStyles.metricIconWarning]}>
-        <Ionicons name={icon} size={20} color={tone === "warning" ? "#92400e" : "#3b82f6"} />
+      <View style={localStyles.metricTop}>
+        <View style={[localStyles.metricIcon, tone === "warning" && localStyles.metricIconWarning]}>
+          <Ionicons name={icon} size={15} color={tone === "warning" ? "#B45309" : "#3b82f6"} />
+        </View>
+        <Text style={localStyles.metricNumber} numberOfLines={1} adjustsFontSizeToFit>
+          {value}
+        </Text>
       </View>
-      <Text style={localStyles.metricNumber}>{value}</Text>
-      <Text style={localStyles.metricText}>{label}</Text>
+      <Text style={localStyles.metricText} numberOfLines={1} adjustsFontSizeToFit>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -251,7 +321,7 @@ function DashboardProductCard({ product }: { product: DashboardProduct }) {
       </View>
 
       <View style={localStyles.hintRow}>
-        <Ionicons name="bulb-outline" size={17} color="#92400e" />
+        <Ionicons name="bulb-outline" size={17} color="#B45309" />
         <Text style={localStyles.hintText}>{product.managementHint}</Text>
       </View>
 
@@ -295,127 +365,194 @@ function formatDateTime(value: string) {
 }
 
 const localStyles = StyleSheet.create({
-  hero: {
-    minHeight: 110,
-    borderRadius: 8,
+  filterPanel: {
+    gap: 16,
+    borderWidth: 1,
+    borderColor: "#edf2f7",
+    borderRadius: 18,
     padding: 16,
+    backgroundColor: "#ffffff",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 2
+  },
+  filterHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  filterTitle: {
+    color: "#1f2937",
+    fontSize: 14,
+    fontWeight: "600"
+  },
+  filterHint: {
+    color: "#8a95a5",
+    fontSize: 11,
+    fontWeight: "600"
+  },
+  searchBox: {
+    minHeight: 46,
+    borderWidth: 1,
+    borderRadius: 15,
+    paddingHorizontal: 13,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    backgroundColor: "#17263a"
+    gap: 9,
+    backgroundColor: "#fbfdff",
+    shadowColor: "#3b82f6",
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 14,
+    elevation: 1
   },
-  heroIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#eaf4ff"
+  searchInput: {
+    flex: 1,
+    minHeight: 44,
+    paddingVertical: 0,
+    color: "#1f2937",
+    fontSize: 14,
+    fontWeight: "600"
   },
-  heroText: {
-    flex: 1
+  statusGroup: {
+    gap: 10
   },
-  heroTitle: {
-    color: "#ffffff",
-    fontSize: 22,
-    fontWeight: "900"
+  groupLabel: {
+    color: "#596579",
+    fontSize: 12,
+    fontWeight: "600"
   },
-  heroSubtitle: {
-    marginTop: 4,
-    color: "#cbd5e1",
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "700"
-  },
-  filterPanel: {
-    gap: 10,
-    borderWidth: 1,
-    borderColor: "#d8dee9",
-    borderRadius: 8,
-    padding: 14,
-    backgroundColor: "#ffffff"
-  },
-  filterRow: {
+  chipRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    alignItems: "center"
+    gap: 8
   },
-  filterToggle: {
-    flexGrow: 1,
-    flexBasis: 116,
-    minHeight: 44,
+  filterChip: {
+    minHeight: 34,
     borderWidth: 1,
+    borderColor: "#e5ebf3",
+    borderRadius: 17,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#f7f9fc"
+  },
+  filterChipSelected: {
     borderColor: "#3b82f6",
-    borderRadius: 8,
-    paddingHorizontal: 8,
+    backgroundColor: "#3b82f6",
+    shadowColor: "#3b82f6",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    elevation: 2
+  },
+  filterChipPressed: {
+    opacity: 0.82,
+    transform: [{ scale: 0.98 }]
+  },
+  filterChipText: {
+    color: "#5f6d7d",
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  filterChipTextSelected: {
+    color: "#ffffff"
+  },
+  filterButton: {
+    minHeight: 46,
+    borderRadius: 14,
+    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    backgroundColor: "#ffffff"
+    gap: 8,
+    backgroundColor: "#3b82f6",
+    shadowColor: "#2563eb",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    elevation: 3
   },
-  filterToggleActive: {
-    backgroundColor: "#3b82f6"
+  filterButtonPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.99 }]
   },
-  filterToggleText: {
-    color: "#3b82f6",
-    fontSize: 12,
-    fontWeight: "900"
+  filterButtonDisabled: {
+    opacity: 0.65
   },
-  filterToggleTextActive: {
-    color: "#ffffff"
-  },
-  daysInput: {
-    width: 78,
-    flexGrow: 0,
-    textAlign: "center"
+  filterButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "800"
   },
   metricsGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10
-  },
-  metricCard: {
-    width: "48%",
-    minHeight: 118,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: "#d8dee9",
     borderRadius: 8,
-    padding: 12,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
     backgroundColor: "#ffffff"
   },
+  metricCard: {
+    width: "25%",
+    minHeight: 48,
+    paddingHorizontal: 1,
+    paddingVertical: 6,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  metricTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    gap: 3
+  },
   metricIcon: {
-    width: 34,
-    height: 34,
+    width: 18,
+    height: 18,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#eaf4ff"
   },
   metricIconWarning: {
-    backgroundColor: "#fef3c7"
+    backgroundColor: "#FFF4D6"
   },
   metricNumber: {
-    marginTop: 10,
     color: "#1f2937",
-    fontSize: 24,
+    fontSize: 15,
     fontWeight: "900"
   },
   metricText: {
-    marginTop: 2,
+    marginTop: 3,
     color: "#64748b",
-    fontSize: 12,
+    width: "100%",
+    fontSize: 8,
+    textAlign: "center",
     fontWeight: "800"
   },
   insightCard: {
     borderWidth: 1,
-    borderColor: "#fde68a",
+    borderColor: "#E5E7EB",
+    borderLeftWidth: 4,
+    borderLeftColor: "#F59E0B",
     borderRadius: 8,
     padding: 12,
     flexDirection: "row",
     gap: 10,
-    backgroundColor: "#fffbeb"
+    backgroundColor: "#ffffff",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 18,
+    elevation: 2
   },
   insightIcon: {
     width: 38,
@@ -423,19 +560,19 @@ const localStyles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fef3c7"
+    backgroundColor: "#FFF4D6"
   },
   insightText: {
     flex: 1
   },
   insightTitle: {
-    color: "#78350f",
+    color: "#1F2937",
     fontSize: 14,
     fontWeight: "900"
   },
   insightBody: {
     marginTop: 3,
-    color: "#92400e",
+    color: "#64748B",
     fontSize: 13,
     lineHeight: 18,
     fontWeight: "700"
@@ -563,18 +700,20 @@ const localStyles = StyleSheet.create({
     fontWeight: "800"
   },
   hintRow: {
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
     borderLeftWidth: 4,
-    borderLeftColor: "#f59e0b",
+    borderLeftColor: "#F59E0B",
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
     flexDirection: "row",
     gap: 8,
-    backgroundColor: "#fffbeb"
+    backgroundColor: "#F8FAFC"
   },
   hintText: {
     flex: 1,
-    color: "#78350f",
+    color: "#64748B",
     fontSize: 12,
     lineHeight: 17,
     fontWeight: "800"

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BarcodeScanningResult, BarcodeType, CameraView } from "expo-camera";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from "react-native";
+import { Alert, Animated, Easing, KeyboardAvoidingView, LayoutChangeEvent, Platform, Pressable, Text, TextInput, View } from "react-native";
 import { styles } from "../styles/appStyles";
 
 type ScanMode = "barcode" | "qr" | "manual" | "ai";
@@ -32,6 +32,8 @@ export function ScanScreen({
   const [manualInput, setManualInput] = useState("");
   const [barcodeScanArmed, setBarcodeScanArmed] = useState(false);
   const [torchEnabled, setTorchEnabled] = useState(false);
+  const [scannerFrameHeight, setScannerFrameHeight] = useState(0);
+  const scanLineAnim = useRef(new Animated.Value(0)).current;
   const cameraActive = mode === "barcode" || mode === "qr" || mode === "ai";
   const barcodeTypes = useMemo(
     () =>
@@ -46,6 +48,44 @@ export function ScanScreen({
       setTorchEnabled(false);
     }
   }, [cameraActive, torchEnabled]);
+
+  useEffect(() => {
+    if (!cameraActive || mode !== "barcode") {
+      scanLineAnim.stopAnimation();
+      scanLineAnim.setValue(0);
+      return;
+    }
+
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanLineAnim, {
+          toValue: 1,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true
+        }),
+        Animated.timing(scanLineAnim, {
+          toValue: 0,
+          duration: 1800,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true
+        })
+      ])
+    );
+
+    animation.start();
+    return () => animation.stop();
+  }, [cameraActive, mode, scanLineAnim]);
+
+  const scanLineTravel = scannerFrameHeight / 3;
+  const scanLineTranslateY = scanLineAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-scanLineTravel, scanLineTravel]
+  });
+
+  function updateScannerFrame(event: LayoutChangeEvent) {
+    setScannerFrameHeight(event.nativeEvent.layout.height);
+  }
 
   function handleBarcodeScanned(result: BarcodeScanningResult) {
     if (mode === "barcode" && !barcodeScanArmed) return;
@@ -112,23 +152,29 @@ export function ScanScreen({
       )}
 
       <View style={[styles.scannerOverlay, { paddingTop: topInset }]}>
-        <View style={styles.scanModeBar}>
-          <ScanModeButton icon="barcode-outline" label="Barras" active={mode === "barcode"} onPress={() => setMode("barcode")} />
-          {/* <ScanModeButton icon="qr-code-outline" label="QRCode" active={mode === "qr"} onPress={() => setMode("qr")} /> */}
-          <ScanModeButton icon="create-outline" label="Manual" active={mode === "manual"} onPress={() => setMode("manual")} />
-          {/* <ScanModeButton icon="sparkles-outline" label="IA" active={mode === "ai"} onPress={() => setMode("ai")} /> */}
+        <View style={styles.scanTopChrome}>
+          <View style={styles.scanModeBar}>
+            <ScanModeButton icon="barcode-outline" label="Barras" active={mode === "barcode"} onPress={() => setMode("barcode")} />
+            {/* <ScanModeButton icon="qr-code-outline" label="QRCode" active={mode === "qr"} onPress={() => setMode("qr")} /> */}
+            <ScanModeButton icon="create-outline" label="Manual" active={mode === "manual"} onPress={() => setMode("manual")} />
+            {/* <ScanModeButton icon="sparkles-outline" label="IA" active={mode === "ai"} onPress={() => setMode("ai")} /> */}
+          </View>
         </View>
 
         {cameraActive && (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={torchEnabled ? "Desligar flash" : "Acender flash"}
-            style={[styles.scanTorchButton, torchEnabled && styles.scanTorchButtonActive]}
+            style={({ pressed }) => [
+              styles.scanTorchButton,
+              torchEnabled && styles.scanTorchButtonActive,
+              pressed && styles.scanControlPressed
+            ]}
             onPress={() => setTorchEnabled((enabled) => !enabled)}
           >
-            <Ionicons name={torchEnabled ? "flashlight" : "flashlight-outline"} size={19} color={torchEnabled ? "#17263a" : "#ffffff"} />
+            <Ionicons name={torchEnabled ? "flashlight" : "flashlight-outline"} size={18} color={torchEnabled ? "#17263a" : "#3b82f6"} />
             <Text style={[styles.scanTorchButtonText, torchEnabled && styles.scanTorchButtonTextActive]}>
-              {torchEnabled ? "Flash ligado" : "Flash"}
+              {torchEnabled ? "Ligado" : "Flash"}
             </Text>
           </Pressable>
         )}
@@ -154,22 +200,19 @@ export function ScanScreen({
           </View>
         ) : (
           <>
-            {mode === "barcode" && (
-              <View pointerEvents="none" style={styles.scanBarcodeFocusLayer}>
-                <View style={styles.scanBarcodeShade} />
-                <View style={styles.scanBarcodeFocusRow}>
-                  <View style={styles.scanBarcodeShade} />
-                  <View style={styles.scanBarcodeFocusHole} />
-                  <View style={styles.scanBarcodeShade} />
-                </View>
-                <View style={styles.scanBarcodeShade} />
-              </View>
-            )}
             {mode === "barcode" ? (
-              <View style={styles.scanBarcodeGuide}>
+              <View style={styles.scanBarcodeGuide} onLayout={updateScannerFrame}>
                 <View style={[styles.scanBarcodeCorner, styles.scanBarcodeCornerTopLeft]} />
                 <View style={[styles.scanBarcodeCorner, styles.scanBarcodeCornerTopRight]} />
-                <View style={styles.scanBarcodeLine} />
+                <Animated.View
+                  style={[
+                    styles.scanBarcodeLine,
+                    {
+                      opacity: barcodeScanArmed ? 1 : 0.56,
+                      transform: [{ translateY: scanLineTranslateY }]
+                    }
+                  ]}
+                />
                 <View style={[styles.scanBarcodeCorner, styles.scanBarcodeCornerBottomLeft]} />
                 <View style={[styles.scanBarcodeCorner, styles.scanBarcodeCornerBottomRight]} />
               </View>
@@ -184,7 +227,12 @@ export function ScanScreen({
             </Text>
             {mode === "barcode" && (
               <Pressable
-                style={[styles.scanReadButton, barcodeScanArmed && styles.scanReadButtonActive]}
+                style={({ pressed }) => [
+                  styles.scanReadButton,
+                  barcodeScanArmed && styles.scanReadButtonActive,
+                  pressed && styles.scanControlPressed,
+                  loading && styles.disabledButton
+                ]}
                 disabled={loading}
                 onPress={() => setBarcodeScanArmed((armed) => !armed)}
               >
@@ -219,7 +267,7 @@ function ScanModeButton({
   onPress: () => void;
 }) {
   return (
-    <Pressable style={[styles.scanModeButton, active && styles.scanModeButtonActive]} onPress={onPress}>
+    <Pressable style={({ pressed }) => [styles.scanModeButton, active && styles.scanModeButtonActive, pressed && styles.scanControlPressed]} onPress={onPress}>
       <Ionicons name={icon} size={19} color={active ? "#ffffff" : "#3b82f6"} />
       <Text style={[styles.scanModeButtonText, active && styles.scanModeButtonTextActive]}>{label}</Text>
     </Pressable>

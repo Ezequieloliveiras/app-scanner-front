@@ -41,7 +41,7 @@ export function ObservationModal({
           />
           {!!product?.observation?.trim() && (
             <View style={styles.inlineAlert}>
-              <Ionicons name="alert-circle-outline" size={18} color="#92400e" />
+              <Ionicons name="alert-circle-outline" size={18} color="#B45309" />
               <Text style={styles.inlineAlertText}>Essa observação será vinculada à entrada deste produto.</Text>
             </View>
           )}

@@ -149,7 +149,7 @@ export function InvoiceReviewModal({
 
                 {hasDivergence && (
                   <View style={styles.inlineAlert}>
-                    <Ionicons name="alert-circle-outline" size={18} color="#92400e" />
+                    <Ionicons name="alert-circle-outline" size={18} color="#B45309" />
                     <Text style={styles.inlineAlertText}>Divergencia entre a NF e a contagem.</Text>
                   </View>
                 )}
@@ -171,7 +171,7 @@ export function InvoiceReviewModal({
 
                 {!!product.observation?.trim() && !isEditing && !hasDivergence && (
                   <View style={styles.inlineAlert}>
-                    <Ionicons name="alert-circle-outline" size={18} color="#92400e" />
+                    <Ionicons name="alert-circle-outline" size={18} color="#B45309" />
                     <Text style={styles.inlineAlertText}>Este produto tem observacao.</Text>
                   </View>
                 )}
