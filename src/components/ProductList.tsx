@@ -82,6 +82,7 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
   const [historyCustomEnd, setHistoryCustomEnd] = useState("");
   const [historySortMode, setHistorySortMode] = useState<HistorySortMode>("recent");
   const [sortOptionsVisible, setSortOptionsVisible] = useState(false);
+  const [historyFiltersExpanded, setHistoryFiltersExpanded] = useState(false);
   const [dateRangePickerVisible, setDateRangePickerVisible] = useState(false);
   const [draftRangeStart, setDraftRangeStart] = useState("");
   const [draftRangeEnd, setDraftRangeEnd] = useState("");
@@ -136,6 +137,7 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
     setHistoryCustomEnd("");
     setHistorySortMode("recent");
     setSortOptionsVisible(false);
+    setHistoryFiltersExpanded(false);
     setDateRangePickerVisible(false);
     setDraftRangeStart("");
     setDraftRangeEnd("");
@@ -394,76 +396,88 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
                   <HistorySummaryCard value={historySummary.adjustments} label="Ajustes" color={ui.purple} backgroundColor={ui.purpleSoft} />
                 </View>
 
-                <View style={styles.historyFilterGroup}>
-                  <Text style={styles.historyFilterLabel}>Período</Text>
-                  <View style={styles.historyChipRow}>
-                    {DATE_FILTERS.map((filter) => (
-                      <HistoryFilterChip
-                        key={filter.value}
-                        label={filter.label}
-                        selected={historyDateFilter === filter.value}
-                        onPress={() => {
-                          setHistoryDateFilter(filter.value);
-                          if (filter.value === "custom") {
-                            openDateRangePicker();
-                          }
-                        }}
-                      />
-                    ))}
+                <Pressable style={styles.historyFiltersToggle} onPress={() => setHistoryFiltersExpanded((current) => !current)}>
+                  <View style={styles.historyFiltersToggleTitle}>
+                    <Ionicons name="options-outline" size={16} color="#3b82f6" />
+                    <Text style={styles.historyFiltersToggleText}>Filtros do histórico</Text>
                   </View>
-                </View>
+                  <Ionicons name={historyFiltersExpanded ? "chevron-up-outline" : "chevron-down-outline"} size={18} color="#3b82f6" />
+                </Pressable>
 
-                {historyDateFilter === "custom" && (
-                  <Pressable style={styles.dateRangeField} onPress={openDateRangePicker}>
-                    <View style={styles.dateRangeFieldIcon}>
-                      <Ionicons name="calendar-outline" size={18} color="#3b82f6" />
+                {historyFiltersExpanded && (
+                  <View style={styles.historyAdvancedFilters}>
+                    <View style={styles.historyFilterGroup}>
+                      <Text style={styles.historyFilterLabel}>Período</Text>
+                      <View style={styles.historyChipRow}>
+                        {DATE_FILTERS.map((filter) => (
+                          <HistoryFilterChip
+                            key={filter.value}
+                            label={filter.label}
+                            selected={historyDateFilter === filter.value}
+                            onPress={() => {
+                              setHistoryDateFilter(filter.value);
+                              if (filter.value === "custom") {
+                                openDateRangePicker();
+                              }
+                            }}
+                          />
+                        ))}
+                      </View>
                     </View>
-                    <View style={styles.dateRangeFieldText}>
-                      <Text style={styles.dateRangeFieldLabel}>Período</Text>
-                      <Text style={styles.dateRangeFieldValue}>{formatDateRangeLabel(historyCustomStart, historyCustomEnd)}</Text>
+
+                    {historyDateFilter === "custom" && (
+                      <Pressable style={styles.dateRangeField} onPress={openDateRangePicker}>
+                        <View style={styles.dateRangeFieldIcon}>
+                          <Ionicons name="calendar-outline" size={18} color="#3b82f6" />
+                        </View>
+                        <View style={styles.dateRangeFieldText}>
+                          <Text style={styles.dateRangeFieldLabel}>Período</Text>
+                          <Text style={styles.dateRangeFieldValue}>{formatDateRangeLabel(historyCustomStart, historyCustomEnd)}</Text>
+                        </View>
+                        <Ionicons name="chevron-forward-outline" size={18} color="#64748b" />
+                      </Pressable>
+                    )}
+
+                    <View style={styles.historyFilterGroup}>
+                      <Text style={styles.historyFilterLabel}>Tipo</Text>
+                      <View style={styles.historyChipRow}>
+                        {TYPE_FILTERS.map((filter) => (
+                          <HistoryFilterChip
+                            key={filter.value}
+                            label={filter.label}
+                            selected={historyTypeFilter === filter.value}
+                            onPress={() => setHistoryTypeFilter(filter.value)}
+                          />
+                        ))}
+                      </View>
                     </View>
-                    <Ionicons name="chevron-forward-outline" size={18} color="#64748b" />
-                  </Pressable>
+
+                    <View style={styles.historySortArea}>
+                      <Pressable style={styles.historySortButton} onPress={() => setSortOptionsVisible((current) => !current)}>
+                        <Ionicons name="swap-vertical-outline" size={16} color="#3b82f6" />
+                        <Text style={styles.historySortText}>
+                          {SORT_OPTIONS.find((option) => option.value === historySortMode)?.label ?? "Mais recentes"}
+                        </Text>
+                        <Ionicons name={sortOptionsVisible ? "chevron-up-outline" : "chevron-down-outline"} size={16} color="#3b82f6" />
+                      </Pressable>
+                      {sortOptionsVisible && (
+                        <View style={styles.historySortOptions}>
+                          {SORT_OPTIONS.map((option) => (
+                            <HistoryFilterChip
+                              key={option.value}
+                              label={option.label}
+                              selected={historySortMode === option.value}
+                              onPress={() => {
+                                setHistorySortMode(option.value);
+                                setSortOptionsVisible(false);
+                              }}
+                            />
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  </View>
                 )}
-
-                <View style={styles.historyFilterGroup}>
-                  <Text style={styles.historyFilterLabel}>Tipo</Text>
-                  <View style={styles.historyChipRow}>
-                    {TYPE_FILTERS.map((filter) => (
-                      <HistoryFilterChip
-                        key={filter.value}
-                        label={filter.label}
-                        selected={historyTypeFilter === filter.value}
-                        onPress={() => setHistoryTypeFilter(filter.value)}
-                      />
-                    ))}
-                  </View>
-                </View>
-
-                <View style={styles.historySortArea}>
-                  <Pressable style={styles.historySortButton} onPress={() => setSortOptionsVisible((current) => !current)}>
-                    <Ionicons name="swap-vertical-outline" size={16} color="#3b82f6" />
-                    <Text style={styles.historySortText}>
-                      {SORT_OPTIONS.find((option) => option.value === historySortMode)?.label ?? "Mais recentes"}
-                    </Text>
-                    <Ionicons name={sortOptionsVisible ? "chevron-up-outline" : "chevron-down-outline"} size={16} color="#3b82f6" />
-                  </Pressable>
-                  {sortOptionsVisible && (
-                    <View style={styles.historySortOptions}>
-                      {SORT_OPTIONS.map((option) => (
-                        <HistoryFilterChip
-                          key={option.value}
-                          label={option.label}
-                          selected={historySortMode === option.value}
-                          onPress={() => {
-                            setHistorySortMode(option.value);
-                            setSortOptionsVisible(false);
-                          }}
-                        />
-                      ))}
-                    </View>
-                  )}
-                </View>
               </View>
 
               {filteredHistoryEntries.length === 0 ? (
@@ -1666,16 +1680,16 @@ const styles = StyleSheet.create({
     fontWeight: "800"
   },
   historyPanel: {
-    gap: 12,
+    gap: 10,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: ui.radius,
-    padding: 12,
+    padding: 10,
     backgroundColor: ui.surface,
     ...softShadow
   },
   historySearchBox: {
-    minHeight: 44,
+    minHeight: 40,
     borderWidth: 1,
     borderColor: "#E2E8F0",
     borderRadius: ui.controlRadius,
@@ -1687,7 +1701,7 @@ const styles = StyleSheet.create({
   },
   historySearchInput: {
     flex: 1,
-    minHeight: 42,
+    minHeight: 38,
     paddingVertical: 0,
     color: ui.text,
     fontSize: 14,
@@ -1702,24 +1716,24 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexBasis: "23%",
     minWidth: 72,
-    minHeight: 58,
+    minHeight: 46,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 12,
     paddingHorizontal: 9,
-    paddingVertical: 8,
+    paddingVertical: 6,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#F8FAFC"
   },
   historySummaryDot: {
-    width: 16,
-    height: 3,
+    width: 14,
+    height: 2,
     borderRadius: 2
   },
   historySummaryValue: {
-    marginTop: 5,
-    fontSize: 17,
+    marginTop: 3,
+    fontSize: 15,
     fontWeight: "900"
   },
   historySummaryLabel: {
@@ -1728,6 +1742,30 @@ const styles = StyleSheet.create({
     fontSize: 10,
     textAlign: "center",
     fontWeight: "800"
+  },
+  historyFiltersToggle: {
+    minHeight: 38,
+    borderWidth: 1,
+    borderColor: "#DCEAFE",
+    borderRadius: 14,
+    paddingHorizontal: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F8FBFF"
+  },
+  historyFiltersToggleTitle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7
+  },
+  historyFiltersToggleText: {
+    color: "#3b82f6",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  historyAdvancedFilters: {
+    gap: 10
   },
   historyFilterGroup: {
     gap: 8
