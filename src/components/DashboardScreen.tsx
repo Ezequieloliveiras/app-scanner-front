@@ -1,14 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
+  FlatList,
+  LayoutAnimation,
+  Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  UIManager,
   View
 } from "react-native";
 import { api } from "../api/client";
@@ -38,28 +43,36 @@ const BUCKET_LABELS = {
 };
 
 const DEFAULT_STOPPED_DAYS = 30;
+const DASHBOARD_PRODUCT_LIMIT = 500;
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export function DashboardScreen({ token }: Props) {
   const [dashboard, setDashboard] = useState<InventoryDashboard | null>(null);
   const [productQuery, setProductQuery] = useState("");
+  const [debouncedProductQuery, setDebouncedProductQuery] = useState("");
   const [onlyStopped, setOnlyStopped] = useState(false);
   const [onlyWithStock, setOnlyWithStock] = useState(true);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  const [filtersVisible, setFiltersVisible] = useState(false);
+  const [indicatorsExpanded, setIndicatorsExpanded] = useState(false);
   const searchFocusAnim = useRef(new Animated.Value(0)).current;
 
   const query = useMemo(
     () => ({
-      product: productQuery.trim() || undefined,
       minStoppedDays: onlyStopped ? DEFAULT_STOPPED_DAYS : undefined,
       onlyWithStock,
       sortBy: "daysStopped",
       sortDir: "desc",
-      limit: 100
+      limit: DASHBOARD_PRODUCT_LIMIT
     }),
-    [onlyStopped, onlyWithStock, productQuery]
+    [onlyStopped, onlyWithStock]
   );
 
   const loadDashboard = useCallback(
@@ -89,6 +102,12 @@ export function DashboardScreen({ token }: Props) {
   }, [loadDashboard]);
 
   useEffect(() => {
+    const timer = setTimeout(() => setDebouncedProductQuery(productQuery), 220);
+
+    return () => clearTimeout(timer);
+  }, [productQuery]);
+
+  useEffect(() => {
     Animated.timing(searchFocusAnim, {
       toValue: searchFocused ? 1 : 0,
       duration: 180,
@@ -111,13 +130,43 @@ export function DashboardScreen({ token }: Props) {
     setOnlyWithStock(false);
   }
 
+  const filteredProducts = useMemo(
+    () => filterDashboardProducts(dashboard?.products ?? [], debouncedProductQuery),
+    [dashboard?.products, debouncedProductQuery]
+  );
+
+  const toggleExpandedProduct = useCallback((productId: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedProductId((current) => (current === productId ? null : productId));
+  }, []);
+
+  const renderProduct = useCallback(
+    ({ item }: { item: DashboardProduct }) => (
+      <DashboardProductCard product={item} expanded={expandedProductId === item.id} onToggle={toggleExpandedProduct} />
+    ),
+    [expandedProductId, toggleExpandedProduct]
+  );
+
+  const productKeyExtractor = useCallback((product: DashboardProduct) => product.id, []);
+
   return (
-    <ScrollView
+    <>
+    <FlatList
+      data={dashboard ? filteredProducts : []}
+      renderItem={renderProduct}
+      keyExtractor={productKeyExtractor}
       style={styles.content}
       contentContainerStyle={[styles.contentInner, styles.productListScreenInner]}
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadDashboard("refresh")} />}
-    >
+      initialNumToRender={12}
+      maxToRenderPerBatch={12}
+      updateCellsBatchingPeriod={45}
+      windowSize={8}
+      removeClippedSubviews
+      extraData={expandedProductId}
+      ListHeaderComponent={
+        <View style={localStyles.dashboardHeader}>
       <View style={localStyles.filterPanel}>
         <View style={localStyles.filterHeader}>
           <Text style={localStyles.filterTitle}>Produto</Text>
@@ -137,15 +186,25 @@ export function DashboardScreen({ token }: Props) {
           <TextInput
             value={productQuery}
             onChangeText={setProductQuery}
-            placeholder="Buscar produto ou EAN"
+            placeholder="Buscar produto..."
             placeholderTextColor="#8a95a5"
             returnKeyType="search"
             style={localStyles.searchInput}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
-            onSubmitEditing={() => loadDashboard()}
+            onSubmitEditing={() => setDebouncedProductQuery(productQuery)}
           />
+          {!!productQuery && (
+            <Pressable style={localStyles.clearSearchButton} onPress={() => setProductQuery("")} accessibilityLabel="Limpar busca">
+              <Ionicons name="close-outline" size={18} color="#64748b" />
+            </Pressable>
+          )}
         </Animated.View>
+
+        <Pressable style={localStyles.filtersTrigger} onPress={() => setFiltersVisible(true)}>
+          <Ionicons name="options-outline" size={18} color="#3b82f6" />
+          <Text style={localStyles.filtersTriggerText}>Filtros</Text>
+        </Pressable>
 
         <View style={localStyles.statusGroup}>
           <Text style={localStyles.groupLabel}>Status</Text>
@@ -182,6 +241,12 @@ export function DashboardScreen({ token }: Props) {
 
       {error && <Text style={styles.errorText}>{error}</Text>}
 
+      {loading && !dashboard && (
+        <View style={localStyles.loadingState}>
+          <ActivityIndicator color="#3b82f6" />
+        </View>
+      )}
+
       {dashboard && (
         <>
           <View style={localStyles.metricsGrid}>
@@ -192,7 +257,7 @@ export function DashboardScreen({ token }: Props) {
           </View>
 
           {dashboard.metrics.oldestProduct && (
-            <View style={localStyles.insightCard}>
+            <View style={[localStyles.insightCard, localStyles.hiddenSection]}>
               <View style={localStyles.insightIcon}>
                 <Ionicons name="trending-down-outline" size={22} color="#B45309" />
               </View>
@@ -206,38 +271,229 @@ export function DashboardScreen({ token }: Props) {
             </View>
           )}
 
-          <View style={localStyles.bucketPanel}>
-            <Text style={styles.sectionTitle}>Tempo parado</Text>
-            <View style={localStyles.bucketGrid}>
-              {Object.entries(dashboard.agingBuckets).map(([key, value]) => (
-                <View key={key} style={localStyles.bucketItem}>
-                  <Text style={localStyles.bucketValue}>{value}</Text>
-                  <Text style={localStyles.bucketLabel}>{BUCKET_LABELS[key as keyof typeof BUCKET_LABELS]}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
+              <View style={localStyles.hiddenSection}>
+                <Text style={styles.sectionTitle}>Tempo parado</Text>
+                <ScrollView
+                  horizontal
+                  nestedScrollEnabled
+                  directionalLockEnabled
+                  keyboardShouldPersistTaps="handled"
+                  showsHorizontalScrollIndicator={false}
+                  style={localStyles.bucketScroller}
+                  contentContainerStyle={localStyles.bucketChipRow}
+                >
+                  {Object.entries(dashboard.agingBuckets).map(([key, value]) => (
+                    <View key={key} style={localStyles.bucketChip}>
+                      <Text style={localStyles.bucketValue}>{value}</Text>
+                      <Text style={localStyles.bucketLabel} numberOfLines={1}>
+                        {BUCKET_LABELS[key as keyof typeof BUCKET_LABELS]}
+                      </Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
 
           <View style={localStyles.listHeader}>
             <View>
               <Text style={styles.sectionTitle}>Produtos analisados</Text>
-              <Text style={styles.sectionSubtitle}>{dashboard.products.length} item(ns) no filtro atual</Text>
+              <Text style={styles.sectionSubtitle}>{filteredProducts.length} item(ns) no filtro atual</Text>
             </View>
             <Text style={styles.meta}>{formatDateTime(dashboard.generatedAt)}</Text>
           </View>
-
-          {dashboard.products.length === 0 ? (
-            <View style={localStyles.emptyState}>
-              <Ionicons name="search-outline" size={28} color="#64748b" />
-              <Text style={localStyles.emptyTitle}>Nenhum produto encontrado</Text>
-              <Text style={styles.mutedText}>Ajuste o filtro por produto ou dias parados.</Text>
-            </View>
-          ) : (
-            dashboard.products.map((product) => <DashboardProductCard key={product.id} product={product} />)
-          )}
         </>
       )}
-    </ScrollView>
+        </View>
+      }
+      ListEmptyComponent={
+        dashboard && !loading ? (
+          <View style={localStyles.emptyState}>
+            <Ionicons name="search-outline" size={28} color="#64748b" />
+            <Text style={localStyles.emptyTitle}>Nenhum produto encontrado</Text>
+            <Text style={styles.mutedText}>Ajuste a busca ou os filtros do dashboard.</Text>
+          </View>
+        ) : null
+      }
+      ListFooterComponent={null}
+      /*
+      ListFooterComponent={
+        dashboard ? (
+          <View style={localStyles.indicatorsAccordion}>
+            <Pressable
+              style={localStyles.indicatorsHeader}
+              onPress={() => {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setIndicatorsExpanded((current) => !current);
+              }}
+            >
+              <View style={localStyles.indicatorsTitleRow}>
+                <Ionicons name="analytics-outline" size={18} color="#3b82f6" />
+                <Text style={localStyles.indicatorsTitle}>Indicadores</Text>
+              </View>
+              <Ionicons name={indicatorsExpanded ? "chevron-up-outline" : "chevron-down-outline"} size={19} color="#3b82f6" />
+            </Pressable>
+
+            {indicatorsExpanded && (
+              <View style={localStyles.indicatorsBody}>
+                {dashboard.metrics.oldestProduct && (
+                  <View style={localStyles.insightCard}>
+                    <View style={localStyles.insightIcon}>
+                      <Ionicons name="trending-down-outline" size={20} color="#B45309" />
+                    </View>
+                    <View style={localStyles.insightText}>
+                      <Text style={localStyles.insightTitle}>Maior tempo parado</Text>
+                      <Text style={localStyles.insightBody}>
+                        {dashboard.metrics.oldestProduct.name} está parado há {dashboard.metrics.oldestProduct.daysStopped || 0} dias com{" "}
+                        {dashboard.metrics.oldestProduct.totalQuantity} unidade(s) no estoque.
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                <View style={localStyles.bucketPanel}>
+                  <Text style={localStyles.indicatorsSubtitle}>Tempo parado</Text>
+                  <ScrollView
+                    horizontal
+                    nestedScrollEnabled
+                    directionalLockEnabled
+                    keyboardShouldPersistTaps="handled"
+                    showsHorizontalScrollIndicator={false}
+                    style={localStyles.bucketScroller}
+                    contentContainerStyle={localStyles.bucketChipRow}
+                  >
+                    {Object.entries(dashboard.agingBuckets).map(([key, value]) => (
+                      <View key={key} style={localStyles.bucketChip}>
+                        <Text style={localStyles.bucketValue}>{value}</Text>
+                        <Text style={localStyles.bucketLabel} numberOfLines={1}>
+                          {BUCKET_LABELS[key as keyof typeof BUCKET_LABELS]}
+                        </Text>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+            )}
+          </View>
+        ) : null
+      }
+      */
+    />
+    <Modal visible={filtersVisible} transparent animationType="slide" onRequestClose={() => setFiltersVisible(false)}>
+      <Pressable style={localStyles.sheetBackdrop} onPress={() => setFiltersVisible(false)}>
+        <Pressable style={localStyles.filterSheet} onPress={(event) => event.stopPropagation()}>
+          <View style={localStyles.sheetHandle} />
+          <View style={localStyles.sheetHeader}>
+            <Text style={localStyles.sheetTitle}>Filtros</Text>
+            <Pressable style={localStyles.sheetCloseButton} onPress={() => setFiltersVisible(false)} accessibilityLabel="Fechar filtros">
+              <Ionicons name="close-outline" size={21} color="#64748b" />
+            </Pressable>
+          </View>
+
+          <View style={localStyles.sheetSection}>
+            <Text style={localStyles.groupLabel}>Status</Text>
+            <View style={localStyles.chipRow}>
+              <FilterChip label="Todos" icon="apps-outline" selected={!onlyStopped && !onlyWithStock} onPress={showAllProducts} />
+              <FilterChip
+                label="Parados"
+                icon="pause-circle-outline"
+                selected={onlyStopped}
+                onPress={() => setOnlyStopped((current) => !current)}
+              />
+              <FilterChip
+                label="Em estoque"
+                icon="cube-outline"
+                selected={onlyWithStock}
+                onPress={() => setOnlyWithStock((current) => !current)}
+              />
+            </View>
+          </View>
+
+          <View style={localStyles.sheetSection}>
+            <Text style={localStyles.groupLabel}>Filial</Text>
+            <View style={localStyles.compactOption}>
+              <Text style={localStyles.compactOptionText}>Todas as filiais</Text>
+            </View>
+          </View>
+
+          <View style={localStyles.sheetSection}>
+            <Text style={localStyles.groupLabel}>Datas</Text>
+            <View style={localStyles.compactOption}>
+              <Text style={localStyles.compactOptionText}>Todo o período</Text>
+            </View>
+          </View>
+
+          <View style={localStyles.sheetSection}>
+            <Text style={localStyles.groupLabel}>Outros filtros</Text>
+            <View style={localStyles.compactOption}>
+              <Text style={localStyles.compactOptionText}>Ordenar por maior tempo parado</Text>
+            </View>
+          </View>
+
+          {dashboard && (
+            <View style={localStyles.sheetSection}>
+              <Pressable
+                style={localStyles.indicatorsHeader}
+                onPress={() => {
+                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                  setIndicatorsExpanded((current) => !current);
+                }}
+              >
+                <View style={localStyles.indicatorsTitleRow}>
+                  <Ionicons name="analytics-outline" size={18} color="#3b82f6" />
+                  <Text style={localStyles.indicatorsTitle}>Indicadores</Text>
+                </View>
+                <Ionicons name={indicatorsExpanded ? "chevron-up-outline" : "chevron-down-outline"} size={19} color="#3b82f6" />
+              </Pressable>
+
+              {indicatorsExpanded && (
+                <View style={localStyles.indicatorsBody}>
+                  {dashboard.metrics.oldestProduct && (
+                    <View style={localStyles.insightCard}>
+                      <View style={localStyles.insightIcon}>
+                        <Ionicons name="trending-down-outline" size={20} color="#B45309" />
+                      </View>
+                      <View style={localStyles.insightText}>
+                        <Text style={localStyles.insightTitle}>Maior tempo parado</Text>
+                        <Text style={localStyles.insightBody}>
+                          {dashboard.metrics.oldestProduct.name} está parado há {dashboard.metrics.oldestProduct.daysStopped || 0} dias com{" "}
+                          {dashboard.metrics.oldestProduct.totalQuantity} unidade(s) no estoque.
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  <View style={localStyles.bucketPanel}>
+                    <Text style={localStyles.indicatorsSubtitle}>Tempo parado</Text>
+                    <ScrollView
+                      horizontal
+                      nestedScrollEnabled
+                      directionalLockEnabled
+                      keyboardShouldPersistTaps="handled"
+                      showsHorizontalScrollIndicator={false}
+                      style={localStyles.bucketScroller}
+                      contentContainerStyle={localStyles.bucketChipRow}
+                    >
+                      {Object.entries(dashboard.agingBuckets).map(([key, value]) => (
+                        <View key={key} style={localStyles.bucketChip}>
+                          <Text style={localStyles.bucketValue}>{value}</Text>
+                          <Text style={localStyles.bucketLabel} numberOfLines={1}>
+                            {BUCKET_LABELS[key as keyof typeof BUCKET_LABELS]}
+                          </Text>
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+
+          <Pressable style={localStyles.sheetApplyButton} onPress={() => setFiltersVisible(false)}>
+            <Text style={localStyles.sheetApplyButtonText}>Aplicar filtros</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+    </>
   );
 }
 
@@ -297,50 +553,79 @@ function MetricCard({
   );
 }
 
-function DashboardProductCard({ product }: { product: DashboardProduct }) {
+const DashboardProductCard = memo(function DashboardProductCard({
+  product,
+  expanded,
+  onToggle
+}: {
+  product: DashboardProduct;
+  expanded: boolean;
+  onToggle: (productId: string) => void;
+}) {
   const status = STATUS_META[product.status];
+  const stoppedLabel = product.daysStopped === null ? "--" : `${product.daysStopped}d`;
+  const handleToggle = useCallback(() => onToggle(product.id), [onToggle, product.id]);
 
   return (
-    <View style={localStyles.productCard}>
+    <Pressable style={[localStyles.productCard, expanded && localStyles.productCardExpanded]} onPress={handleToggle}>
       <View style={localStyles.productTop}>
         <View style={localStyles.productTitleArea}>
-          <Text style={localStyles.productName}>{product.name}</Text>
-          <Text style={localStyles.productMeta}>EAN {product.ean}</Text>
-        </View>
-        <View style={[localStyles.statusBadge, { backgroundColor: status.backgroundColor }]}>
-          <Ionicons name={status.icon} size={15} color={status.color} />
-          <Text style={[localStyles.statusText, { color: status.color }]}>{status.label}</Text>
-        </View>
-      </View>
-
-      <View style={localStyles.productNumbers}>
-        <SmallNumber label="Total" value={product.totalQuantity} />
-        <SmallNumber label="Central" value={product.centralQuantity} />
-        <SmallNumber label="Filiais" value={product.branchQuantity} />
-        <SmallNumber label="Parado" value={product.daysStopped === null ? "--" : `${product.daysStopped}d`} />
-      </View>
-
-      <View style={localStyles.hintRow}>
-        <Ionicons name="bulb-outline" size={17} color="#B45309" />
-        <Text style={localStyles.hintText}>{product.managementHint}</Text>
-      </View>
-
-      {!!product.lastMovementAt && (
-        <Text style={localStyles.productMeta}>Última movimentação: {formatDateTime(product.lastMovementAt)}</Text>
-      )}
-
-      {product.branchStocks.length > 0 && (
-        <View style={localStyles.branchChips}>
-          {product.branchStocks.map((branch) => (
-            <Text key={branch.branchName} style={localStyles.branchChip}>
-              {branch.branchName}: {branch.quantity}
+          <View style={localStyles.productTitleRow}>
+            <Text style={localStyles.productName} numberOfLines={2} ellipsizeMode="tail">
+              {product.name}
             </Text>
-          ))}
+            <Text style={localStyles.productMeta} numberOfLines={1}>
+              EAN {product.ean}
+            </Text>
+          </View>
+        </View>
+        <View style={localStyles.compactSummary}>
+          
+          <View style={[localStyles.statusBadge, { backgroundColor: status.backgroundColor }]}>
+            <Ionicons name={status.icon} size={13} color={status.color} />
+            <Text style={[localStyles.statusText, { color: status.color }]} numberOfLines={1}>
+              {status.label}
+            </Text>
+          </View>
+        
+          <View style={localStyles.expandButton}>
+            <Ionicons name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={18} color="#3b82f6" />
+          </View>
+        </View>
+      </View>
+
+      {expanded && (
+        <View style={localStyles.productDetails}>
+          <View style={localStyles.productNumbers}>
+            <SmallNumber label="Total" value={product.totalQuantity} />
+            <SmallNumber label="Central" value={product.centralQuantity} />
+            <SmallNumber label="Filiais" value={product.branchQuantity} />
+            <SmallNumber label="Parado" value={stoppedLabel} />
+          </View>
+
+          <View style={localStyles.hintRow}>
+            <Ionicons name="bulb-outline" size={17} color="#B45309" />
+            <Text style={localStyles.hintText}>{product.managementHint}</Text>
+          </View>
+
+          {!!product.lastMovementAt && (
+            <Text style={localStyles.detailMeta}>Última movimentação: {formatDateTime(product.lastMovementAt)}</Text>
+          )}
+
+          {product.branchStocks.length > 0 && (
+            <View style={localStyles.branchChips}>
+              {product.branchStocks.map((branch) => (
+                <Text key={branch.branchName} style={localStyles.branchChip}>
+                  {branch.branchName}: {branch.quantity}
+                </Text>
+              ))}
+            </View>
+          )}
         </View>
       )}
-    </View>
+    </Pressable>
   );
-}
+});
 
 function SmallNumber({ label, value }: { label: string; value: number | string }) {
   return (
@@ -349,6 +634,43 @@ function SmallNumber({ label, value }: { label: string; value: number | string }
       <Text style={localStyles.smallNumberLabel}>{label}</Text>
     </View>
   );
+}
+
+function filterDashboardProducts(products: DashboardProduct[], query: string) {
+  const normalizedQuery = normalizeSearch(query);
+
+  if (!normalizedQuery) {
+    return products;
+  }
+
+  return products.filter((product) => getDashboardProductSearchText(product).includes(normalizedQuery));
+}
+
+function getDashboardProductSearchText(product: DashboardProduct) {
+  const status = STATUS_META[product.status];
+  const branchText = product.branchStocks.map((branch) => `${branch.branchName} ${branch.quantity}`).join(" ");
+
+  return normalizeSearch(
+    [
+      product.name,
+      product.ean,
+      status.label,
+      product.status,
+      product.agingBucket,
+      branchText,
+      product.managementHint,
+      String(product.totalQuantity),
+      product.daysStopped === null ? "" : `${product.daysStopped}d`
+    ].join(" ")
+  );
+}
+
+function normalizeSearch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 function formatDateTime(value: string) {
@@ -365,20 +687,16 @@ function formatDateTime(value: string) {
 }
 
 const localStyles = StyleSheet.create({
+  dashboardHeader: {
+    gap: 8
+  },
   filterPanel: {
-    gap: 16,
-    borderWidth: 1,
-    borderColor: "#edf2f7",
-    borderRadius: 18,
-    padding: 16,
-    backgroundColor: "#ffffff",
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.06,
-    shadowRadius: 18,
-    elevation: 2
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
   },
   filterHeader: {
+    display: "none",
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
@@ -395,10 +713,11 @@ const localStyles = StyleSheet.create({
     fontWeight: "600"
   },
   searchBox: {
-    minHeight: 46,
+    flex: 1,
+    minHeight: 42,
     borderWidth: 1,
-    borderRadius: 15,
-    paddingHorizontal: 13,
+    borderRadius: 14,
+    paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
     gap: 9,
@@ -410,13 +729,40 @@ const localStyles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    minHeight: 44,
+    minWidth: 0,
+    minHeight: 40,
     paddingVertical: 0,
     color: "#1f2937",
     fontSize: 14,
     fontWeight: "600"
   },
+  clearSearchButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#eef4fb"
+  },
+  filtersTrigger: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderColor: "#dbe7f5",
+    borderRadius: 14,
+    paddingHorizontal: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    backgroundColor: "#ffffff"
+  },
+  filtersTriggerText: {
+    color: "#3b82f6",
+    fontSize: 12,
+    fontWeight: "900"
+  },
   statusGroup: {
+    display: "none",
     gap: 10
   },
   groupLabel: {
@@ -462,6 +808,7 @@ const localStyles = StyleSheet.create({
     color: "#ffffff"
   },
   filterButton: {
+    display: "none",
     minHeight: 46,
     borderRadius: 14,
     paddingHorizontal: 14,
@@ -492,18 +839,17 @@ const localStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#d8dee9",
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    paddingVertical: 8,
+    borderWidth: 0,
+    borderRadius: 12,
+    paddingHorizontal: 2,
+    paddingVertical: 4,
     backgroundColor: "#ffffff"
   },
   metricCard: {
     width: "25%",
-    minHeight: 48,
+    minHeight: 42,
     paddingHorizontal: 1,
-    paddingVertical: 6,
+    paddingVertical: 4,
     alignItems: "center",
     justifyContent: "center"
   },
@@ -527,11 +873,11 @@ const localStyles = StyleSheet.create({
   },
   metricNumber: {
     color: "#1f2937",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "900"
   },
   metricText: {
-    marginTop: 3,
+    marginTop: 2,
     color: "#64748b",
     width: "100%",
     fontSize: 8,
@@ -578,32 +924,38 @@ const localStyles = StyleSheet.create({
     fontWeight: "700"
   },
   bucketPanel: {
-    gap: 10
-  },
-  bucketGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
     gap: 8
   },
-  bucketItem: {
-    width: "31%",
-    minHeight: 70,
+  bucketScroller: {
+    width: "100%"
+  },
+  bucketChipRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingRight: 28
+  },
+  bucketChip: {
+    minWidth: 86,
+    minHeight: 46,
     borderWidth: 1,
     borderColor: "#d8dee9",
-    borderRadius: 8,
-    padding: 10,
-    backgroundColor: "#f8fafc"
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    justifyContent: "center",
+    backgroundColor: "#ffffff"
   },
   bucketValue: {
     color: "#3b82f6",
-    fontSize: 18,
+    fontSize: 16,
+    lineHeight: 19,
     fontWeight: "900"
   },
   bucketLabel: {
-    marginTop: 3,
+    marginTop: 1,
     color: "#475569",
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 10,
+    lineHeight: 12,
     fontWeight: "800"
   },
   listHeader: {
@@ -629,50 +981,119 @@ const localStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "900"
   },
+  hiddenSection: {
+    display: "none"
+  },
+  loadingState: {
+    minHeight: 96,
+    alignItems: "center",
+    justifyContent: "center"
+  },
   productCard: {
     width: "100%",
-    gap: 10,
     borderWidth: 1,
     borderColor: "#d8dee9",
-    borderRadius: 8,
-    padding: 14,
-    backgroundColor: "#ffffff"
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    backgroundColor: "#ffffff",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    elevation: 1
+  },
+  productCardExpanded: {
+    borderColor: "#bfdbfe"
   },
   productTop: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
-    gap: 10
+    gap: 8
   },
   productTitleArea: {
     flex: 1,
     minWidth: 0
   },
+  productTitleRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+    columnGap: 8,
+    rowGap: 2
+  },
   productName: {
     color: "#1f2937",
-    fontSize: 16,
-    lineHeight: 21,
-    fontWeight: "900"
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "900",
+    flexShrink: 1,
+    minWidth: "48%",
+    maxWidth: "100%"
   },
   productMeta: {
-    marginTop: 3,
+    color: "#64748b",
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: "800",
+    flexShrink: 1,
+    maxWidth: "100%"
+  },
+  detailMeta: {
     color: "#64748b",
     fontSize: 12,
+    lineHeight: 17,
     fontWeight: "800"
   },
-  statusBadge: {
-    alignSelf: "flex-start",
-    minHeight: 30,
-    borderRadius: 8,
-    paddingHorizontal: 8,
+  compactSummary: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5
+    justifyContent: "flex-end",
+    gap: 6
+  },
+  compactQuantity: {
+    minWidth: 28,
+    color: "#3b82f6",
+    fontSize: 17,
+    lineHeight: 21,
+    textAlign: "right",
+    fontWeight: "900"
+  },
+  statusBadge: {
+    minHeight: 26,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4
   },
   statusText: {
+    fontSize: 10,
+    fontWeight: "900"
+  },
+  daysBadge: {
+    minHeight: 26,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingTop: 5,
+    overflow: "hidden",
+    color: "#1f2937",
+    backgroundColor: "#f1f5f9",
     fontSize: 11,
     fontWeight: "900"
+  },
+  expandButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#eaf4ff"
+  },
+  productDetails: {
+    gap: 10,
+    marginTop: 10
   },
   productNumbers: {
     flexDirection: "row",
@@ -731,6 +1152,110 @@ const localStyles = StyleSheet.create({
     color: "#3b82f6",
     backgroundColor: "#eaf4ff",
     fontSize: 11,
+    fontWeight: "900"
+  },
+  indicatorsAccordion: {
+    marginTop: 8,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: "#dbe7f5",
+    borderRadius: 12,
+    backgroundColor: "#ffffff",
+    overflow: "hidden"
+  },
+  indicatorsHeader: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+  indicatorsTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  indicatorsTitle: {
+    color: "#1f2937",
+    fontSize: 15,
+    fontWeight: "900"
+  },
+  indicatorsBody: {
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingBottom: 12
+  },
+  indicatorsSubtitle: {
+    color: "#1f2937",
+    fontSize: 13,
+    fontWeight: "900"
+  },
+  sheetBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(15, 23, 42, 0.28)"
+  },
+  filterSheet: {
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 22,
+    gap: 14,
+    backgroundColor: "#ffffff"
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    width: 42,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#d8e1ee"
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+  sheetTitle: {
+    color: "#1f2937",
+    fontSize: 18,
+    fontWeight: "900"
+  },
+  sheetCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f1f5f9"
+  },
+  sheetSection: {
+    gap: 8
+  },
+  compactOption: {
+    minHeight: 38,
+    borderWidth: 1,
+    borderColor: "#e5ebf3",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    justifyContent: "center",
+    backgroundColor: "#f8fafc"
+  },
+  compactOptionText: {
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  sheetApplyButton: {
+    minHeight: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#3b82f6"
+  },
+  sheetApplyButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
     fontWeight: "900"
   }
 });

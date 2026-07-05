@@ -217,11 +217,11 @@ export function BranchScreen({
           {openSection === "movements" && (
             <View style={styles.accordionBody}>
 
-              <Text style={styles.fieldLabel}>Pesquisar movimentação pelo ID</Text>
+              <Text style={styles.fieldLabel}>Pesquisar por produto ou ID</Text>
               <TextInput
                 value={movementIdSearch}
                 onChangeText={setMovementIdSearch}
-                placeholder="Digite o ID da movimentação"
+                placeholder="Digite produto, EAN ou ID da movimentação"
                 returnKeyType="search"
                 style={styles.quantityInput}
               />
@@ -496,3 +496,4 @@ function getTransferStatusStyle(status: BranchTransferStatus) {
   if (status === "in_transit") return styles.transferStatusInTransit;
   return styles.transferStatusReserved;
 }
+

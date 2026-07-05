@@ -1,6 +1,6 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
-import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+﻿import { Ionicons } from "@expo/vector-icons";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Product, StockEntry } from "../types/product";
 
 type Props = {
@@ -14,6 +14,7 @@ type HistoryTypeFilter = "all" | "entry" | "divergence" | "withdrawal" | "reject
 type HistoryDateFilter = "all" | "today" | "week" | "month" | "custom";
 type HistorySortMode = "recent" | "oldest" | "quantity_desc" | "quantity_asc";
 type DateRangeShortcut = "today" | "yesterday" | "last_7" | "last_30" | "this_month" | "last_month" | "custom";
+type SearchableProduct = { product: Product; searchText: string };
 
 const DATE_FILTERS: Array<{ label: string; value: HistoryDateFilter }> = [
   { label: "Todos", value: "all" },
@@ -85,6 +86,8 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
   const [draftRangeStart, setDraftRangeStart] = useState("");
   const [draftRangeEnd, setDraftRangeEnd] = useState("");
   const [visibleCalendarMonth, setVisibleCalendarMonth] = useState(startOfMonth(new Date()));
+  const [productSearch, setProductSearch] = useState("");
+  const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
   const activeProduct = selectedProduct
     ? products.find((product) => product._id === selectedProduct._id) ?? selectedProduct
     : null;
@@ -104,17 +107,22 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
     [historyCustomEnd, historyCustomStart, historyDateFilter, historyEntries, historyQuery, historySortMode, historyTypeFilter]
   );
   const historySummary = useMemo(() => getHistorySummary(historyEntries), [historyEntries]);
+  const searchableProducts = useMemo(
+    () => products.map((product) => ({ product, searchText: getProductSearchText(product) })),
+    [products]
+  );
+  const filteredProducts = useMemo(
+    () => filterProductList(searchableProducts, debouncedProductSearch),
+    [debouncedProductSearch, searchableProducts]
+  );
 
-  if (!products.length) {
-    return (
-      <View style={styles.emptyState}>
-        <Text style={styles.emptyTitle}>Nenhum produto no estoque</Text>
-        <Text style={styles.emptyText}>Leia uma nota ou simule um XML para registrar entradas.</Text>
-      </View>
-    );
-  }
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedProductSearch(productSearch), 220);
 
-  function openProduct(product: Product) {
+    return () => clearTimeout(timer);
+  }, [productSearch]);
+
+  const openProduct = useCallback((product: Product) => {
     setSelectedProduct(product);
     setQuantityInput("");
     setObservationInput("");
@@ -132,6 +140,22 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
     setDraftRangeStart("");
     setDraftRangeEnd("");
     setVisibleCalendarMonth(startOfMonth(new Date()));
+  }, []);
+
+  const renderProduct = useCallback(
+    ({ item }: { item: Product }) => <ProductListItem product={item} onOpen={openProduct} />,
+    [openProduct]
+  );
+
+  const productKeyExtractor = useCallback((product: Product) => product._id, []);
+
+  if (!products.length) {
+    return (
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyTitle}>Nenhum produto no estoque</Text>
+        <Text style={styles.emptyText}>Leia uma nota ou simule um XML para registrar entradas.</Text>
+      </View>
+    );
   }
 
   function openDateRangePicker() {
@@ -318,7 +342,7 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
 
   if (activeProduct) {
     return (
-      <View style={styles.detailScreen}>
+      <ScrollView style={styles.detailScroller} contentContainerStyle={styles.detailScreen}>
         <View style={styles.detailHeader}>
           <Pressable style={styles.backButton} onPress={() => setSelectedProduct(null)}>
             <Ionicons name="arrow-back-outline" size={23} color="#1f2937" />
@@ -535,30 +559,79 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
           )}
         </View>
         */}
-      </View>
+      </ScrollView>
     );
   }
 
   return (
-    <View style={styles.list}>
-      {products.map((product) => (
-        <View key={product._id} style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardTitleArea}>
-              <Text style={styles.productName}>{product.name}</Text>
-              <Text style={styles.meta}>EAN: {product.ean}</Text>
-            </View>
-            <Text style={styles.quantity}>{product.quantity}</Text>
-            <Pressable style={styles.detailButton} onPress={() => openProduct(product)}>
-              <Ionicons name="chevron-forward-outline" size={22} color="#3b82f6" />
-            </Pressable>
+    <View style={styles.listScreen}>
+      <View style={styles.searchBar}>
+        <Ionicons name="search-outline" size={18} color="#64748b" />
+        <TextInput
+          value={productSearch}
+          onChangeText={setProductSearch}
+          placeholder="Buscar por produto, EAN ou código"
+          placeholderTextColor="#8a95a5"
+          returnKeyType="search"
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={styles.searchInput}
+        />
+        {!!productSearch && (
+          <Pressable style={styles.clearSearchButton} onPress={() => setProductSearch("")} accessibilityLabel="Limpar busca">
+            <Ionicons name="close-outline" size={18} color="#64748b" />
+          </Pressable>
+        )}
+      </View>
+
+      <FlatList
+        data={filteredProducts}
+        renderItem={renderProduct}
+        keyExtractor={productKeyExtractor}
+        style={styles.listScroller}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        initialNumToRender={18}
+        maxToRenderPerBatch={18}
+        updateCellsBatchingPeriod={40}
+        windowSize={9}
+        removeClippedSubviews
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>Nenhum produto encontrado.</Text>
+            <Text style={styles.emptyText}>Ajuste a busca ou limpe o filtro para ver a lista completa.</Text>
           </View>
-          <Text style={styles.meta}>Entradas: {product.stockEntries?.length || 0}</Text>
-        </View>
-      ))}
+        }
+      />
     </View>
   );
 }
+
+const ProductListItem = memo(function ProductListItem({
+  product,
+  onOpen
+}: {
+  product: Product;
+  onOpen: (product: Product) => void;
+}) {
+  const stockEntriesCount = product.stockEntries?.length || 0;
+  const handlePress = useCallback(() => onOpen(product), [onOpen, product]);
+
+  return (
+    <Pressable style={styles.card} onPress={handlePress}>
+      <View style={styles.cardHeader}>
+        <View style={styles.cardTitleArea}>
+          <View style={styles.titleMetaRow}>
+            <Text style={styles.productName} numberOfLines={2} ellipsizeMode="tail">
+              {product.name}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </Pressable>
+  );
+});
 
 function DetailMetric({
   icon,
@@ -849,6 +922,32 @@ type HistorySummaryChip = {
 };
 
 type HistoryKind = "entry" | "divergence" | "withdrawal" | "approved" | "rejected" | "adjustment" | "other";
+
+function filterProductList(products: SearchableProduct[], query: string) {
+  const normalizedQuery = normalizeSearch(query);
+
+  if (!normalizedQuery) {
+    return products.map(({ product }) => product);
+  }
+
+  return products.filter(({ searchText }) => searchText.includes(normalizedQuery)).map(({ product }) => product);
+}
+
+function getProductSearchText(product: Product) {
+  const searchableProduct = product as Product & Record<string, unknown>;
+  const parts = [
+    product.name,
+    product.ean,
+    searchableProduct.code,
+    searchableProduct.internalCode,
+    searchableProduct.productCode,
+    searchableProduct.sku,
+    searchableProduct.reference,
+    searchableProduct.internalReference
+  ];
+
+  return normalizeSearch(parts.filter((part): part is string | number => typeof part === "string" || typeof part === "number").join(" "));
+}
 
 function filterAndSortHistory(
   entries: StockEntry[],
@@ -1347,55 +1446,112 @@ const softShadow = {
 };
 
 const styles = StyleSheet.create({
-  list: {
+  listScreen: {
+    flex: 1,
     width: "100%",
-    gap: 12,
+    gap: 8
+  },
+  listScroller: {
+    flex: 1,
+    width: "100%"
+  },
+  listContent: {
+    gap: 8,
     paddingBottom: 24
+  },
+  searchBar: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: ui.border,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: ui.surface,
+    ...softShadow
+  },
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    color: ui.text,
+    fontSize: 14,
+    fontWeight: "700",
+    paddingVertical: 9
+  },
+  clearSearchButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f1f5f9"
   },
   card: {
     width: "100%",
     borderWidth: 1,
     borderColor: ui.border,
-    borderRadius: ui.radius,
-    padding: 14,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     backgroundColor: ui.surface,
     ...softShadow
   },
   cardHeader: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    alignItems: "flex-start"
+    gap: 8,
+    alignItems: "center"
   },
   cardTitleArea: {
     flex: 1,
     minWidth: 0
   },
+  titleMetaRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+    columnGap: 8,
+    rowGap: 2
+  },
   productName: {
     color: ui.text,
     fontSize: 15,
     lineHeight: 20,
-    fontWeight: "800"
+    fontWeight: "900",
+    flexShrink: 1,
+    minWidth: "42%",
+    maxWidth: "100%"
+  },
+  inlineMeta: {
+    color: ui.muted,
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: "700",
+    flexShrink: 1,
+    maxWidth: "100%"
+  },
+  cardActions: {
+    minWidth: 58,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 6
   },
   quantity: {
-    minWidth: 44,
+    minWidth: 28,
     textAlign: "right",
     color: "#3b82f6",
-    fontSize: 18,
+    fontSize: 17,
+    lineHeight: 21,
     fontWeight: "900"
   },
   detailButton: {
-    width: 40,
-    height: 40,
-    borderRadius: ui.controlRadius,
+    width: 32,
+    height: 32,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#eaf4ff"
-  },
-  meta: {
-    marginTop: 6,
-    color: "#5b6472",
-    fontSize: 13
   },
   emptyState: {
     width: "100%",
@@ -1416,6 +1572,10 @@ const styles = StyleSheet.create({
     color: "#5b6472",
     fontSize: 14,
     lineHeight: 20
+  },
+  detailScroller: {
+    flex: 1,
+    width: "100%"
   },
   detailScreen: {
     width: "100%",

@@ -181,14 +181,15 @@ export function filterBranches(branches: BranchOption[], query: string) {
 
 export function filterTransfers(
   transfers: BranchTransfer[],
-  movementId: string,
+  movementSearch: string,
   sourceBranch: BranchOption | null,
   targetBranch: BranchOption | null
 ) {
-  const normalizedId = normalizeSearch(movementId);
+  const normalizedSearch = normalizeSearch(movementSearch);
 
   return transfers.filter((transfer) => {
-    const matchesId = normalizedId ? normalizeSearch(transfer._id).includes(normalizedId) : true;
+    const searchableTransfer = normalizeSearch(`${transfer._id} ${transfer.product} ${transfer.productName} ${transfer.ean}`);
+    const matchesSearch = normalizedSearch ? searchableTransfer.includes(normalizedSearch) : true;
     const matchesSource = sourceBranch
       ? transfer.sourceBranchCode === sourceBranch.code || transfer.sourceBranch === sourceBranch.name
       : true;
@@ -196,7 +197,7 @@ export function filterTransfers(
       ? transfer.targetBranchCode === targetBranch.code || transfer.targetBranch === targetBranch.name
       : true;
 
-    return matchesId && matchesSource && matchesTarget;
+    return matchesSearch && matchesSource && matchesTarget;
   });
 }
 

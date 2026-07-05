@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useRef } from "react";
+import { findNodeHandle, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { styles } from "../styles/appStyles";
 import { EditableInvoiceProduct } from "../types/app";
 import { InvoiceResult } from "../types/product";
@@ -35,8 +36,22 @@ export function InvoiceReviewModal({
   onCommit,
   onBackToScan
 }: InvoiceReviewModalProps) {
+  const reviewScrollRef = useRef<ScrollView>(null);
+  const observationInputRefs = useRef<Record<number, TextInput | null>>({});
+
   function updateCountedQuantity(index: number, value: number) {
     onUpdateProduct(index, { quantityInput: formatQuantity(Math.max(0, value)) });
+  }
+
+  function keepObservationVisible(index: number) {
+    setTimeout(() => {
+      const input = observationInputRefs.current[index];
+      const node = input ? findNodeHandle(input) : null;
+
+      if (node) {
+        reviewScrollRef.current?.getScrollResponder()?.scrollResponderScrollNativeHandleToKeyboard(node, 140, true);
+      }
+    }, 120);
   }
 
   const safeBottom = Math.max(bottomInset, 56);
@@ -50,7 +65,7 @@ export function InvoiceReviewModal({
     >
       <KeyboardAvoidingView
         style={styles.invoiceReviewPage}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 16 : 0}
       >
         <View style={[styles.invoiceReviewPageHeader, { paddingTop: topInset }]}>
@@ -64,10 +79,12 @@ export function InvoiceReviewModal({
         </View>
 
         <ScrollView
+          ref={reviewScrollRef}
           style={styles.invoiceReviewList}
-          contentContainerStyle={styles.invoiceReviewPageContent}
+          contentContainerStyle={[styles.invoiceReviewPageContent, { paddingBottom: safeBottom + 140 }]}
           keyboardShouldPersistTaps="always"
           keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          automaticallyAdjustKeyboardInsets
         >
           {pendingInvoice?.invoiceKey && (
             <View style={styles.invoiceKeyArea}>
@@ -158,8 +175,12 @@ export function InvoiceReviewModal({
                   <View style={styles.inlineEditor}>
                     <Text style={styles.fieldLabel}>Observação da entrada</Text>
                     <TextInput
+                      ref={(input) => {
+                        observationInputRefs.current[index] = input;
+                      }}
                       value={product.observation || ""}
                       onChangeText={(value) => onUpdateProduct(index, { observation: value })}
+                      onFocus={() => keepObservationVisible(index)}
                       style={[styles.quantityInput, styles.inlineObservationInput]}
                       placeholder="Ex: faltaram 2 unidades na entrega"
                       multiline
