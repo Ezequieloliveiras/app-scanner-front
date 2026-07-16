@@ -20,14 +20,6 @@ export const PLAN_LABELS = {
   custom: "Personalizado"
 } as const;
 
-export const PLAN_LIMITS = {
-  free: 0,
-  basic: 3,
-  premium: 10,
-  pro: 30,
-  custom: Infinity
-} as const;
-
 export const PLAN_ORDER: UserPlan[] = ["free", "basic", "premium", "pro", "custom"];
 
 export const FALLBACK_PLANS: PlanDefinition[] = [
@@ -104,10 +96,6 @@ export function canManageCertificate(user: AuthUser | null) {
 
 export function canAccessModule(user: AuthUser | null, module: AppModule) {
   if (!user?.enabled) return false;
-  if (user.role === "main" || user.role === "master") {
-    const plan = FALLBACK_PLANS.find((item) => item.id === user.plan);
-    return Boolean(plan?.modules.includes(module));
-  }
   return user.modules.includes(module);
 }
 

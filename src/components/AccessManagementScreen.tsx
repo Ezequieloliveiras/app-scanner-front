@@ -2,11 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { styles } from "../styles/appStyles";
-import { AppModule, AuthUser, CreateManagedUserPayload, UserPlan, UserRole } from "../types/app";
-import { APP_MODULES, MODULE_LABELS, PLAN_LABELS, PLAN_LIMITS, PLAN_ORDER } from "../utils/appHelpers";
+import { AppModule, AuthUser, CreateManagedUserPayload, PlanDefinition, UserPlan, UserRole } from "../types/app";
+import { APP_MODULES, MODULE_LABELS, PLAN_LABELS, PLAN_ORDER } from "../utils/appHelpers";
 
 type AccessManagementScreenProps = {
   currentUser: AuthUser;
+  plans: PlanDefinition[];
   users: AuthUser[];
   loading: boolean;
   onCreateUser: (payload: CreateManagedUserPayload) => Promise<void>;
@@ -28,6 +29,7 @@ const PLAN_OPTIONS: UserPlan[] = PLAN_ORDER;
 
 export function AccessManagementScreen({
   currentUser,
+  plans,
   users,
   loading,
   onCreateUser,
@@ -48,7 +50,8 @@ export function AccessManagementScreen({
   const [newRole, setNewRole] = useState<UserRole>(currentUser.role === "main" ? "master" : "default");
   const [newPlan, setNewPlan] = useState<UserPlan>("free");
   const canCreateMaster = currentUser.role === "main";
-  const managedUsersLimit = currentUser.role === "main" || currentUser.role === "master" ? PLAN_LIMITS[currentUser.plan] : null;
+  const currentPlan = plans.find((plan) => plan.id === currentUser.plan);
+  const managedUsersLimit = currentUser.role === "main" ? Infinity : currentUser.role === "master" ? currentPlan?.maxManagedUsers ?? 0 : null;
   const reachedPlanLimit = managedUsersLimit !== null && users.length >= managedUsersLimit;
   const managedUsersLimitText = managedUsersLimit === Infinity ? "sem limite" : managedUsersLimit;
   const normalizedSearch = normalizeSearch(search);

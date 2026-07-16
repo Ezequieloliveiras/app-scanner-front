@@ -73,6 +73,9 @@ export type InventoryDashboard = {
   generatedAt: string;
   filters: {
     product?: string;
+    branch?: string;
+    movementFrom?: string;
+    movementTo?: string;
     minStoppedDays?: number;
     stoppedDaysTo?: number;
     onlyWithStock: boolean;

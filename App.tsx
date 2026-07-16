@@ -1139,6 +1139,7 @@ function MainApp() {
         {screen === "access" && (
           <AccessManagementScreen
             currentUser={currentUser}
+            plans={plans}
             users={managedUsers}
             loading={loading}
             onCreateUser={createManagedUser}

@@ -44,6 +44,21 @@ const BUCKET_LABELS = {
 
 const DEFAULT_STOPPED_DAYS = 30;
 const DASHBOARD_PRODUCT_LIMIT = 500;
+type DatePreset = "all" | "7d" | "30d" | "90d";
+type SortOption = "stopped_desc" | "quantity_desc" | "name_asc";
+
+const DATE_PRESETS: Array<{ id: DatePreset; label: string; days?: number }> = [
+  { id: "all", label: "Todo o periodo" },
+  { id: "7d", label: "Ultimos 7 dias", days: 7 },
+  { id: "30d", label: "Ultimos 30 dias", days: 30 },
+  { id: "90d", label: "Ultimos 90 dias", days: 90 }
+];
+
+const SORT_OPTIONS: Array<{ id: SortOption; label: string; sortBy: "daysStopped" | "quantity" | "name"; sortDir: "asc" | "desc" }> = [
+  { id: "stopped_desc", label: "Maior tempo parado", sortBy: "daysStopped", sortDir: "desc" },
+  { id: "quantity_desc", label: "Maior estoque", sortBy: "quantity", sortDir: "desc" },
+  { id: "name_asc", label: "Nome A-Z", sortBy: "name", sortDir: "asc" }
+];
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -62,17 +77,24 @@ export function DashboardScreen({ token }: Props) {
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [indicatorsExpanded, setIndicatorsExpanded] = useState(false);
+  const [selectedBranch, setSelectedBranch] = useState("");
+  const [datePreset, setDatePreset] = useState<DatePreset>("all");
+  const [sortOption, setSortOption] = useState<SortOption>("stopped_desc");
   const searchFocusAnim = useRef(new Animated.Value(0)).current;
 
+  const selectedSort = SORT_OPTIONS.find((option) => option.id === sortOption) || SORT_OPTIONS[0];
+  const movementFrom = useMemo(() => getPresetStartDate(datePreset), [datePreset]);
   const query = useMemo(
     () => ({
+      branch: selectedBranch || undefined,
+      movementFrom,
       minStoppedDays: onlyStopped ? DEFAULT_STOPPED_DAYS : undefined,
       onlyWithStock,
-      sortBy: "daysStopped",
-      sortDir: "desc",
+      sortBy: selectedSort.sortBy,
+      sortDir: selectedSort.sortDir,
       limit: DASHBOARD_PRODUCT_LIMIT
     }),
-    [onlyStopped, onlyWithStock]
+    [movementFrom, onlyStopped, onlyWithStock, selectedBranch, selectedSort.sortBy, selectedSort.sortDir]
   );
 
   const loadDashboard = useCallback(
@@ -134,6 +156,7 @@ export function DashboardScreen({ token }: Props) {
     () => filterDashboardProducts(dashboard?.products ?? [], debouncedProductQuery),
     [dashboard?.products, debouncedProductQuery]
   );
+  const branchOptions = useMemo(() => getBranchOptions(dashboard?.products ?? [], selectedBranch), [dashboard?.products, selectedBranch]);
 
   const toggleExpandedProduct = useCallback((productId: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -409,22 +432,47 @@ export function DashboardScreen({ token }: Props) {
 
           <View style={localStyles.sheetSection}>
             <Text style={localStyles.groupLabel}>Filial</Text>
-            <View style={localStyles.compactOption}>
-              <Text style={localStyles.compactOptionText}>Todas as filiais</Text>
+            <View style={localStyles.chipRow}>
+              <FilterChip label="Todas" icon="git-branch-outline" selected={!selectedBranch} onPress={() => setSelectedBranch("")} />
+              {branchOptions.map((branch) => (
+                <FilterChip
+                  key={branch}
+                  label={branch}
+                  icon="business-outline"
+                  selected={selectedBranch === branch}
+                  onPress={() => setSelectedBranch((current) => (current === branch ? "" : branch))}
+                />
+              ))}
             </View>
           </View>
 
           <View style={localStyles.sheetSection}>
             <Text style={localStyles.groupLabel}>Datas</Text>
-            <View style={localStyles.compactOption}>
-              <Text style={localStyles.compactOptionText}>Todo o período</Text>
+            <View style={localStyles.chipRow}>
+              {DATE_PRESETS.map((preset) => (
+                <FilterChip
+                  key={preset.id}
+                  label={preset.label}
+                  icon="calendar-outline"
+                  selected={datePreset === preset.id}
+                  onPress={() => setDatePreset(preset.id)}
+                />
+              ))}
             </View>
           </View>
 
           <View style={localStyles.sheetSection}>
             <Text style={localStyles.groupLabel}>Outros filtros</Text>
-            <View style={localStyles.compactOption}>
-              <Text style={localStyles.compactOptionText}>Ordenar por maior tempo parado</Text>
+            <View style={localStyles.chipRow}>
+              {SORT_OPTIONS.map((option) => (
+                <FilterChip
+                  key={option.id}
+                  label={option.label}
+                  icon="swap-vertical-outline"
+                  selected={sortOption === option.id}
+                  onPress={() => setSortOption(option.id)}
+                />
+              ))}
             </View>
           </View>
 
@@ -644,6 +692,34 @@ function filterDashboardProducts(products: DashboardProduct[], query: string) {
   }
 
   return products.filter((product) => getDashboardProductSearchText(product).includes(normalizedQuery));
+}
+
+function getPresetStartDate(preset: DatePreset) {
+  const option = DATE_PRESETS.find((item) => item.id === preset);
+  if (!option?.days) return undefined;
+
+  const date = new Date();
+  date.setDate(date.getDate() - option.days);
+  date.setHours(0, 0, 0, 0);
+  return date.toISOString();
+}
+
+function getBranchOptions(products: DashboardProduct[], selectedBranch: string) {
+  const branches = new Set<string>();
+
+  products.forEach((product) => {
+    product.branchStocks.forEach((branch) => {
+      if (branch.quantity > 0) {
+        branches.add(branch.branchName);
+      }
+    });
+  });
+
+  if (selectedBranch) {
+    branches.add(selectedBranch);
+  }
+
+  return Array.from(branches).sort((left, right) => left.localeCompare(right));
 }
 
 function getDashboardProductSearchText(product: DashboardProduct) {
