@@ -2,6 +2,7 @@ import {
   AuthCredentials,
   AuthSession,
   AuthUser,
+  BillingCheckoutPayload,
   BillingCheckoutResult,
   CertificateStatus,
   CreateManagedUserPayload,
@@ -119,11 +120,11 @@ export const api = {
     return request<PlanDefinition[]>("/api/billing/plans");
   },
 
-  requestPlanCheckout(token: string, plan: PlanDefinition["id"]) {
+  requestPlanCheckout(token: string, payload: BillingCheckoutPayload) {
     return request<BillingCheckoutResult>("/api/billing/checkout", {
       method: "POST",
       token,
-      body: JSON.stringify({ plan })
+      body: JSON.stringify(payload)
     });
   },
 

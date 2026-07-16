@@ -36,6 +36,16 @@ export type BillingCheckoutResult = {
   message: string;
 };
 
+export type BillingCheckoutPayload = {
+  plan: UserPlan;
+  cpfCnpj?: string;
+  phoneNumber?: string;
+  postalCode?: string;
+  address?: string;
+  addressNumber?: string;
+  province?: string;
+};
+
 export type DashboardProductStatus = "out_of_stock" | "without_movement" | "stopped" | "attention" | "healthy";
 export type DashboardAgingBucket = "sem_estoque" | "sem_movimentacao" | "0_7" | "8_30" | "31_60" | "61_90" | "90_plus";
 

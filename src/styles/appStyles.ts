@@ -1512,6 +1512,26 @@ export const styles = StyleSheet.create({
     padding: 18,
     backgroundColor: "#ffffff"
   },
+  billingModalKeyboard: {
+    flex: 1,
+    width: "100%",
+    justifyContent: "flex-end"
+  },
+  billingModalSheet: {
+    width: "100%",
+    maxHeight: "88%",
+    gap: 12,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 18,
+    backgroundColor: "#ffffff"
+  },
+  billingModalFields: {
+    gap: 10,
+    paddingBottom: 4
+  },
   invoiceReviewPage: {
     flex: 1,
     backgroundColor: "#ffffff"

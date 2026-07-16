@@ -24,6 +24,7 @@ import { styles } from "./src/styles/appStyles";
 import {
   AppModule,
   AuthUser,
+  BillingCheckoutPayload,
   BranchOption,
   CertificateStatus,
   CreateManagedUserPayload,
@@ -73,6 +74,7 @@ function MainApp() {
   const stockRequestStatusRef = useRef<Record<string, StockRequest["status"]>>({});
   const liveSyncInFlightRef = useRef(false);
   const registeredPushTokenRef = useRef<string | null>(null);
+  const pendingBillingRefreshRef = useRef(false);
   const [branchProductId, setBranchProductId] = useState("");
   const [branchProductSearch, setBranchProductSearch] = useState("");
   const [sourceBranch, setSourceBranch] = useState<BranchOption>(BRANCH_OPTIONS[0]);
@@ -113,6 +115,14 @@ function MainApp() {
     const data = await api.listPlans();
     setPlans(data);
   }, []);
+
+  const refreshCurrentUser = useCallback(async () => {
+    if (!authToken) return null;
+
+    const updatedUser = await api.getProfile(authToken);
+    setCurrentUser(updatedUser);
+    return updatedUser;
+  }, [authToken]);
 
   useEffect(() => {
     loadPlans().catch(() => undefined);
@@ -262,6 +272,53 @@ function MainApp() {
   }, [currentUser, stockRequests, loadProducts]);
 
   useEffect(() => {
+    if (!authToken) return;
+
+    const refreshBillingAfterReturn = async () => {
+      if (!pendingBillingRefreshRef.current) return;
+
+      try {
+        const updatedUser = await refreshCurrentUser();
+        if (updatedUser && updatedUser.plan !== currentUser?.plan) {
+          pendingBillingRefreshRef.current = false;
+          Alert.alert("Plano atualizado", `Seu plano agora e ${updatedUser.plan}.`);
+        }
+      } catch {
+        setError("Nao consegui atualizar seu plano. Puxe para atualizar ou entre novamente.");
+      }
+    };
+
+    const appStateSubscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        refreshBillingAfterReturn().catch(() => undefined);
+      }
+    });
+
+    const urlSubscription = Linking.addEventListener("url", ({ url }) => {
+      if (url.includes("billing")) {
+        pendingBillingRefreshRef.current = true;
+        setScreen("billing");
+        refreshBillingAfterReturn().catch(() => undefined);
+      }
+    });
+
+    Linking.getInitialURL()
+      .then((url) => {
+        if (url?.includes("billing")) {
+          pendingBillingRefreshRef.current = true;
+          setScreen("billing");
+          refreshBillingAfterReturn().catch(() => undefined);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      appStateSubscription.remove();
+      urlSubscription.remove();
+    };
+  }, [authToken, currentUser?.plan, refreshCurrentUser]);
+
+  useEffect(() => {
     if (!error) return;
 
     const timeout = setTimeout(() => {
@@ -332,6 +389,7 @@ function MainApp() {
     setStockRequests([]);
     stockRequestStatusRef.current = {};
     registeredPushTokenRef.current = null;
+    pendingBillingRefreshRef.current = false;
     setLiveNotifications([]);
     setPendingInvoice(null);
     setPendingProducts([]);
@@ -860,20 +918,28 @@ function MainApp() {
     }
   }
 
-  async function requestPlanCheckout(plan: UserPlan) {
+  async function requestPlanCheckout(payload: BillingCheckoutPayload) {
     if (!authToken) return;
 
     try {
       setLoading(true);
       setError(null);
-      const result = await api.requestPlanCheckout(authToken, plan);
+      const result = await api.requestPlanCheckout(authToken, payload);
       const updatedUser = await api.getProfile(authToken);
       setCurrentUser(updatedUser);
 
       if (result.checkoutUrl) {
         Alert.alert("Upgrade iniciado", result.message, [
           { text: "Depois", style: "cancel" },
-          { text: "Abrir pagamento", onPress: () => Linking.openURL(result.checkoutUrl!) }
+          {
+            text: "Abrir pagamento",
+            onPress: () => {
+              pendingBillingRefreshRef.current = true;
+              Linking.openURL(result.checkoutUrl!).catch(() => {
+                setError("Nao consegui abrir o checkout.");
+              });
+            }
+          }
         ]);
         return;
       }
