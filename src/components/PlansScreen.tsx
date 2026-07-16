@@ -35,7 +35,9 @@ export function PlansScreen({ user, plans, loading, onSelectPlan }: PlansScreenP
   }
 
   function selectPlan(plan: UserPlan) {
-    if (plan === "free" || plan === "custom") {
+    const planDefinition = plans.find((item) => item.id === plan);
+
+    if (plan === "free" || plan === "custom" || (planDefinition?.monthlyPriceCents || 0) <= 0) {
       onSelectPlan({ plan }).catch(() => undefined);
       return;
     }

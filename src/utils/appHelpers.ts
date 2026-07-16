@@ -1,5 +1,5 @@
 import { BranchTransfer, BranchTransferStatus, InvoiceResult, Product } from "../types/product";
-import { AppModule, AuthUser, BranchOption, PlanDefinition, Screen, UserPlan } from "../types/app";
+import { AppModule, AuthUser, BranchOption, Screen, UserPlan } from "../types/app";
 
 export const MODULE_LABELS: Record<AppModule, string> = {
   dashboard: "Dashboard",
@@ -22,69 +22,6 @@ export const PLAN_LABELS = {
 
 export const PLAN_ORDER: UserPlan[] = ["free", "basic", "premium", "pro", "custom"];
 
-export const FALLBACK_PLANS: PlanDefinition[] = [
-  {
-    id: "free",
-    label: "Free",
-    description: "Para testar leitura e estoque central.",
-    monthlyPriceCents: 0,
-    maxManagedUsers: 0,
-    modules: ["dashboard", "scan", "products"],
-    features: [
-      { key: "dashboard", label: "Dashboard de estoque" },
-      { key: "scan", label: "Scanner de notas" },
-      { key: "products", label: "Produtos e estoque central" }
-    ]
-  },
-  {
-    id: "basic",
-    label: "Basic",
-    description: "Equipe pequena com controle de acessos.",
-    monthlyPriceCents: 4900,
-    maxManagedUsers: 3,
-    modules: ["dashboard", "scan", "products", "access"],
-    features: [
-      { key: "dashboard", label: "Dashboard de estoque" },
-      { key: "scan", label: "Scanner de notas" },
-      { key: "users", label: "Ate 3 usuarios" }
-    ]
-  },
-  {
-    id: "premium",
-    label: "Premium",
-    description: "Filiais e solicitações internas.",
-    monthlyPriceCents: 9900,
-    maxManagedUsers: 10,
-    modules: APP_MODULES,
-    features: [
-      { key: "branches", label: "Filiais" },
-      { key: "stock_requests", label: "Solicitações" }
-    ],
-    highlighted: true
-  },
-  {
-    id: "pro",
-    label: "Pro",
-    description: "Operação maior com todos os modulos.",
-    monthlyPriceCents: 19900,
-    maxManagedUsers: 30,
-    modules: APP_MODULES,
-    features: [
-      { key: "users", label: "Ate 30 usuarios" },
-      { key: "branches", label: "Filiais" }
-    ]
-  },
-  {
-    id: "custom",
-    label: "Personalizado",
-    description: "Limites e suporte sob contrato.",
-    monthlyPriceCents: null,
-    maxManagedUsers: null,
-    modules: APP_MODULES,
-    features: [{ key: "support", label: "Atendimento consultivo" }],
-    contactRequired: true
-  }
-];
 
 export function canManageAccess(user: AuthUser | null) {
   return (user?.role === "main" || user?.role === "master") && canAccessModule(user, "access");
@@ -206,3 +143,4 @@ export function parseQuantity(value: string) {
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
 }
+

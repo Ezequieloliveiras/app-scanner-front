@@ -38,7 +38,7 @@ import {
   UserRole
 } from "./src/types/app";
 import { BranchTransfer, BranchTransferStatus, InvoiceResult, Product, StockRequest } from "./src/types/product";
-import { FALLBACK_PLANS, canAccessModule, canManageAccess, canManageCertificate, formatQuantity, getScreenTitle, parseQuantity } from "./src/utils/appHelpers";
+import { canAccessModule, canManageAccess, canManageCertificate, formatQuantity, getScreenTitle, parseQuantity } from "./src/utils/appHelpers";
 import { getExpoPushToken } from "./src/utils/pushNotifications";
 
 const BRANCH_OPTIONS: BranchOption[] = [
@@ -65,7 +65,7 @@ function MainApp() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [managedUsers, setManagedUsers] = useState<AuthUser[]>([]);
   const [certificateStatus, setCertificateStatus] = useState<CertificateStatus | null>(null);
-  const [plans, setPlans] = useState<PlanDefinition[]>(FALLBACK_PLANS);
+  const [plans, setPlans] = useState<PlanDefinition[]>([]);
   const [screen, setScreen] = useState<Screen>("home");
   const [menuOpen, setMenuOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -528,7 +528,7 @@ function MainApp() {
     setError(null);
     setMenuOpen(false);
     setScreen("billing");
-    loadPlans().catch(() => setPlans(FALLBACK_PLANS));
+    loadPlans().catch(() => setError("Nao consegui carregar os planos."));
   }
 
   function simulateInvoice() {
