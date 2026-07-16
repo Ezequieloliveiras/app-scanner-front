@@ -23,6 +23,7 @@ export type PlanDefinition = {
   description: string;
   monthlyPriceCents: number | null;
   maxManagedUsers: number | null;
+  expiresAfterDays?: number | null;
   modules: AppModule[];
   features: { key: string; label: string }[];
   highlighted?: boolean;
