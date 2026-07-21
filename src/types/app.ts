@@ -120,6 +120,7 @@ export type AuthUser = {
   plan: UserPlan;
   createdBy?: string;
   photoUrl?: string;
+  cameraEnabled: boolean;
   enabled: boolean;
   modules: AppModule[];
   createdAt?: string;
@@ -146,6 +147,7 @@ export type UpdateUserAccessPayload = {
   plan?: UserPlan;
   enabled?: boolean;
   modules?: AppModule[];
+  cameraEnabled?: boolean;
 };
 
 export type UpdateProfilePayload = {
@@ -156,6 +158,7 @@ export type UpdateProfilePayload = {
   photoFileName?: string;
   photoMimeType?: string;
   removePhoto?: boolean;
+  cameraEnabled?: boolean;
   currentPassword?: string;
   newPassword?: string;
 };

@@ -1,0 +1,7 @@
+env: load .env
+env: export EXPO_PUBLIC_API_URL
+Starting project at C:\Users\Ezequiel\workspace\app-scanner-front
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8082
+Logs for your project will appear below.

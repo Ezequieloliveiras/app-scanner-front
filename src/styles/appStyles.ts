@@ -1,53 +1,24 @@
 import { StyleSheet } from "react-native";
-
-export const colors = {
-  primary: "#3b82f6",
-  primarySoft: "#eaf4ff",
-  primaryDark: "#17263a",
-  white: "#ffffff",
-  background: "#f6f8fb",
-  surface: "#ffffff",
-  surfaceMuted: "#f8fafc",
-  border: "#edf2f7",
-  borderStrong: "#dbe4f0",
-  text: "#1f2937",
-  muted: "#64748b",
-  danger: "#991b1b",
-  warning: "#B45309",
-  warningSoft: "#FFF4D6",
-  warningAccent: "#F59E0B",
-  success: "#15803d",
-  successSoft: "#dcfce7"
-};
-
-export const radii = {
-  sm: 10,
-  md: 14,
-  lg: 18,
-  xl: 22,
-  pill: 999
-};
-
-const softShadow = {
-  shadowColor: "#0f172a",
-  shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.05,
-  shadowRadius: 18,
-  elevation: 2
-};
-
-const primaryShadow = {
-  shadowColor: "#2563eb",
-  shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.16,
-  shadowRadius: 14,
-  elevation: 3
-};
-
-export const scannerBorderRadius = 18;
-export const scannerFrameStrokeWidth = 4;
-export const scannerFrameWidth = "86%";
-export const scannerFrameHeight = 170;
+import {
+  colors,
+  primaryShadow,
+  radii,
+  scannerBorderRadius,
+  scannerFrameHeight,
+  scannerFrameStrokeWidth,
+  scannerFrameWidth,
+  softShadow
+} from "./tokens";
+export {
+  colors,
+  primaryShadow,
+  radii,
+  scannerBorderRadius,
+  scannerFrameHeight,
+  scannerFrameStrokeWidth,
+  scannerFrameWidth,
+  softShadow
+} from "./tokens";
 
 export const styles = StyleSheet.create({
   safeArea: {
@@ -57,69 +28,9 @@ export const styles = StyleSheet.create({
   screenBody: {
     flex: 1
   },
-  header: {
-    minHeight: 76,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 18,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 1
-  },
-  headerIconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surfaceMuted
-  },
-  headerTitleArea: {
-    flex: 1
-  },
-  headerTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: "800"
-  },
-  headerSubtitle: {
-    marginTop: 2,
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: "600"
-  },
   headerStatus: {
     width: 28,
     alignItems: "center"
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 8,
-    minWidth: 42
-  },
-  notificationDot: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: "#ef4444"
-  },
-  menuNotificationDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: "#ef4444"
   },
   notificationItem: {
     minHeight: 58,
@@ -169,41 +80,6 @@ export const styles = StyleSheet.create({
     color: "#991b1b",
     fontSize: 12,
     fontWeight: "900"
-  },
-  bottomNav: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-    gap: 8,
-    paddingTop: 9,
-    paddingHorizontal: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.surface,
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.04,
-    shadowRadius: 14,
-    elevation: 8
-  },
-  bottomNavItem: {
-    flex: 1,
-    minHeight: 50,
-    borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 3
-  },
-  bottomNavItemActive: {
-    backgroundColor: "#3b82f6"
-  },
-  bottomNavLabel: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: "800"
-  },
-  bottomNavLabelActive: {
-    color: "#ffffff"
   },
   content: {
     flex: 1
@@ -373,46 +249,6 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10
-  },
-  homeAction: {
-    width: "48%",
-    minHeight: 132,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: 14,
-    position: "relative",
-    backgroundColor: colors.surface,
-    ...softShadow
-  },
-  homeActionNotificationDot: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#ef4444"
-  },
-  homeActionIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: radii.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#eaf4ff"
-  },
-  homeActionTitle: {
-    marginTop: 12,
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: "800"
-  },
-  homeActionText: {
-    marginTop: 4,
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: "600"
   },
   scanPage: {
     flex: 1,
@@ -1419,6 +1255,52 @@ export const styles = StyleSheet.create({
     borderColor: "#ffffff",
     backgroundColor: "#3b82f6"
   },
+  cameraPreferenceRow: {
+    width: "100%",
+    minHeight: 58,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    backgroundColor: "#f8fafc"
+  },
+  cameraPreferenceRowActive: {
+    borderColor: "#bfdbfe",
+    backgroundColor: "#eaf4ff"
+  },
+  cameraPreferenceRowPressed: {
+    transform: [{ scale: 0.995 }]
+  },
+  cameraPreferenceTextArea: {
+    flex: 1
+  },
+  cameraPreferenceSwitchTrack: {
+    width: 52,
+    height: 32,
+    borderRadius: 16,
+    padding: 3,
+    justifyContent: "center",
+    backgroundColor: "#cbd5e1"
+  },
+  cameraPreferenceSwitchTrackActive: {
+    backgroundColor: "#3b82f6"
+  },
+  cameraPreferenceSwitchKnob: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#ffffff",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 3
+  },
   inlineAlert: {
     flexDirection: "row",
     alignItems: "center",
@@ -1483,21 +1365,6 @@ export const styles = StyleSheet.create({
   sideMenuTitle: {
     color: "#1f2937",
     fontSize: 24,
-    fontWeight: "900"
-  },
-  menuItem: {
-    minHeight: 52,
-    borderRadius: radii.md,
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "#f8fafc"
-  },
-  menuItemText: {
-    flex: 1,
-    color: "#1f2937",
-    fontSize: 15,
     fontWeight: "900"
   },
   modalOverlay: {

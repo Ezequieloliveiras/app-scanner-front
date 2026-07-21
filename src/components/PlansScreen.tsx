@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, Tex
 import { styles } from "../styles/appStyles";
 import { AuthUser, BillingCheckoutPayload, PlanDefinition, UserPlan } from "../types/app";
 import { MODULE_LABELS } from "../utils/appHelpers";
+import { styles as appHeaderStyles } from "./AppHeader.styles";
 
 type PlansScreenProps = {
   user: AuthUser;
@@ -153,7 +154,7 @@ export function PlansScreen({ user, plans, loading, onSelectPlan }: PlansScreenP
                 <Text style={styles.pendingName}>Dados de cobranca</Text>
                 <Text style={styles.meta}>Plano {selectedPlan?.label}</Text>
               </View>
-              <Pressable style={styles.headerIconButton} onPress={() => setSelectedPaidPlan(null)}>
+              <Pressable style={appHeaderStyles.headerIconButton} onPress={() => setSelectedPaidPlan(null)}>
                 <Ionicons name="close-outline" size={22} color="#64748b" />
               </Pressable>
             </View>

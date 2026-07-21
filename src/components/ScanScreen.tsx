@@ -10,6 +10,7 @@ export function ScanScreen({
   permissionGranted,
   loading,
   scannerEnabled,
+  cameraAutoEnabled = false,
   onRequestPermission,
   onBarcodeScanned,
   onManualSubmit,
@@ -20,6 +21,7 @@ export function ScanScreen({
   permissionGranted?: boolean;
   loading: boolean;
   scannerEnabled: boolean;
+  cameraAutoEnabled?: boolean;
   topInset: number;
   onRequestPermission: () => void;
   onBarcodeScanned: (result: BarcodeScanningResult) => void;
@@ -30,8 +32,8 @@ export function ScanScreen({
   const cameraRef = useRef<CameraView | null>(null);
   const [mode, setMode] = useState<ScanMode>("barcode");
   const [manualInput, setManualInput] = useState("");
-  const [barcodeScanArmed, setBarcodeScanArmed] = useState(false);
-  const [torchEnabled, setTorchEnabled] = useState(false);
+  const [barcodeScanArmed, setBarcodeScanArmed] = useState(cameraAutoEnabled);
+  const [torchEnabled, setTorchEnabled] = useState(cameraAutoEnabled);
   const [scannerFrameHeight, setScannerFrameHeight] = useState(0);
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const cameraActive = mode === "barcode" || mode === "qr" || mode === "ai";
@@ -48,6 +50,13 @@ export function ScanScreen({
       setTorchEnabled(false);
     }
   }, [cameraActive, torchEnabled]);
+
+  useEffect(() => {
+    if (!cameraAutoEnabled || mode !== "barcode") return;
+
+    setBarcodeScanArmed(true);
+    setTorchEnabled(true);
+  }, [cameraAutoEnabled, mode]);
 
   useEffect(() => {
     if (!cameraActive || mode !== "barcode") {

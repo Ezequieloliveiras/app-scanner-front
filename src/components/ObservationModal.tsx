@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, View } from "react-native";
 import { styles } from "../styles/appStyles";
 import { EditableInvoiceProduct } from "../types/app";
+import { styles as appHeaderStyles } from "./AppHeader.styles";
 export function ObservationModal({
   visible,
   product,
@@ -26,7 +27,7 @@ export function ObservationModal({
               <Text style={styles.modalTitle}>Observação</Text>
               <Text style={styles.modalSubtitle}>{product?.name}</Text>
             </View>
-            <Pressable style={styles.headerIconButton} onPress={onClose}>
+            <Pressable style={appHeaderStyles.headerIconButton} onPress={onClose}>
               <Ionicons name="close-outline" size={24} color="#1f2937" />
             </Pressable>
           </View>

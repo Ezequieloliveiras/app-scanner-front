@@ -25,6 +25,7 @@ import {
   Product,
   StockRequest
 } from "../types/product";
+import { normalizeCameraEnabled } from "../utils/cameraPreference";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3333";
 
@@ -54,23 +55,42 @@ async function request<T>(path: string, options?: RequestInit & { token?: string
   return data as T;
 }
 
+function normalizeAuthUser(user: AuthUser): AuthUser {
+  return {
+    ...user,
+    cameraEnabled: normalizeCameraEnabled((user as AuthUser & { cameraEnabled?: unknown }).cameraEnabled)
+  };
+}
+
+function normalizeAuthSession(session: AuthSession): AuthSession {
+  return {
+    ...session,
+    user: normalizeAuthUser(session.user)
+  };
+}
+
 export const api = {
-  login(payload: AuthCredentials) {
-    return request<AuthSession>("/api/auth/login", {
+  async login(payload: AuthCredentials) {
+    const session = await request<AuthSession>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify(payload)
     });
+
+    return normalizeAuthSession(session);
   },
 
-  register(payload: RegisterCredentials) {
-    return request<AuthSession>("/api/auth/register", {
+  async register(payload: RegisterCredentials) {
+    const session = await request<AuthSession>("/api/auth/register", {
       method: "POST",
       body: JSON.stringify(payload)
     });
+
+    return normalizeAuthSession(session);
   },
 
-  getProfile(token: string) {
-    return request<AuthUser>("/api/auth/me", { token });
+  async getProfile(token: string) {
+    const user = await request<AuthUser>("/api/auth/me", { token });
+    return normalizeAuthUser(user);
   },
 
   registerPushToken(token: string, expoPushToken: string, deviceId?: string) {
@@ -81,16 +101,19 @@ export const api = {
     });
   },
 
-  listUsers(token: string) {
-    return request<AuthUser[]>("/api/auth/users", { token });
+  async listUsers(token: string) {
+    const users = await request<AuthUser[]>("/api/auth/users", { token });
+    return users.map(normalizeAuthUser);
   },
 
-  updateProfile(token: string, payload: UpdateProfilePayload) {
-    return request<AuthUser>("/api/auth/me", {
+  async updateProfile(token: string, payload: UpdateProfilePayload) {
+    const user = await request<AuthUser>("/api/auth/me", {
       method: "PATCH",
       token,
       body: JSON.stringify(payload)
     });
+
+    return normalizeAuthUser(user);
   },
 
   requestPasswordReset(email: string) {
@@ -100,20 +123,24 @@ export const api = {
     });
   },
 
-  createUser(token: string, payload: CreateManagedUserPayload) {
-    return request<AuthUser>("/api/auth/users", {
+  async createUser(token: string, payload: CreateManagedUserPayload) {
+    const user = await request<AuthUser>("/api/auth/users", {
       method: "POST",
       token,
       body: JSON.stringify(payload)
     });
+
+    return normalizeAuthUser(user);
   },
 
-  updateUserAccess(token: string, userId: string, payload: UpdateUserAccessPayload) {
-    return request<AuthUser>(`/api/auth/users/${userId}/access`, {
+  async updateUserAccess(token: string, userId: string, payload: UpdateUserAccessPayload) {
+    const user = await request<AuthUser>(`/api/auth/users/${userId}/access`, {
       method: "PATCH",
       token,
       body: JSON.stringify(payload)
     });
+
+    return normalizeAuthUser(user);
   },
 
   listPlans() {
@@ -128,12 +155,14 @@ export const api = {
     });
   },
 
-  adminResetPassword(token: string, userId: string, password: string) {
-    return request<AuthUser>(`/api/auth/users/${userId}/password`, {
+  async adminResetPassword(token: string, userId: string, password: string) {
+    const user = await request<AuthUser>(`/api/auth/users/${userId}/password`, {
       method: "PATCH",
       token,
       body: JSON.stringify({ password })
     });
+
+    return normalizeAuthUser(user);
   },
 
   deleteUser(token: string, userId: string) {

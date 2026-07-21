@@ -56,7 +56,7 @@ export function HomeScreen({
             <Ionicons name="barcode-outline" size={26} color="#3b82f6" />
           </View>
           <View style={styles.homeHeroBrand}>
-            <Text style={styles.homeEyebrow}>LogScan</Text>
+            <Text style={styles.homeEyebrow}>BipaAí</Text>
             <Text style={styles.homeHeroName}>NF-e direto no estoque</Text>
           </View>
         </View>

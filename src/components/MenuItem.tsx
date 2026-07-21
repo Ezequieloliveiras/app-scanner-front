@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
-import { styles } from "../styles/appStyles";
+import { styles } from "./MenuItem.styles";
 export function MenuItem({
   icon,
   label,

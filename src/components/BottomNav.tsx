@@ -1,7 +1,7 @@
 import { View } from "react-native";
-import { styles } from "../styles/appStyles";
 import { AuthUser, Screen } from "../types/app";
 import { canAccessModule } from "../utils/appHelpers";
+import { styles } from "./BottomNav.styles";
 import { BottomNavItem } from "./BottomNavItem";
 export function BottomNav({
   activeScreen,

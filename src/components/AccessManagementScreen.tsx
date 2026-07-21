@@ -4,6 +4,8 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, Tex
 import { styles } from "../styles/appStyles";
 import { AppModule, AuthUser, CreateManagedUserPayload, PlanDefinition, UserPlan, UserRole } from "../types/app";
 import { APP_MODULES, MODULE_LABELS, PLAN_LABELS, PLAN_ORDER } from "../utils/appHelpers";
+import { styles as appHeaderStyles } from "./AppHeader.styles";
+import { CameraPreferenceSwitch } from "./CameraPreferenceSwitch";
 
 type AccessManagementScreenProps = {
   currentUser: AuthUser;
@@ -12,6 +14,7 @@ type AccessManagementScreenProps = {
   loading: boolean;
   onCreateUser: (payload: CreateManagedUserPayload) => Promise<void>;
   onToggleEnabled: (user: AuthUser) => void;
+  onToggleCamera: (user: AuthUser) => void;
   onToggleModule: (user: AuthUser, module: AppModule) => void;
   onChangeRole: (user: AuthUser, role: UserRole) => void;
   onChangePlan: (user: AuthUser, plan: UserPlan) => void;
@@ -34,6 +37,7 @@ export function AccessManagementScreen({
   loading,
   onCreateUser,
   onToggleEnabled,
+  onToggleCamera,
   onToggleModule,
   onChangeRole,
   onChangePlan,
@@ -58,7 +62,7 @@ export function AccessManagementScreen({
   const filteredUsers = normalizedSearch
     ? users.filter((user) => normalizeSearch(`${user.name} ${user.email}`).includes(normalizedSearch))
     : users;
-
+console.log("userszzzzzzz");
   async function submitCreateUser() {
     await onCreateUser({
       name,
@@ -160,6 +164,8 @@ export function AccessManagementScreen({
                     </Text>
                   </Pressable>
                 )}
+
+                {expanded && <CameraPreferenceSwitch enabled={user.cameraEnabled} disabled={loading} onPress={() => onToggleCamera(user)} />}
 
             {expanded && currentUser.role === "main" && (
               <View style={styles.roleRow}>
@@ -270,7 +276,7 @@ export function AccessManagementScreen({
                 <Text style={styles.modalTitle}>Cadastrar usuário</Text>
                 <Text style={styles.modalSubtitle}>Crie o acesso e depois habilite os módulos no card do usuário.</Text>
               </View>
-              <Pressable style={styles.headerIconButton} onPress={() => setCreateModalOpen(false)}>
+              <Pressable style={appHeaderStyles.headerIconButton} onPress={() => setCreateModalOpen(false)}>
                 <Ionicons name="close-outline" size={24} color="#1f2937" />
               </Pressable>
             </View>

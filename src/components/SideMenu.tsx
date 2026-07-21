@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { styles } from "../styles/appStyles";
 import { AuthUser } from "../types/app";
 import { canAccessModule, canManageAccess, canManageCertificate } from "../utils/appHelpers";
+import { styles as appHeaderStyles } from "./AppHeader.styles";
 import { MenuItem } from "./MenuItem";
 export function SideMenu({
   visible,
@@ -48,7 +49,7 @@ export function SideMenu({
         <View style={[styles.sideMenu, { paddingTop: topInset + 18 }]}>
           <View style={styles.sideMenuHeader}>
             <Text style={styles.sideMenuTitle}>Menu</Text>
-            <Pressable style={styles.headerIconButton} onPress={onClose}>
+            <Pressable style={appHeaderStyles.headerIconButton} onPress={onClose}>
               <Ionicons name="close-outline" size={24} color="#1f2937" />
             </Pressable>
           </View>

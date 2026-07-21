@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text } from "react-native";
-import { styles } from "../styles/appStyles";
+import { styles } from "./BottomNav.styles";
 export function BottomNavItem({
   icon,
   label,

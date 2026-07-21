@@ -5,6 +5,7 @@ import { styles } from "../styles/appStyles";
 import { EditableInvoiceProduct } from "../types/app";
 import { InvoiceResult } from "../types/product";
 import { formatQuantity, parseQuantity } from "../utils/appHelpers";
+import { styles as appHeaderStyles } from "./AppHeader.styles";
 
 type InvoiceReviewModalProps = {
   visible: boolean;
@@ -69,7 +70,7 @@ export function InvoiceReviewModal({
         keyboardVerticalOffset={Platform.OS === "ios" ? 16 : 0}
       >
         <View style={[styles.invoiceReviewPageHeader, { paddingTop: topInset }]}>
-          <Pressable style={styles.headerIconButton} onPress={onBackToScan}>
+          <Pressable style={appHeaderStyles.headerIconButton} onPress={onBackToScan}>
             <Ionicons name="arrow-back-outline" size={24} color="#1f2937" />
           </Pressable>
           <View style={styles.modalTitleArea}>

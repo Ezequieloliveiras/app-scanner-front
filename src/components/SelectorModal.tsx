@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { ReactNode } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { styles } from "../styles/appStyles";
+import { styles as appHeaderStyles } from "./AppHeader.styles";
 export function SelectorModal({
   visible,
   title,
@@ -22,7 +23,7 @@ export function SelectorModal({
               <Text style={styles.modalTitle}>{title}</Text>
               <Text style={styles.modalSubtitle}>Toque em uma opção para selecionar.</Text>
             </View>
-            <Pressable style={styles.headerIconButton} onPress={onClose}>
+            <Pressable style={appHeaderStyles.headerIconButton} onPress={onClose}>
               <Ionicons name="close-outline" size={24} color="#1f2937" />
             </Pressable>
           </View>

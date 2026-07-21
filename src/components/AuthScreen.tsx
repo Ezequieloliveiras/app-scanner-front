@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { colors, styles } from "../styles/appStyles";
+import { styles } from "../styles/appStyles";
+import { colors } from "../styles/tokens";
 import { AuthMode, RegisterCredentials } from "../types/app";
 
 type AuthScreenProps = {
@@ -46,7 +47,7 @@ export function AuthScreen({ loading, error, onLogin, onRegister, onRequestPassw
       >
         <View style={styles.authHero}>
             <Ionicons name="barcode-outline" size={40} color={colors.primary} />
-          <Text style={styles.authAppName}>LogScan</Text>
+          <Text style={styles.authAppName}>BipaAí</Text>
           <Text style={styles.authAppTagline}>Da nota ao estoque em segundos</Text>
         </View>
 

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { styles } from "../styles/appStyles";
+import { styles } from "./AppHeader.styles";
 export function AppHeader({
   title,
   loading,

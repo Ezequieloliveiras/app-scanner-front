@@ -60,7 +60,9 @@ const SORT_OPTIONS: Array<{ id: SortOption; label: string; sortBy: "daysStopped"
   { id: "name_asc", label: "Nome A-Z", sortBy: "name", sortDir: "asc" }
 ];
 
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+const isNewArchitectureEnabled = Boolean((globalThis as { nativeFabricUIManager?: unknown }).nativeFabricUIManager);
+
+if (Platform.OS === "android" && !isNewArchitectureEnabled && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 

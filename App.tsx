@@ -39,6 +39,7 @@ import {
 } from "./src/types/app";
 import { BranchTransfer, BranchTransferStatus, InvoiceResult, Product, StockRequest } from "./src/types/product";
 import { canAccessModule, canManageAccess, canManageCertificate, formatQuantity, getScreenTitle, parseQuantity } from "./src/utils/appHelpers";
+import { canApplyProfileRefresh, isLatestProfileMutation } from "./src/utils/cameraPreference";
 import { getExpoPushToken } from "./src/utils/pushNotifications";
 
 const BRANCH_OPTIONS: BranchOption[] = [
@@ -58,6 +59,12 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+function debugAutomaticCamera(label: string, value: unknown) {
+  if (typeof __DEV__ !== "undefined" && __DEV__) {
+    console.debug(`[AutomaticCamera] ${label}:`, value);
+  }
+}
 function MainApp() {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
@@ -75,6 +82,8 @@ function MainApp() {
   const liveSyncInFlightRef = useRef(false);
   const registeredPushTokenRef = useRef<string | null>(null);
   const pendingBillingRefreshRef = useRef(false);
+  const profileMutationSeqRef = useRef(0);
+  const profileMutationInFlightRef = useRef(0);
   const [branchProductId, setBranchProductId] = useState("");
   const [branchProductSearch, setBranchProductSearch] = useState("");
   const [sourceBranch, setSourceBranch] = useState<BranchOption>(BRANCH_OPTIONS[0]);
@@ -119,7 +128,14 @@ function MainApp() {
   const refreshCurrentUser = useCallback(async () => {
     if (!authToken) return null;
 
+    const mutationSeqAtStart = profileMutationSeqRef.current;
     const updatedUser = await api.getProfile(authToken);
+
+    if (!canApplyProfileRefresh(mutationSeqAtStart, profileMutationSeqRef.current, profileMutationInFlightRef.current)) {
+      return null;
+    }
+
+    debugAutomaticCamera("profile/context updated", updatedUser.cameraEnabled);
     setCurrentUser(updatedUser);
     return updatedUser;
   }, [authToken]);
@@ -518,9 +534,10 @@ function MainApp() {
     loadCertificateStatus().catch(() => setError("Não consegui carregar o certificado."));
   }
 
-  function goToProfile() {
+  async function goToProfile() {
     setError(null);
     setMenuOpen(false);
+    await refreshCurrentUser().catch(() => setError("Não consegui atualizar o perfil."));
     setScreen("profile");
   }
 
@@ -764,7 +781,8 @@ function MainApp() {
         role: changes.role,
         plan: changes.plan,
         enabled: changes.enabled,
-        modules: changes.modules
+        modules: changes.modules,
+        cameraEnabled: changes.cameraEnabled
       });
       setManagedUsers((current) => current.map((item) => (item._id === updatedUser._id ? updatedUser : item)));
       if (currentUser?._id === updatedUser._id) {
@@ -781,6 +799,10 @@ function MainApp() {
 
   function toggleUserEnabled(user: AuthUser) {
     updateManagedUser(user, { enabled: !user.enabled });
+  }
+
+  function toggleUserCamera(user: AuthUser) {
+    updateManagedUser(user, { cameraEnabled: !user.cameraEnabled });
   }
 
   function toggleUserModule(user: AuthUser, module: AppModule) {
@@ -864,20 +886,40 @@ function MainApp() {
     }
   }
 
-  async function updateProfile(payload: UpdateProfilePayload) {
+  async function updateProfile(payload: UpdateProfilePayload, options?: { silent?: boolean }) {
     if (!authToken) return;
+
+    const mutationSeq = ++profileMutationSeqRef.current;
+    profileMutationInFlightRef.current += 1;
 
     try {
       setLoading(true);
       setError(null);
+      debugAutomaticCamera("payload", payload.cameraEnabled);
+
+      if (typeof payload.cameraEnabled === "boolean") {
+        setCurrentUser((current) => (current ? { ...current, cameraEnabled: payload.cameraEnabled! } : current));
+      }
+
       const updatedUser = await api.updateProfile(authToken, payload);
-      setCurrentUser(updatedUser);
-      Alert.alert("Perfil atualizado", "Suas informações foram salvas.");
+      debugAutomaticCamera("API response", updatedUser.cameraEnabled);
+
+      if (isLatestProfileMutation(mutationSeq, profileMutationSeqRef.current)) {
+        debugAutomaticCamera("profile/context updated", updatedUser.cameraEnabled);
+        setCurrentUser(updatedUser);
+      }
+
+      if (!options?.silent) {
+        Alert.alert("Perfil atualizado", "Suas informações foram salvas.");
+      }
+
+      return updatedUser;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao atualizar perfil.";
       setError(message);
       Alert.alert("Perfil não atualizado", message);
     } finally {
+      profileMutationInFlightRef.current = Math.max(0, profileMutationInFlightRef.current - 1);
       setLoading(false);
     }
   }
@@ -1074,6 +1116,7 @@ function MainApp() {
             permissionGranted={permission?.granted}
             loading={loading}
             scannerEnabled={scannerEnabled}
+            cameraAutoEnabled={currentUser.cameraEnabled}
             topInset={insets.top}
             onRequestPermission={requestPermission}
             onBarcodeScanned={handleBarcodeScanned}
@@ -1144,6 +1187,7 @@ function MainApp() {
             loading={loading}
             onCreateUser={createManagedUser}
             onToggleEnabled={toggleUserEnabled}
+            onToggleCamera={toggleUserCamera}
             onToggleModule={toggleUserModule}
             onChangeRole={changeUserRole}
             onChangePlan={changeUserPlan}

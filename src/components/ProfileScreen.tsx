@@ -1,16 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { styles } from "../styles/appStyles";
 import { AuthUser, UpdateProfilePayload } from "../types/app";
 import { PLAN_LABELS } from "../utils/appHelpers";
+import { normalizeCameraEnabled, shouldHydrateCameraPreference } from "../utils/cameraPreference";
+import { CameraPreferenceSwitch } from "./CameraPreferenceSwitch";
 
 type ProfileScreenProps = {
   user: AuthUser;
   loading: boolean;
-  onUpdateProfile: (payload: UpdateProfilePayload) => Promise<void>;
+  onUpdateProfile: (payload: UpdateProfilePayload, options?: { silent?: boolean }) => Promise<AuthUser | undefined>;
   onUpgradePlan: () => void;
 };
 
@@ -22,6 +24,9 @@ type SelectedProfilePhoto = {
 };
 
 export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan }: ProfileScreenProps) {
+  const cameraPreferenceDirtyRef = useRef(false);
+  const cameraPreferenceSavingRef = useRef(false);
+  const loadedUserIdRef = useRef(user._id);
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   const [photoUrl, setPhotoUrl] = useState(user.photoUrl || "");
@@ -29,14 +34,27 @@ export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan }:
   const [removePhoto, setRemovePhoto] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [cameraEnabled, setCameraEnabled] = useState(normalizeCameraEnabled(user.cameraEnabled));
+  const [cameraPreferenceSaving, setCameraPreferenceSaving] = useState(false);
 
   useEffect(() => {
+    const normalizedCameraEnabled = normalizeCameraEnabled(user.cameraEnabled);
+    debugAutomaticCamera("API loaded", user.cameraEnabled);
+    debugAutomaticCamera("normalized", normalizedCameraEnabled);
+
+    if (!shouldHydrateCameraPreference(loadedUserIdRef.current, user._id, cameraPreferenceDirtyRef.current)) {
+      return;
+    }
+
+    loadedUserIdRef.current = user._id;
+    cameraPreferenceDirtyRef.current = false;
     setName(user.name);
     setEmail(user.email);
     setPhotoUrl(user.photoUrl || "");
+    setCameraEnabled(normalizedCameraEnabled);
     setSelectedPhoto(null);
     setRemovePhoto(false);
-  }, [user._id, user.name, user.email, user.photoUrl]);
+  }, [user._id, user.name, user.email, user.photoUrl, user.cameraEnabled]);
 
   async function pickProfilePhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -88,20 +106,57 @@ export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan }:
   }
 
   async function submitProfile() {
-    await onUpdateProfile({
+    const payload: UpdateProfilePayload = {
       name,
       email,
       photoFileBase64: selectedPhoto?.base64,
       photoFileName: selectedPhoto?.fileName,
       photoMimeType: selectedPhoto?.mimeType,
       removePhoto,
+      cameraEnabled,
       currentPassword: currentPassword || undefined,
       newPassword: newPassword || undefined
-    });
+    };
+    debugAutomaticCamera("state before save", cameraEnabled);
+    debugAutomaticCamera("payload", payload.cameraEnabled);
+
+    const updatedUser = await onUpdateProfile(payload);
+    cameraPreferenceDirtyRef.current = false;
+
+    if (updatedUser) {
+      setCameraEnabled(normalizeCameraEnabled(updatedUser.cameraEnabled));
+    }
+
     setSelectedPhoto(null);
     setRemovePhoto(false);
     setCurrentPassword("");
     setNewPassword("");
+  }
+
+  async function toggleCameraPreference() {
+    if (cameraPreferenceSavingRef.current) return;
+
+    const previousCameraEnabled = cameraEnabled;
+    const nextCameraEnabled = !previousCameraEnabled;
+    cameraPreferenceDirtyRef.current = true;
+    cameraPreferenceSavingRef.current = true;
+    setCameraPreferenceSaving(true);
+    setCameraEnabled(nextCameraEnabled);
+    debugAutomaticCamera("user changed", nextCameraEnabled);
+
+    try {
+      const updatedUser = await onUpdateProfile({ cameraEnabled: nextCameraEnabled }, { silent: true });
+
+      if (updatedUser) {
+        setCameraEnabled(normalizeCameraEnabled(updatedUser.cameraEnabled));
+      } else {
+        setCameraEnabled(previousCameraEnabled);
+      }
+    } finally {
+      cameraPreferenceDirtyRef.current = false;
+      cameraPreferenceSavingRef.current = false;
+      setCameraPreferenceSaving(false);
+    }
   }
 
   return (
@@ -144,6 +199,7 @@ export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan }:
 
         <View style={styles.accessCard}>
           <Text style={styles.sectionTitle}>Minha conta</Text>
+          <CameraPreferenceSwitch enabled={cameraEnabled} disabled={loading || cameraPreferenceSaving} onPress={toggleCameraPreference} />
           <TextInput value={name} onChangeText={setName} placeholder="Nome" style={styles.quantityInput} returnKeyType="next" />
           <TextInput
             value={email}
@@ -189,4 +245,10 @@ function inferMimeType(fileName: string) {
   if (normalized.endsWith(".png")) return "image/png";
   if (normalized.endsWith(".webp")) return "image/webp";
   return "image/jpeg";
+}
+
+function debugAutomaticCamera(label: string, value: unknown) {
+  if (typeof __DEV__ !== "undefined" && __DEV__) {
+    console.debug(`[AutomaticCamera] ${label}:`, value);
+  }
 }
