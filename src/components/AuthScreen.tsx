@@ -1,7 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { styles } from "../styles/appStyles";
+import { useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
+} from "react-native";
 import { colors } from "../styles/tokens";
 import { AuthMode, RegisterCredentials } from "../types/app";
 
@@ -13,11 +22,29 @@ type AuthScreenProps = {
   onRequestPasswordReset: (email: string) => Promise<void>;
 };
 
+const palette = {
+  shell: "#ffffff",
+  panel: "#ffffff",
+  formBackground: "#f5f7fb",
+  primary: "#2563eb",
+  primaryPressed: "#1d4ed8",
+  text: "#050816",
+  muted: "#667085",
+  inputBorder: "#d9e1ec",
+  placeholder: "#94a3b8",
+  segment: "#eef2f7",
+  danger: "#991b1b",
+  dangerSoft: "#fee2e2"
+};
+
 export function AuthScreen({ loading, error, onLogin, onRegister, onRequestPasswordReset }: AuthScreenProps) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const emailInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
 
   async function submit() {
     if (mode === "reset") {
@@ -33,98 +60,383 @@ export function AuthScreen({ loading, error, onLogin, onRegister, onRequestPassw
     await onRegister({ name, email, password });
   }
 
+  const primaryLabel =
+    mode === "login" ? "Entrar" : mode === "register" ? "Criar acesso" : "Enviar e-mail de redefinição";
+
   return (
-    <KeyboardAvoidingView
-      style={styles.screenBody}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 16 : 0}
-    >
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.authContainer}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <View style={screenStyles.shell}>
+      <KeyboardAvoidingView
+        style={screenStyles.keyboard}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
       >
-        <View style={styles.authHero}>
-            <Ionicons name="barcode-outline" size={40} color={colors.primary} />
-          <Text style={styles.authAppName}>BipaAí</Text>
-          <Text style={styles.authAppTagline}>Da nota ao estoque em segundos</Text>
-        </View>
+        <ScrollView
+          style={screenStyles.scroller}
+          contentContainerStyle={screenStyles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={screenStyles.panel}>
+            <View style={screenStyles.hero}>
+              <Ionicons name="barcode-outline" size={40} color={colors.primary} />
+              <Text style={screenStyles.title}>BipaAí</Text>
+              <Text style={screenStyles.subtitle}>Da nota ao estoque em segundos</Text>
+            </View>
 
-        <View style={styles.authPanel}>
-          <View style={styles.authTabs}>
-            <Pressable style={[styles.authTab, mode === "login" && styles.authTabActive]} onPress={() => setMode("login")}>
-              <Text style={[styles.authTabText, mode === "login" && styles.authTabTextActive]}>Entrar</Text>
-            </Pressable>
-            <Pressable style={[styles.authTab, mode === "register" && styles.authTabActive]} onPress={() => setMode("register")}>
-              <Text style={[styles.authTabText, mode === "register" && styles.authTabTextActive]}>Registre-se</Text>
-            </Pressable>
+            <View style={screenStyles.formSection}>
+              <View style={screenStyles.segmentedControl}>
+                <SegmentButton label="Entrar" active={mode === "login"} disabled={loading} onPress={() => setMode("login")} />
+                <SegmentButton
+                  label="Registre-se"
+                  active={mode === "register"}
+                  disabled={loading}
+                  onPress={() => setMode("register")}
+                />
+              </View>
+
+              {error && <Text style={screenStyles.errorText}>{error}</Text>}
+
+              {mode === "register" && (
+                <View style={screenStyles.fieldGroup}>
+                  <Text style={screenStyles.label}>Nome</Text>
+                  <TextInput
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Seu nome"
+                    placeholderTextColor={palette.placeholder}
+                    style={screenStyles.input}
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                    editable={!loading}
+                    onSubmitEditing={() => emailInputRef.current?.focus()}
+                  />
+                </View>
+              )}
+
+              <View style={screenStyles.fieldGroup}>
+                <Text style={screenStyles.label}>E-mail</Text>
+                <TextInput
+                  ref={emailInputRef}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="e-mail@empresa.com.br"
+                  placeholderTextColor={palette.placeholder}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  editable={!loading}
+                  importantForAutofill="yes"
+                  keyboardType="email-address"
+                  showSoftInputOnFocus
+                  textContentType="emailAddress"
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onPressIn={() => emailInputRef.current?.focus()}
+                  onSubmitEditing={() => passwordInputRef.current?.focus()}
+                  style={screenStyles.input}
+                />
+              </View>
+
+              {mode !== "reset" && (
+                <View style={screenStyles.fieldGroup}>
+                  <Text style={screenStyles.label}>Senha</Text>
+                  <View style={screenStyles.passwordInput}>
+                    <TextInput
+                      ref={passwordInputRef}
+                      value={password}
+                      onChangeText={setPassword}
+                      placeholder={mode === "login" ? "••••••••" : "Mínimo 6 caracteres"}
+                      placeholderTextColor={palette.placeholder}
+                      autoComplete={mode === "login" ? "current-password" : "new-password"}
+                      editable={!loading}
+                      importantForAutofill="yes"
+                      secureTextEntry={!passwordVisible}
+                      showSoftInputOnFocus
+                      textContentType={mode === "login" ? "password" : "newPassword"}
+                      returnKeyType="done"
+                      onPressIn={() => passwordInputRef.current?.focus()}
+                      onSubmitEditing={submit}
+                      style={screenStyles.passwordTextInput}
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={passwordVisible ? "Ocultar senha" : "Mostrar senha"}
+                      hitSlop={8}
+                      style={screenStyles.eyeButton}
+                      onPress={() => setPasswordVisible((visible) => !visible)}
+                    >
+                      <Ionicons name={passwordVisible ? "eye-off-outline" : "eye-outline"} size={19} color="#98a2b3" />
+                    </Pressable>
+                  </View>
+                </View>
+              )}
+
+              <Pressable
+                style={({ pressed }) => [
+                  screenStyles.primaryButton,
+                  pressed && !loading && screenStyles.primaryButtonPressed,
+                  loading && screenStyles.disabledButton
+                ]}
+                disabled={loading}
+                onPress={submit}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <Text style={screenStyles.primaryButtonText}>{primaryLabel}</Text>
+                )}
+              </Pressable>
+
+              {mode === "login" ? (
+                <Pressable style={screenStyles.textLink} disabled={loading} onPress={() => setMode("reset")}>
+                  <Text style={screenStyles.textLinkLabel}>Redefinir senha</Text>
+                </Pressable>
+              ) : (
+                <Pressable style={screenStyles.textLink} disabled={loading} onPress={() => setMode("login")}>
+                  <Text style={screenStyles.textLinkLabel}>Voltar para login</Text>
+                </Pressable>
+              )}
+            </View>
           </View>
-
-          {error && <Text style={styles.errorText}>{error}</Text>}
-
-          {mode === "register" && (
-            <>
-              <Text style={styles.fieldLabel}>Nome</Text>
-              <TextInput value={name} onChangeText={setName} placeholder="Seu nome" style={styles.quantityInput} returnKeyType="next" />
-            </>
-          )}
-
-          <Text style={styles.fieldLabel}>E-mail</Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="e-mail@empresa.com"
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            textContentType="emailAddress"
-            returnKeyType="next"
-            style={styles.quantityInput}
-          />
-
-          {mode !== "reset" && (
-            <>
-              <Text style={styles.fieldLabel}>Senha</Text>
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder={"M\u00ednimo 6 caracteres"}
-                secureTextEntry
-                textContentType={mode === "login" ? "password" : "newPassword"}
-                returnKeyType="done"
-                onSubmitEditing={submit}
-                style={styles.quantityInput}
-              />
-            </>
-          )}
-
-          <Pressable style={[styles.primaryButton, loading && styles.disabledButton]} disabled={loading} onPress={submit}>
-            <Ionicons
-              name={mode === "login" ? "log-in-outline" : mode === "register" ? "person-add-outline" : "mail-outline"}
-              size={18}
-              color="#ffffff"
-            />
-            <Text style={styles.primaryButtonText}>
-              {mode === "login" && "Entrar"}
-              {mode === "register" && "Criar acesso"}
-              {mode === "reset" && "Enviar e-mail de redefini\u00e7\u00e3o"}
-            </Text>
-          </Pressable>
-
-          {mode === "login" ? (
-            <Pressable style={styles.secondaryButton} disabled={loading} onPress={() => setMode("reset")}>
-              <Ionicons name="key-outline" size={18} color="#3b82f6" />
-              <Text style={styles.secondaryButtonText}>Redefinir senha</Text>
-            </Pressable>
-          ) : (
-            <Pressable style={styles.secondaryButton} disabled={loading} onPress={() => setMode("login")}>
-              <Ionicons name="arrow-back-outline" size={18} color="#3b82f6" />
-              <Text style={styles.secondaryButtonText}>Voltar para login</Text>
-            </Pressable>
-          )}
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
+
+function SegmentButton({
+  label,
+  active,
+  disabled,
+  onPress
+}: {
+  label: string;
+  active: boolean;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        screenStyles.segmentButton,
+        active && screenStyles.segmentButtonActive,
+        pressed && !active && screenStyles.segmentButtonPressed
+      ]}
+      disabled={disabled}
+      onPress={onPress}
+    >
+      <Text style={[screenStyles.segmentButtonText, active && screenStyles.segmentButtonTextActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+const screenStyles = StyleSheet.create({
+  shell: {
+    flex: 1,
+    backgroundColor: palette.formBackground
+  },
+  keyboard: {
+    flex: 1
+  },
+  scroller: {
+    flex: 1,
+    backgroundColor: palette.formBackground
+  },
+  scrollContent: {
+    flexGrow: 1,
+    padding: 0
+  },
+  panel: {
+    flex: 1,
+    width: "100%",
+    alignSelf: "center",
+    overflow: "hidden",
+    backgroundColor: palette.formBackground
+  },
+  hero: {
+    minHeight: 286,
+    paddingHorizontal: 24,
+    paddingTop: 88,
+    paddingBottom: 30,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    backgroundColor: palette.panel
+  },
+  logoBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 3,
+    backgroundColor: palette.primary,
+    shadowColor: palette.primary,
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.24,
+    shadowRadius: 24,
+    elevation: 8
+  },
+  logoLine: {
+    width: 3,
+    height: 22,
+    borderRadius: 2,
+    backgroundColor: palette.panel
+  },
+  title: {
+    marginTop: 18,
+    color: palette.text,
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: "900",
+    textAlign: "center"
+  },
+  subtitle: {
+    marginTop: 8,
+    color: palette.muted,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "500",
+    textAlign: "center"
+  },
+  formSection: {
+    flexGrow: 1,
+    paddingHorizontal: 18,
+    paddingTop: 24,
+    paddingBottom: 30,
+    backgroundColor: palette.formBackground
+  },
+  segmentedControl: {
+    minHeight: 40,
+    borderRadius: 9,
+    padding: 3,
+    flexDirection: "row",
+    gap: 4,
+    backgroundColor: palette.segment
+  },
+  segmentButton: {
+    flex: 1,
+    minHeight: 34,
+    borderRadius: 7,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  segmentButtonActive: {
+    backgroundColor: palette.panel,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    elevation: 2
+  },
+  segmentButtonPressed: {
+    opacity: 0.78
+  },
+  segmentButtonText: {
+    color: palette.muted,
+    fontSize: 13,
+    fontWeight: "800",
+    textAlign: "center"
+  },
+  segmentButtonTextActive: {
+    color: palette.text
+  },
+  errorText: {
+    marginTop: 16,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    overflow: "hidden",
+    color: palette.danger,
+    backgroundColor: palette.dangerSoft,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "700"
+  },
+  fieldGroup: {
+    marginTop: 22,
+    gap: 8
+  },
+  label: {
+    color: palette.text,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "800"
+  },
+  input: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: palette.inputBorder,
+    borderRadius: 9,
+    paddingHorizontal: 14,
+    color: palette.text,
+    backgroundColor: palette.panel,
+    fontSize: 15,
+    fontWeight: "500"
+  },
+  passwordInput: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: palette.inputBorder,
+    borderRadius: 9,
+    paddingLeft: 14,
+    paddingRight: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: palette.panel
+  },
+  passwordTextInput: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 42,
+    paddingVertical: 0,
+    color: palette.text,
+    fontSize: 15,
+    fontWeight: "500"
+  },
+  eyeButton: {
+    width: 42,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  primaryButton: {
+    minHeight: 44,
+    marginTop: 22,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: palette.primary,
+    shadowColor: palette.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.26,
+    shadowRadius: 16,
+    elevation: 5
+  },
+  primaryButtonPressed: {
+    backgroundColor: palette.primaryPressed,
+    transform: [{ translateY: 1 }]
+  },
+  disabledButton: {
+    opacity: 0.68
+  },
+  primaryButtonText: {
+    color: palette.panel,
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "900",
+    textAlign: "center"
+  },
+  textLink: {
+    minHeight: 44,
+    marginTop: 8,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  textLinkLabel: {
+    color: "#0b57ff",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center"
+  }
+});
