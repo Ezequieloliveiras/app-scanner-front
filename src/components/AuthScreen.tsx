@@ -11,7 +11,6 @@ import {
   TextInput,
   View
 } from "react-native";
-import { colors } from "../styles/tokens";
 import { AuthMode, RegisterCredentials } from "../types/app";
 
 type AuthScreenProps = {
@@ -78,7 +77,9 @@ export function AuthScreen({ loading, error, onLogin, onRegister, onRequestPassw
         >
           <View style={screenStyles.panel}>
             <View style={screenStyles.hero}>
-              <Ionicons name="barcode-outline" size={40} color={colors.primary} />
+              <View style={screenStyles.logoBox} accessibilityLabel="BipaAí">
+                <Ionicons name="barcode-outline" size={40} color="#ffffff" />
+              </View>
               <Text style={screenStyles.title}>BipaAí</Text>
               <Text style={screenStyles.subtitle}>Da nota ao estoque em segundos</Text>
             </View>
@@ -254,27 +255,25 @@ const screenStyles = StyleSheet.create({
     backgroundColor: palette.formBackground
   },
   hero: {
-    minHeight: 286,
+    minHeight: 260,
     paddingHorizontal: 24,
-    paddingTop: 88,
-    paddingBottom: 30,
+    paddingTop: 78,
+    paddingBottom: 24,
     alignItems: "center",
     justifyContent: "flex-start",
     backgroundColor: palette.panel
   },
   logoBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
+    width: 72,
+    height: 72,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
-    gap: 3,
     backgroundColor: palette.primary,
     shadowColor: palette.primary,
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.24,
-    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 22,
     elevation: 8
   },
   logoLine: {
@@ -286,23 +285,23 @@ const screenStyles = StyleSheet.create({
   title: {
     marginTop: 18,
     color: palette.text,
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 26,
+    lineHeight: 31,
     fontWeight: "900",
     textAlign: "center"
   },
   subtitle: {
     marginTop: 8,
     color: palette.muted,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: "500",
     textAlign: "center"
   },
   formSection: {
     flexGrow: 1,
-    paddingHorizontal: 18,
-    paddingTop: 24,
+    paddingHorizontal: 10,
+    paddingTop: 22,
     paddingBottom: 30,
     backgroundColor: palette.formBackground
   },
@@ -334,7 +333,7 @@ const screenStyles = StyleSheet.create({
   },
   segmentButtonText: {
     color: palette.muted,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
     textAlign: "center"
   },
@@ -355,12 +354,12 @@ const screenStyles = StyleSheet.create({
   },
   fieldGroup: {
     marginTop: 22,
-    gap: 8
+    gap: 7
   },
   label: {
     color: palette.text,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: "800"
   },
   input: {
@@ -371,7 +370,7 @@ const screenStyles = StyleSheet.create({
     paddingHorizontal: 14,
     color: palette.text,
     backgroundColor: palette.panel,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "500"
   },
   passwordInput: {
@@ -391,7 +390,7 @@ const screenStyles = StyleSheet.create({
     minHeight: 42,
     paddingVertical: 0,
     color: palette.text,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "500"
   },
   eyeButton: {
@@ -422,8 +421,8 @@ const screenStyles = StyleSheet.create({
   },
   primaryButtonText: {
     color: palette.panel,
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 18,
     fontWeight: "900",
     textAlign: "center"
   },
@@ -435,7 +434,7 @@ const screenStyles = StyleSheet.create({
   },
   textLinkLabel: {
     color: "#0b57ff",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     textAlign: "center"
   }
