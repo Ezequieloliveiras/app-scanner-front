@@ -3,57 +3,70 @@ import { colors, radii } from "../styles/tokens";
 
 export const styles = StyleSheet.create({
   header: {
-    minHeight: 76,
+    minHeight: 74,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 18,
-    paddingBottom: 10,
+    gap: 8,
+    paddingHorizontal: 8,
+    paddingBottom: 11,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: "#dce3ee",
     backgroundColor: colors.surface,
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 1
+    shadowOpacity: 0,
+    elevation: 0
+  },
+  headerHome: {
+    minHeight: 74
   },
   headerIconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: radii.md,
+    width: 32,
+    height: 32,
+    borderRadius: radii.sm,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.surfaceMuted
+    backgroundColor: "transparent"
   },
   headerTitleArea: {
-    flex: 1
+    flex: 1,
+    alignItems: "flex-start"
+  },
+  headerTitleAreaHome: {
+    alignItems: "center"
   },
   headerTitle: {
     color: colors.text,
-    fontSize: 18,
-    fontWeight: "800"
+    fontSize: 16,
+    lineHeight: 19,
+    fontWeight: "900"
+  },
+  headerTitleHome: {
+    color: "#020617",
+    fontSize: 14,
+    lineHeight: 17
   },
   headerSubtitle: {
-    marginTop: 2,
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: "600"
+    marginTop: 1,
+    color: "#8b9bb0",
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: "700"
   },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    gap: 8,
-    minWidth: 42
+    gap: 4,
+    minWidth: 32
   },
   notificationDot: {
     position: "absolute",
-    top: 8,
-    right: 8,
+    top: 5,
+    right: 5,
     width: 9,
     height: 9,
     borderRadius: 5,
-    backgroundColor: "#ef4444"
+    borderWidth: 1,
+    borderColor: "#ffffff",
+    backgroundColor: "#2563eb"
   }
 });

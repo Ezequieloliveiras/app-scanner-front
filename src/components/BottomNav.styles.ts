@@ -1,40 +1,54 @@
 import { StyleSheet } from "react-native";
-import { colors, radii } from "../styles/tokens";
+import { colors } from "../styles/tokens";
 
 export const styles = StyleSheet.create({
   bottomNav: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    gap: 8,
-    paddingTop: 9,
-    paddingHorizontal: 12,
+    gap: 4,
+    paddingTop: 2,
+    paddingHorizontal: 8,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: "#dce3ee",
     backgroundColor: colors.surface,
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.04,
-    shadowRadius: 14,
-    elevation: 8
+    shadowOpacity: 0,
+    elevation: 0
   },
   bottomNavItem: {
     flex: 1,
     minHeight: 50,
-    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
-    gap: 3
+    gap: 1
   },
-  bottomNavItemActive: {
-    backgroundColor: "#3b82f6"
+  bottomNavItemProminent: {
+    transform: [{ translateY: -3 }]
+  },
+  bottomNavIconBox: {
+    width: 34,
+    height: 30,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent"
+  },
+  bottomNavIconBoxActive: {
+    backgroundColor: "#eef4ff"
+  },
+  bottomNavIconBoxProminent: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#071426"
   },
   bottomNavLabel: {
     color: colors.muted,
-    fontSize: 11,
-    fontWeight: "800"
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: "700"
   },
   bottomNavLabelActive: {
-    color: "#ffffff"
+    color: "#2563eb"
   }
 });

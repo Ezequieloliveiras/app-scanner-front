@@ -1086,6 +1086,7 @@ function MainApp() {
         loading={loading}
         topInset={insets.top}
         hasNotification={hasNotifications}
+        isHome={screen === "home"}
       />
 
       <View style={styles.screenBody}>

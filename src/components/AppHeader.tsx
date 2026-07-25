@@ -6,6 +6,7 @@ export function AppHeader({
   loading,
   topInset,
   hasNotification,
+  isHome = false,
   onMenuPress,
   onNotificationPress
 }: {
@@ -13,16 +14,17 @@ export function AppHeader({
   loading: boolean;
   topInset: number;
   hasNotification: boolean;
+  isHome?: boolean;
   onMenuPress: () => void;
   onNotificationPress: () => void;
 }) {
   return (
-    <View style={[styles.header, { paddingTop: topInset + 8 }]}>
+    <View style={[styles.header, isHome && styles.headerHome, { paddingTop: topInset + 8 }]}>
       <Pressable style={styles.headerIconButton} onPress={onMenuPress}>
-        <Ionicons name="menu-outline" size={26} color="#1f2937" />
+        <Ionicons name="menu-outline" size={25} color="#1f2937" />
       </Pressable>
-      <View style={styles.headerTitleArea}>
-        <Text style={styles.headerTitle}>{title}</Text>
+      <View style={[styles.headerTitleArea, isHome && styles.headerTitleAreaHome]}>
+        <Text style={[styles.headerTitle, isHome && styles.headerTitleHome]}>{isHome ? "BipaAí" : title}</Text>
         <Text style={styles.headerSubtitle}>Scanner de notas e estoque</Text>
       </View>
       <View style={styles.headerActions}>

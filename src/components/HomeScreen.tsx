@@ -1,9 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
-import { styles } from "../styles/appStyles";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { AuthUser } from "../types/app";
 import { PLAN_LABELS, canAccessModule, canManageAccess, canManageCertificate } from "../utils/appHelpers";
 import { HomeAction } from "./HomeAction";
+
+const homePalette = {
+  blue: "#2563eb",
+  navy: "#071426",
+  orange: "#ff8a00",
+  text: "#020617",
+  muted: "#64748b",
+  line: "#dce3ee",
+  section: "#f7f9fc",
+  iconSoft: "#eef4ff",
+  white: "#ffffff"
+};
+
 export function HomeScreen({
   productsCount,
   pendingCount,
@@ -18,8 +30,7 @@ export function HomeScreen({
   onStockRequests,
   onAccess,
   onCertificate,
-  onBilling,
-  onSimulate
+  onBilling
 }: {
   productsCount: number;
   pendingCount: number;
@@ -37,66 +48,206 @@ export function HomeScreen({
   onBilling: () => void;
   onSimulate: () => void;
 }) {
+  const displayName = user.name?.trim() || "usuário";
+
   return (
     <ScrollView
-      style={styles.content}
-      contentContainerStyle={styles.homeInner}
+      style={homeStyles.screen}
+      contentContainerStyle={homeStyles.content}
+      showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor="#3b82f6"
-          colors={["#3b82f6"]}
-        />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={homePalette.blue} colors={[homePalette.blue]} />
       }
     >
-      <View style={styles.homeHero}>
-        <View style={styles.homeHeroTop}>
-          <View style={styles.homeHeroMark}>
-            <Ionicons name="barcode-outline" size={26} color="#3b82f6" />
-          </View>
-          <View style={styles.homeHeroBrand}>
-            <Text style={styles.homeEyebrow}>BipaAí</Text>
-            <Text style={styles.homeHeroName}>NF-e direto no estoque</Text>
-          </View>
+      <View style={homeStyles.intro}>
+        <View style={homeStyles.greetingRow}>
+          <Text style={homeStyles.greeting}>Olá, {displayName} 👋</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Atualizar dados"
+            style={({ pressed }) => [homeStyles.refreshButton, pressed && homeStyles.pressed]}
+            onPress={onRefresh}
+          >
+            {refreshing ? (
+              <ActivityIndicator size="small" color={homePalette.blue} />
+            ) : (
+              <Ionicons name="refresh-outline" size={18} color="#8aa0b8" />
+            )}
+          </Pressable>
         </View>
-        <Text style={styles.homeHeroText}>Escaneie a nota, confira os produtos e finalize a entrada sem retrabalho.</Text>
-        <View style={styles.metricRow}>
-          <View style={styles.metricBox}>
-            <Text style={styles.metricValue}>{productsCount}</Text>
-            <Text style={styles.metricLabel}>produtos em estoque</Text>
-          </View>
-          <View style={styles.metricBox}>
-            <Text style={styles.metricValue}>{pendingCount}</Text>
-            <Text style={styles.metricLabel}>itens para conferir</Text>
-          </View>
+
+        <Text style={homeStyles.heroTitle}>NF-e direto no estoque</Text>
+        <Text style={homeStyles.heroText}>Escaneie a nota, confira os produtos e finalize a entrada sem retrabalho.</Text>
+
+        <View style={homeStyles.metricsRow}>
+          <MetricCard value={productsCount} label="produtos em estoque" accent="blue" />
+          <MetricCard value={pendingCount} label="itens para conferir" accent="orange" />
         </View>
       </View>
 
-      <View style={styles.quickGrid}>
-        {canAccessModule(user, "dashboard") && (
-          <HomeAction icon="analytics-outline" title="Dashboard" text="Produtos parados" onPress={onDashboard} />
-        )}
-        {canAccessModule(user, "scan") && <HomeAction icon="camera-outline" title="Câmera" text="Escanear nota" onPress={onScan} />}
-        {canAccessModule(user, "products") && <HomeAction icon="cube-outline" title="Produtos" text="Ver estoque" onPress={onProducts} />}
-        {canAccessModule(user, "branches") && (
-          <HomeAction icon="git-compare-outline" title="Filial" text="Movimentar estoque" onPress={onBranches} />
-        )}
-        {canAccessModule(user, "stock_requests") && (
-          <HomeAction
-            icon="file-tray-full-outline"
-            title="Solicitações"
-            text="Analisar retiradas"
-            hasBadge={pendingStockRequestsCount > 0}
-            onPress={onStockRequests}
-          />
-        )}
-        {canManageAccess(user) && <HomeAction icon="people-outline" title="Acessos" text="Gerenciar usuários" onPress={onAccess} />}
-        {canManageCertificate(user) && (
-          <HomeAction icon="shield-checkmark-outline" title="Certificado" text="A1 da organização" onPress={onCertificate} />
-        )}
-        <HomeAction icon="card-outline" title="Planos" text={`Atual: ${PLAN_LABELS[user.plan]}`} onPress={onBilling} />
+      <View style={homeStyles.quickSection}>
+        <Text style={homeStyles.quickTitle}>ACESSO RÁPIDO</Text>
+        <View style={homeStyles.quickGrid}>
+          {canAccessModule(user, "dashboard") && <HomeAction icon="bar-chart-outline" title="Dashboard" onPress={onDashboard} />}
+          {canAccessModule(user, "scan") && <HomeAction icon="camera-outline" title="Câmera" onPress={onScan} />}
+          {canAccessModule(user, "products") && <HomeAction icon="cube-outline" title="Produtos" onPress={onProducts} />}
+          {canAccessModule(user, "branches") && <HomeAction icon="git-branch-outline" title="Filial" onPress={onBranches} />}
+          {canAccessModule(user, "stock_requests") && (
+            <HomeAction
+              icon="clipboard-outline"
+              title="Solicitações"
+              hasBadge={pendingStockRequestsCount > 0}
+              onPress={onStockRequests}
+            />
+          )}
+          {canManageAccess(user) && <HomeAction icon="people-outline" title="Acessos" onPress={onAccess} />}
+          {canManageCertificate(user) && (
+            <HomeAction icon="shield-checkmark-outline" title="Certificado" onPress={onCertificate} />
+          )}
+          <HomeAction icon="card-outline" title="Planos" badgeText={PLAN_LABELS[user.plan]} onPress={onBilling} />
+        </View>
       </View>
     </ScrollView>
   );
 }
+
+function MetricCard({ value, label, accent }: { value: number; label: string; accent: "blue" | "orange" }) {
+  const accentStyle = accent === "blue" ? homeStyles.metricAccentBlue : homeStyles.metricAccentOrange;
+
+  return (
+    <View style={homeStyles.metricCard}>
+      <View style={[homeStyles.metricAccent, accentStyle]} />
+      <Text style={homeStyles.metricValue}>{value}</Text>
+      <Text style={homeStyles.metricLabel}>{label}</Text>
+    </View>
+  );
+}
+
+const homeStyles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: homePalette.section
+  },
+  content: {
+    flexGrow: 1,
+    paddingBottom: 18,
+    backgroundColor: homePalette.section
+  },
+  intro: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#edf2f7",
+    paddingHorizontal: 8,
+    paddingTop: 18,
+    paddingBottom: 22,
+    backgroundColor: homePalette.white
+  },
+  greetingRow: {
+    minHeight: 22,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12
+  },
+  greeting: {
+    flex: 1,
+    color: "#475569",
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "600"
+  },
+  refreshButton: {
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  pressed: {
+    opacity: 0.7
+  },
+  heroTitle: {
+    marginTop: 2,
+    color: homePalette.text,
+    fontSize: 21,
+    lineHeight: 26,
+    fontWeight: "900"
+  },
+  heroText: {
+    marginTop: 5,
+    maxWidth: 306,
+    color: homePalette.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: "500"
+  },
+  metricsRow: {
+    marginTop: 15,
+    flexDirection: "row",
+    gap: 12
+  },
+  metricCard: {
+    flex: 1,
+    minHeight: 85,
+    borderWidth: 1,
+    borderColor: homePalette.line,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 12,
+    overflow: "hidden",
+    backgroundColor: homePalette.white,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 1
+  },
+  metricAccent: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: 3
+  },
+  metricAccentBlue: {
+    backgroundColor: homePalette.blue
+  },
+  metricAccentOrange: {
+    backgroundColor: homePalette.orange
+  },
+  metricValue: {
+    color: homePalette.text,
+    fontSize: 25,
+    lineHeight: 30,
+    fontWeight: "900"
+  },
+  metricLabel: {
+    marginTop: 4,
+    color: homePalette.muted,
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "600"
+  },
+  quickSection: {
+    flexGrow: 1,
+    borderTopWidth: 1,
+    borderTopColor: "#edf2f7",
+    paddingHorizontal: 8,
+    paddingTop: 18,
+    paddingBottom: 18,
+    backgroundColor: homePalette.section
+  },
+  quickTitle: {
+    marginBottom: 13,
+    color: "#64748b",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "900",
+    letterSpacing: 0
+  },
+  quickGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 12
+  }
+});
