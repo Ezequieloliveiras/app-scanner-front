@@ -95,6 +95,18 @@ export const styles = StyleSheet.create({
     paddingBottom: 16,
     gap: 12
   },
+  productsPage: {
+    flex: 1,
+    width: "100%",
+    paddingHorizontal: 10,
+    paddingTop: 14,
+    backgroundColor: "#f8fafc"
+  },
+  productsPageDetail: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    backgroundColor: "#ffffff"
+  },
   homeInner: {
     padding: 16,
     gap: 16

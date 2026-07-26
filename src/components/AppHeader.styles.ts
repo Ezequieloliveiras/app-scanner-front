@@ -18,6 +18,10 @@ export const styles = StyleSheet.create({
   headerHome: {
     minHeight: 74
   },
+  headerCompact: {
+    minHeight: 64,
+    paddingBottom: 10
+  },
   headerIconButton: {
     width: 32,
     height: 32,
@@ -43,6 +47,12 @@ export const styles = StyleSheet.create({
     color: "#020617",
     fontSize: 14,
     lineHeight: 17
+  },
+  headerTitleCompact: {
+    color: "#020617",
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: "900"
   },
   headerSubtitle: {
     marginTop: 1,

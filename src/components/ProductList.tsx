@@ -1,10 +1,12 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Product, StockEntry } from "../types/product";
 
 type Props = {
   products: Product[];
+  onDetailChange?: (open: boolean) => void;
+  detailBackRequest?: number;
   onRegisterMissingDelivered: (productId: string, quantity: number, observation?: string) => Promise<void>;
   onCreateStockRequest: (productId: string, quantity: number, observation?: string) => Promise<void>;
 };
@@ -67,7 +69,7 @@ const MONTH_LABELS = [
   "Dezembro"
 ];
 
-export function ProductList({ products, onRegisterMissingDelivered, onCreateStockRequest }: Props) {
+export function ProductList({ products, onDetailChange, detailBackRequest = 0, onRegisterMissingDelivered, onCreateStockRequest }: Props) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantityInput, setQuantityInput] = useState("");
   const [observationInput, setObservationInput] = useState("");
@@ -89,6 +91,7 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
   const [visibleCalendarMonth, setVisibleCalendarMonth] = useState(startOfMonth(new Date()));
   const [productSearch, setProductSearch] = useState("");
   const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
+  const handledBackRequestRef = useRef(detailBackRequest);
   const activeProduct = selectedProduct
     ? products.find((product) => product._id === selectedProduct._id) ?? selectedProduct
     : null;
@@ -125,6 +128,7 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
 
   const openProduct = useCallback((product: Product) => {
     setSelectedProduct(product);
+    onDetailChange?.(true);
     setQuantityInput("");
     setObservationInput("");
     setWithdrawQuantityInput("");
@@ -142,7 +146,32 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
     setDraftRangeStart("");
     setDraftRangeEnd("");
     setVisibleCalendarMonth(startOfMonth(new Date()));
-  }, []);
+  }, [onDetailChange]);
+
+  const closeProduct = useCallback(() => {
+    setSelectedProduct(null);
+    onDetailChange?.(false);
+  }, [onDetailChange]);
+
+  useEffect(() => () => onDetailChange?.(false), [onDetailChange]);
+
+  useEffect(() => {
+    onDetailChange?.(Boolean(activeProduct));
+  }, [activeProduct, onDetailChange]);
+
+  useEffect(() => {
+    if (detailBackRequest === handledBackRequestRef.current) {
+      return;
+    }
+
+    if (activeProduct) {
+      handledBackRequestRef.current = detailBackRequest;
+      closeProduct();
+      return;
+    }
+
+    handledBackRequestRef.current = detailBackRequest;
+  }, [activeProduct, closeProduct, detailBackRequest]);
 
   const renderProduct = useCallback(
     ({ item }: { item: Product }) => <ProductListItem product={item} onOpen={openProduct} />,
@@ -345,140 +374,123 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
   if (activeProduct) {
     return (
       <ScrollView style={styles.detailScroller} contentContainerStyle={styles.detailScreen}>
-        <View style={styles.detailHeader}>
-          <Pressable style={styles.backButton} onPress={() => setSelectedProduct(null)}>
-            <Ionicons name="arrow-back-outline" size={23} color="#1f2937" />
-          </Pressable>
-          <View style={styles.titleArea}>
-            <Text style={styles.detailTitle}>{activeProduct.name}</Text>
-            <Text style={styles.detailSubtitle}>EAN: {activeProduct.ean}</Text>
-          </View>
-        </View>
-
-        <View style={styles.detailSummary}>
-          <DetailMetric icon="cube-outline" value={activeProduct.quantity || 0} label="em estoque" />
-          <View style={styles.summaryDivider} />
-          <DetailMetric icon="file-tray-stacked-outline" value={historyEntries.length} label="entradas" />
-        </View>
-
-        {renderActions()}
-
-        <View style={styles.historySection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Histórico completo</Text>
-            <Text style={styles.sectionCount}>{filteredHistoryEntries.length}/{historyEntries.length} registro(s)</Text>
-          </View>
-
-          {historyEntries.length === 0 ? (
-            <View style={styles.emptyHistory}>
-              <Ionicons name="time-outline" size={20} color="#64748b" />
-              <Text style={styles.emptyHistoryText}>Nenhuma movimentação registrada para este produto.</Text>
+        <View style={styles.detailTopSection}>
+          <View style={styles.productDetailHero}>
+            <View style={styles.detailProductIcon}>
+              <Ionicons name="cube-outline" size={22} color="#2563eb" />
             </View>
-          ) : (
-            <>
-              <View style={styles.historyPanel}>
-                <View style={styles.historySearchBox}>
-                  <Ionicons name="search-outline" size={17} color="#64748b" />
-                  <TextInput
-                    value={historyQuery}
-                    onChangeText={setHistoryQuery}
-                    placeholder="Pesquisar movimentações..."
-                    placeholderTextColor="#8a95a5"
-                    returnKeyType="search"
-                    style={styles.historySearchInput}
-                  />
-                </View>
+            <View style={styles.titleArea}>
+              <Text style={styles.detailTitle} numberOfLines={2}>{activeProduct.name}</Text>
+              <Text style={styles.detailSubtitle}>{activeProduct.ean}</Text>
+            </View>
+          </View>
 
-                <View style={styles.historySummaryGrid}>
-                  <HistorySummaryCard value={historySummary.entries} label="Entradas" color={ui.success} backgroundColor={ui.successSoft} />
-                  <HistorySummaryCard value={historySummary.divergences} label="Divergências" color={ui.warning} backgroundColor={ui.warningSoft} />
-                  <HistorySummaryCard value={historySummary.withdrawals} label="Retiradas" color={ui.primary} backgroundColor="#DBEAFE" />
-                  <HistorySummaryCard value={historySummary.adjustments} label="Ajustes" color={ui.purple} backgroundColor={ui.purpleSoft} />
-                </View>
+          <View style={styles.detailSummaryGrid}>
+            <DetailMetric icon="cube-outline" value={activeProduct.quantity || 0} label="em estoque" />
+            <DetailMetric icon="file-tray-stacked-outline" value={historyEntries.length} label="entradas" />
+          </View>
+        </View>
 
-                <Pressable style={styles.historyFiltersToggle} onPress={() => setHistoryFiltersExpanded((current) => !current)}>
-                  <View style={styles.historyFiltersToggleTitle}>
-                    <Ionicons name="options-outline" size={16} color="#3b82f6" />
-                    <Text style={styles.historyFiltersToggleText}>Filtros do histórico</Text>
-                  </View>
-                  <Ionicons name={historyFiltersExpanded ? "chevron-up-outline" : "chevron-down-outline"} size={18} color="#3b82f6" />
-                </Pressable>
+        <View style={styles.detailLowerSection}>
+          {renderActions()}
 
-                {historyFiltersExpanded && (
-                  <View style={styles.historyAdvancedFilters}>
-                    <View style={styles.historyFilterGroup}>
-                      <Text style={styles.historyFilterLabel}>Período</Text>
-                      <View style={styles.historyChipRow}>
-                        {DATE_FILTERS.map((filter) => (
-                          <HistoryFilterChip
-                            key={filter.value}
-                            label={filter.label}
-                            selected={historyDateFilter === filter.value}
-                            onPress={() => {
-                              setHistoryDateFilter(filter.value);
-                              if (filter.value === "custom") {
-                                openDateRangePicker();
-                              }
-                            }}
-                          />
-                        ))}
-                      </View>
-                    </View>
+          <View style={styles.historySection}>
+            <View style={styles.historyToolbar}>
+              <Text style={styles.sectionTitle}>HISTÓRICO{"\n"}COMPLETO</Text>
+              <View style={styles.historySearchBox}>
+                <Ionicons name="search-outline" size={17} color="#94a3b8" />
+                <TextInput
+                  value={historyQuery}
+                  onChangeText={setHistoryQuery}
+                  placeholder="Pesq"
+                  placeholderTextColor="#94a3b8"
+                  returnKeyType="search"
+                  style={styles.historySearchInput}
+                />
+              </View>
+              <Pressable style={styles.historyMiniButton} onPress={() => setHistoryFiltersExpanded((current) => !current)}>
+                <Ionicons name="filter-outline" size={13} color="#475569" />
+                <Text style={styles.historyMiniButtonText}>Filtros</Text>
+              </Pressable>
+              <Pressable style={styles.historyMiniButton} onPress={() => setSortOptionsVisible((current) => !current)}>
+                <Ionicons name="swap-vertical-outline" size={13} color="#475569" />
+                <Text style={styles.historyMiniButtonText}>Recentes</Text>
+              </Pressable>
+            </View>
 
-                    {historyDateFilter === "custom" && (
-                      <Pressable style={styles.dateRangeField} onPress={openDateRangePicker}>
-                        <View style={styles.dateRangeFieldIcon}>
-                          <Ionicons name="calendar-outline" size={18} color="#3b82f6" />
+            <View style={styles.historyChipRow}>
+              {TYPE_FILTERS.map((filter) => (
+                <HistoryFilterChip
+                  key={filter.value}
+                  label={filter.label}
+                  selected={historyTypeFilter === filter.value}
+                  onPress={() => setHistoryTypeFilter(filter.value)}
+                />
+              ))}
+            </View>
+
+            {historyEntries.length === 0 ? (
+              <View style={styles.emptyHistory}>
+                <Ionicons name="time-outline" size={20} color="#64748b" />
+                <Text style={styles.emptyHistoryText}>Nenhuma movimentação registrada para este produto.</Text>
+              </View>
+            ) : (
+              <>
+                {(historyFiltersExpanded || sortOptionsVisible) && (
+                  <View style={styles.historyPanel}>
+                    {historyFiltersExpanded && (
+                      <View style={styles.historyAdvancedFilters}>
+                        <View style={styles.historyFilterGroup}>
+                          <Text style={styles.historyFilterLabel}>Período</Text>
+                          <View style={styles.historyChipRow}>
+                            {DATE_FILTERS.map((filter) => (
+                              <HistoryFilterChip
+                                key={filter.value}
+                                label={filter.label}
+                                selected={historyDateFilter === filter.value}
+                                onPress={() => {
+                                  setHistoryDateFilter(filter.value);
+                                  if (filter.value === "custom") {
+                                    openDateRangePicker();
+                                  }
+                                }}
+                              />
+                            ))}
+                          </View>
                         </View>
-                        <View style={styles.dateRangeFieldText}>
-                          <Text style={styles.dateRangeFieldLabel}>Período</Text>
-                          <Text style={styles.dateRangeFieldValue}>{formatDateRangeLabel(historyCustomStart, historyCustomEnd)}</Text>
-                        </View>
-                        <Ionicons name="chevron-forward-outline" size={18} color="#64748b" />
-                      </Pressable>
-                    )}
 
-                    <View style={styles.historyFilterGroup}>
-                      <Text style={styles.historyFilterLabel}>Tipo</Text>
-                      <View style={styles.historyChipRow}>
-                        {TYPE_FILTERS.map((filter) => (
-                          <HistoryFilterChip
-                            key={filter.value}
-                            label={filter.label}
-                            selected={historyTypeFilter === filter.value}
-                            onPress={() => setHistoryTypeFilter(filter.value)}
-                          />
-                        ))}
-                      </View>
-                    </View>
-
-                    <View style={styles.historySortArea}>
-                      <Pressable style={styles.historySortButton} onPress={() => setSortOptionsVisible((current) => !current)}>
-                        <Ionicons name="swap-vertical-outline" size={16} color="#3b82f6" />
-                        <Text style={styles.historySortText}>
-                          {SORT_OPTIONS.find((option) => option.value === historySortMode)?.label ?? "Mais recentes"}
-                        </Text>
-                        <Ionicons name={sortOptionsVisible ? "chevron-up-outline" : "chevron-down-outline"} size={16} color="#3b82f6" />
-                      </Pressable>
-                      {sortOptionsVisible && (
-                        <View style={styles.historySortOptions}>
-                          {SORT_OPTIONS.map((option) => (
-                            <HistoryFilterChip
-                              key={option.value}
-                              label={option.label}
-                              selected={historySortMode === option.value}
-                              onPress={() => {
-                                setHistorySortMode(option.value);
-                                setSortOptionsVisible(false);
-                              }}
-                            />
-                          ))}
-                        </View>
+                      {historyDateFilter === "custom" && (
+                        <Pressable style={styles.dateRangeField} onPress={openDateRangePicker}>
+                          <View style={styles.dateRangeFieldIcon}>
+                            <Ionicons name="calendar-outline" size={18} color="#3b82f6" />
+                          </View>
+                          <View style={styles.dateRangeFieldText}>
+                            <Text style={styles.dateRangeFieldLabel}>Período</Text>
+                            <Text style={styles.dateRangeFieldValue}>{formatDateRangeLabel(historyCustomStart, historyCustomEnd)}</Text>
+                          </View>
+                          <Ionicons name="chevron-forward-outline" size={18} color="#64748b" />
+                        </Pressable>
                       )}
                     </View>
-                  </View>
-                )}
-              </View>
+                  )}
+
+                  {sortOptionsVisible && (
+                    <View style={styles.historySortOptions}>
+                      {SORT_OPTIONS.map((option) => (
+                        <HistoryFilterChip
+                          key={option.value}
+                          label={option.label}
+                          selected={historySortMode === option.value}
+                          onPress={() => {
+                            setHistorySortMode(option.value);
+                            setSortOptionsVisible(false);
+                          }}
+                        />
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
 
               {filteredHistoryEntries.length === 0 ? (
                 <View style={styles.emptyHistory}>
@@ -494,6 +506,7 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
               )}
             </>
           )}
+        </View>
         </View>
 
         <DateRangePickerModal
@@ -580,7 +593,7 @@ export function ProductList({ products, onRegisterMissingDelivered, onCreateStoc
   return (
     <View style={styles.listScreen}>
       <View style={styles.searchBar}>
-        <Ionicons name="search-outline" size={18} color="#64748b" />
+        <Ionicons name="search-outline" size={18} color="#9aa8bd" />
         <TextInput
           value={productSearch}
           onChangeText={setProductSearch}
@@ -633,16 +646,26 @@ const ProductListItem = memo(function ProductListItem({
   const handlePress = useCallback(() => onOpen(product), [onOpen, product]);
 
   return (
-    <Pressable style={styles.card} onPress={handlePress}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardTitleArea}>
-          <View style={styles.titleMetaRow}>
-            <Text style={styles.productName} numberOfLines={2} ellipsizeMode="tail">
-              {product.name}
-            </Text>
-          </View>
-        </View>
+    <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={handlePress}>
+      <View style={styles.productIconBox}>
+        <Ionicons name="cube-outline" size={19} color="#2563eb" />
       </View>
+
+      <View style={styles.cardTitleArea}>
+        <Text style={styles.productName} numberOfLines={2} ellipsizeMode="tail">
+          {product.name}
+        </Text>
+        <Text style={styles.inlineMeta} numberOfLines={1}>
+          {product.ean}   ·   {stockEntriesCount} {stockEntriesCount === 1 ? "entrada" : "entradas"}
+        </Text>
+      </View>
+
+      <View style={styles.stockArea}>
+        <Text style={styles.quantity}>{formatQuantity(product.quantity || 0)}</Text>
+        <Text style={styles.stockLabel}>em estoque</Text>
+      </View>
+
+      <Ionicons name="chevron-forward-outline" size={16} color="#cbd5e1" />
     </Pressable>
   );
 });
@@ -656,11 +679,12 @@ function DetailMetric({
   value: number | string;
   label: string;
 }) {
+  const stockMetric = icon === "cube-outline";
+
   return (
-    <View style={styles.detailMetric}>
-      <Ionicons name={icon} size={18} color="#3b82f6" />
-      <Text style={styles.summaryValue}>{value}</Text>
-      <Text style={styles.summaryLabel}>{label}</Text>
+    <View style={[styles.detailMetric, !stockMetric && styles.detailMetricNeutral]}>
+      <Text style={[styles.summaryValue, !stockMetric && styles.summaryValueNeutral]}>{value}</Text>
+      <Text style={[styles.summaryLabel, !stockMetric && styles.summaryLabelNeutral]}>{label}</Text>
     </View>
   );
 }
@@ -849,23 +873,13 @@ function HistoryEntryCard({ entry }: { entry: StockEntry }) {
       ]}
     >
       <View style={styles.historyTopRow}>
-        <View style={[styles.historyIconBox, { backgroundColor: meta.softBackground }]}>
-          <Ionicons name={meta.icon} size={18} color={meta.accent} />
-        </View>
         <View style={styles.historyTitleArea}>
-          <Text style={styles.historyType} numberOfLines={2}>
-            {meta.title}
+          <Text style={[styles.historyBadgeText, styles.historyBadgeInline, { color: meta.textColor, backgroundColor: meta.softBackground }]}>
+            {meta.badge}
           </Text>
           <Text style={styles.historyMeta}>{formatDate(entry.createdAt)}</Text>
         </View>
-        <View style={styles.historyBadges}>
-          <View style={[styles.historyBadge, { backgroundColor: meta.softBackground }]}>
-            <Text style={[styles.historyBadgeText, { color: meta.textColor }]}>{meta.badge}</Text>
-          </View>
-          <View style={[styles.historyQuantityBadge, { backgroundColor: meta.softBackground }]}>
-            <Text style={[styles.historyQuantity, { color: meta.textColor }]}>{getEntryQuantity(entry)}</Text>
-          </View>
-        </View>
+        <Text style={[styles.historyQuantity, { color: meta.textColor }]}>{getEntryQuantity(entry)}</Text>
       </View>
 
       {entry.invoiceKey && (
@@ -874,8 +888,6 @@ function HistoryEntryCard({ entry }: { entry: StockEntry }) {
           <Text style={styles.historyKeyText}>Chave: {entry.invoiceKey}</Text>
         </View>
       )}
-
-      <View style={styles.historyDivider} />
 
       <View style={styles.historyChipRow}>
         {summaryChips.map((chip) => (
@@ -908,13 +920,15 @@ function ActionHeader({
   expanded: boolean;
   onPress: () => void;
 }) {
+  const toneColor = icon === "add-circle-outline" ? "#16a34a" : "#ef4444";
+
   return (
     <Pressable style={styles.actionHeader} onPress={onPress}>
       <View style={styles.actionHeaderTitle}>
-        <Ionicons name={icon} size={20} color="#3b82f6" />
+        <Ionicons name={icon} size={18} color={toneColor} />
         <Text style={styles.actionHeaderText}>{title}</Text>
       </View>
-      <Ionicons name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={20} color="#3b82f6" />
+      <Ionicons name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={18} color="#94a3b8" />
     </Pressable>
   );
 }
@@ -1463,35 +1477,37 @@ const styles = StyleSheet.create({
   listScreen: {
     flex: 1,
     width: "100%",
-    gap: 8
+    gap: 10,
+    backgroundColor: "#f7f9fc"
   },
   listScroller: {
     flex: 1,
-    width: "100%"
+    width: "100%",
+    backgroundColor: "#f7f9fc"
   },
   listContent: {
     gap: 8,
-    paddingBottom: 24
+    paddingBottom: 92
   },
   searchBar: {
-    minHeight: 44,
+    minHeight: 39,
     borderWidth: 1,
-    borderColor: ui.border,
-    borderRadius: 14,
+    borderColor: "#dce3ee",
+    borderRadius: 10,
     paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: ui.surface,
-    ...softShadow
+    backgroundColor: "#fbfdff"
   },
   searchInput: {
     flex: 1,
     minWidth: 0,
     color: ui.text,
-    fontSize: 14,
-    fontWeight: "700",
-    paddingVertical: 9
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: "600",
+    paddingVertical: 8
   },
   clearSearchButton: {
     width: 28,
@@ -1503,13 +1519,33 @@ const styles = StyleSheet.create({
   },
   card: {
     width: "100%",
+    minHeight: 67,
     borderWidth: 1,
-    borderColor: ui.border,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    borderColor: "#dce3ee",
+    borderRadius: 11,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
     backgroundColor: ui.surface,
-    ...softShadow
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.045,
+    shadowRadius: 10,
+    elevation: 2
+  },
+  cardPressed: {
+    opacity: 0.86,
+    transform: [{ scale: 0.995 }]
+  },
+  productIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#eef4ff"
   },
   cardHeader: {
     flexDirection: "row",
@@ -1518,7 +1554,8 @@ const styles = StyleSheet.create({
   },
   cardTitleArea: {
     flex: 1,
-    minWidth: 0
+    minWidth: 0,
+    justifyContent: "center"
   },
   titleMetaRow: {
     flexDirection: "row",
@@ -1528,18 +1565,17 @@ const styles = StyleSheet.create({
     rowGap: 2
   },
   productName: {
-    color: ui.text,
-    fontSize: 15,
-    lineHeight: 20,
+    color: "#020617",
+    fontSize: 13,
+    lineHeight: 17,
     fontWeight: "900",
-    flexShrink: 1,
-    minWidth: "42%",
-    maxWidth: "100%"
+    flexShrink: 1
   },
   inlineMeta: {
-    color: ui.muted,
+    marginTop: 3,
+    color: "#8b9bb0",
     fontSize: 10,
-    lineHeight: 14,
+    lineHeight: 13,
     fontWeight: "700",
     flexShrink: 1,
     maxWidth: "100%"
@@ -1552,12 +1588,25 @@ const styles = StyleSheet.create({
     gap: 6
   },
   quantity: {
-    minWidth: 28,
+    minWidth: 40,
     textAlign: "right",
-    color: "#3b82f6",
-    fontSize: 17,
-    lineHeight: 21,
+    color: "#020617",
+    fontSize: 18,
+    lineHeight: 22,
     fontWeight: "900"
+  },
+  stockArea: {
+    minWidth: 50,
+    alignItems: "flex-end",
+    justifyContent: "center"
+  },
+  stockLabel: {
+    marginTop: 2,
+    color: "#8b9bb0",
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: "700",
+    textAlign: "right"
   },
   detailButton: {
     width: 32,
@@ -1589,95 +1638,111 @@ const styles = StyleSheet.create({
   },
   detailScroller: {
     flex: 1,
-    width: "100%"
+    width: "100%",
+    backgroundColor: "#f8fafc"
   },
   detailScreen: {
     width: "100%",
-    gap: 12,
-    paddingBottom: 24
+    paddingBottom: 92,
+    backgroundColor: "#f8fafc"
   },
-  detailHeader: {
+  detailTopSection: {
+    gap: 10,
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 14,
+    backgroundColor: "#ffffff"
+  },
+  detailLowerSection: {
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#edf2f7",
+    paddingHorizontal: 10,
+    paddingTop: 11,
+    backgroundColor: "#f8fafc"
+  },
+  productDetailHero: {
+    minHeight: 48,
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8
+    alignItems: "center",
+    gap: 12
   },
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: ui.controlRadius,
+  detailProductIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f1f5f9"
+    backgroundColor: "#eef4ff"
   },
   titleArea: {
     flex: 1,
     minWidth: 0
   },
   detailTitle: {
-    color: "#1f2937",
+    color: "#020617",
     fontSize: 15,
-    lineHeight: 20,
+    lineHeight: 19,
     fontWeight: "900"
   },
   detailSubtitle: {
     marginTop: 2,
-    color: "#64748b",
-    fontSize: 13,
+    color: "#8b9bb0",
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "700"
   },
-  detailSummary: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: ui.border,
-    borderRadius: ui.radius,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+  detailSummaryGrid: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: ui.surface
+    gap: 8
   },
   detailMetric: {
     flex: 1,
+    minHeight: 69,
     minWidth: 0,
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 7
+    borderRadius: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    justifyContent: "center",
+    backgroundColor: "#eef5ff"
   },
-  summaryDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: "#e2e8f0"
+  detailMetricNeutral: {
+    backgroundColor: "#f4f7fb"
   },
   summaryValue: {
-    color: "#3b82f6",
-    fontSize: 18,
+    color: "#2563eb",
+    fontSize: 23,
+    lineHeight: 28,
     fontWeight: "900"
+  },
+  summaryValueNeutral: {
+    color: "#0f172a"
   },
   summaryLabel: {
-    flexShrink: 1,
-    color: "#5d6f82",
-    fontSize: 12,
-    fontWeight: "800"
+    marginTop: 4,
+    color: "#2563eb",
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "700"
+  },
+  summaryLabelNeutral: {
+    color: "#64748b"
   },
   historySection: {
-    gap: 10
+    gap: 9
   },
-  sectionHeader: {
+  historyToolbar: {
+    minHeight: 37,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10
+    gap: 6
   },
   sectionTitle: {
-    color: "#1f2937",
-    fontSize: 16,
-    fontWeight: "900"
-  },
-  sectionCount: {
-    color: "#64748b",
+    width: 73,
+    color: "#334155",
     fontSize: 12,
-    fontWeight: "800"
+    lineHeight: 14,
+    fontWeight: "900"
   },
   historyPanel: {
     gap: 10,
@@ -1689,23 +1754,41 @@ const styles = StyleSheet.create({
     ...softShadow
   },
   historySearchBox: {
-    minHeight: 40,
+    flex: 1,
+    minHeight: 36,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: ui.controlRadius,
-    paddingHorizontal: 12,
+    borderColor: "#dce3ee",
+    borderRadius: 9,
+    paddingHorizontal: 9,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     backgroundColor: "#FBFDFF"
   },
   historySearchInput: {
     flex: 1,
-    minHeight: 38,
+    minHeight: 34,
     paddingVertical: 0,
     color: ui.text,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600"
+  },
+  historyMiniButton: {
+    minHeight: 36,
+    borderWidth: 1,
+    borderColor: "#dce3ee",
+    borderRadius: 9,
+    paddingHorizontal: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    backgroundColor: "#fbfdff"
+  },
+  historyMiniButtonText: {
+    color: "#475569",
+    fontSize: 11,
+    fontWeight: "700"
   },
   historySummaryGrid: {
     flexDirection: "row",
@@ -1776,14 +1859,14 @@ const styles = StyleSheet.create({
     fontWeight: "800"
   },
   historyFilterChip: {
-    minHeight: 32,
+    minHeight: 28,
     borderWidth: 1,
-    borderColor: "#E5EBF3",
-    borderRadius: 16,
-    paddingHorizontal: 11,
+    borderColor: "#eef2f7",
+    borderRadius: 14,
+    paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F7F9FC"
+    backgroundColor: "#eef2f7"
   },
   historyFilterChipSelected: {
     borderColor: ui.primary,
@@ -1794,8 +1877,8 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }]
   },
   historyFilterChipText: {
-    color: "#5F6D7D",
-    fontSize: 12,
+    color: "#475569",
+    fontSize: 11,
     fontWeight: "800"
   },
   historyFilterChipTextSelected: {
@@ -2057,13 +2140,18 @@ const styles = StyleSheet.create({
   },
   historyItem: {
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderLeftWidth: 4,
-    borderRadius: ui.radius,
-    padding: 12,
-    gap: 10,
+    borderColor: "#dfe7f1",
+    borderLeftWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 13,
+    gap: 8,
     backgroundColor: ui.surface,
-    ...softShadow
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.035,
+    shadowRadius: 9,
+    elevation: 1
   },
   historyItemPressed: {
     opacity: 0.9,
@@ -2073,7 +2161,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 8
+    gap: 12
   },
   historyIconBox: {
     width: 34,
@@ -2085,7 +2173,7 @@ const styles = StyleSheet.create({
   historyTitleArea: {
     flex: 1,
     minWidth: 0,
-    gap: 3
+    gap: 8
   },
   historyType: {
     color: "#1f2937",
@@ -2105,8 +2193,16 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   historyBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900"
+  },
+  historyBadgeInline: {
+    alignSelf: "flex-start",
+    borderRadius: 9,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    overflow: "hidden",
+    lineHeight: 12
   },
   historyQuantityBadge: {
     minHeight: 26,
@@ -2117,14 +2213,15 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   historyQuantity: {
-    fontSize: 13,
+    fontSize: 16,
+    lineHeight: 20,
     fontWeight: "900"
   },
   historyMeta: {
-    color: "#64748b",
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "600"
+    color: "#8b9bb0",
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "700"
   },
   historyKeyRow: {
     flexDirection: "row",
@@ -2133,9 +2230,9 @@ const styles = StyleSheet.create({
   },
   historyKeyText: {
     flex: 1,
-    color: "#53657a",
-    fontSize: 12,
-    lineHeight: 17,
+    color: "#8b9bb0",
+    fontSize: 9,
+    lineHeight: 12,
     fontWeight: "600"
   },
   historyDivider: {
@@ -2148,15 +2245,15 @@ const styles = StyleSheet.create({
     gap: 7
   },
   historySummaryChip: {
-    minHeight: 28,
+    minHeight: 24,
     borderRadius: 14,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     alignItems: "center",
     justifyContent: "center"
   },
   historySummaryChipText: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "800"
   },
   historyObservation: {
@@ -2177,25 +2274,24 @@ const styles = StyleSheet.create({
     lineHeight: 18
   },
   actionArea: {
-    gap: 8,
-    borderWidth: 1,
-    borderColor: ui.border,
-    borderRadius: ui.radius,
-    padding: 12,
-    backgroundColor: ui.surface,
-    ...softShadow
+    gap: 8
   },
   actionHeader: {
-    minHeight: 48,
+    minHeight: 41,
     borderWidth: 1,
-    borderColor: ui.border,
-    borderRadius: ui.controlRadius,
-    paddingHorizontal: 12,
+    borderColor: "#dce3ee",
+    borderRadius: 10,
+    paddingHorizontal: 15,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
-    backgroundColor: "#f8fafc"
+    backgroundColor: "#ffffff",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.035,
+    shadowRadius: 8,
+    elevation: 1
   },
   actionHeaderTitle: {
     flex: 1,
@@ -2205,8 +2301,9 @@ const styles = StyleSheet.create({
   },
   actionHeaderText: {
     flex: 1,
-    color: "#1f2937",
-    fontSize: 14,
+    color: "#020617",
+    fontSize: 13,
+    lineHeight: 17,
     fontWeight: "900"
   },
   actionBody: {

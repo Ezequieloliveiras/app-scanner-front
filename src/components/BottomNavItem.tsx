@@ -15,11 +15,11 @@ export function BottomNavItem({
   onPress: () => void;
 }) {
   return (
-    <Pressable style={[styles.bottomNavItem, prominent && styles.bottomNavItemProminent]} onPress={onPress}>
-      <View style={[styles.bottomNavIconBox, active && !prominent && styles.bottomNavIconBoxActive, prominent && styles.bottomNavIconBoxProminent]}>
-        <Ionicons name={icon} size={prominent ? 22 : 21} color={prominent ? "#ffffff" : active ? "#2563eb" : "#94a3b8"} />
+    <Pressable style={styles.bottomNavItem} onPress={onPress}>
+      <View style={[styles.bottomNavIconBox, active && styles.bottomNavIconBoxActive]}>
+        <Ionicons name={icon} size={21} color={active ? "#2563eb" : "#94a3b8"} />
       </View>
-      <Text style={[styles.bottomNavLabel, active && !prominent && styles.bottomNavLabelActive]}>{label}</Text>
+      <Text style={[styles.bottomNavLabel, active && styles.bottomNavLabelActive]}>{label}</Text>
     </Pressable>
   );
 }

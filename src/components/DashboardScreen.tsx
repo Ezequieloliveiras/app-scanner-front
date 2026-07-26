@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
   FlatList,
   LayoutAnimation,
   Modal,
@@ -17,19 +16,54 @@ import {
   View
 } from "react-native";
 import { api } from "../api/client";
-import { styles } from "../styles/appStyles";
+import { softShadow, styles } from "../styles/appStyles";
 import { DashboardProduct, DashboardProductStatus, InventoryDashboard } from "../types/app";
 
 type Props = {
   token: string;
 };
 
-const STATUS_META: Record<DashboardProductStatus, { label: string; color: string; backgroundColor: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  out_of_stock: { label: "Sem estoque", color: "#991b1b", backgroundColor: "#fee2e2", icon: "alert-circle-outline" },
-  without_movement: { label: "Sem movimento", color: "#475569", backgroundColor: "#e2e8f0", icon: "help-circle-outline" },
-  stopped: { label: "Parado", color: "#B45309", backgroundColor: "#FFF4D6", icon: "pause-circle-outline" },
-  attention: { label: "Atenção", color: "#1d4ed8", backgroundColor: "#dbeafe", icon: "time-outline" },
-  healthy: { label: "Giro recente", color: "#3b82f6", backgroundColor: "#dbeafe", icon: "checkmark-circle-outline" }
+type StatusFilter = "all" | "out_of_stock" | "without_movement" | "stopped";
+
+const STATUS_META: Record<
+  DashboardProductStatus,
+  {
+    label: string;
+    color: string;
+    backgroundColor: string;
+    sideColor: string;
+  }
+> = {
+  out_of_stock: {
+    label: "Sem estoque",
+    color: "#DC2626",
+    backgroundColor: "#FEE2E2",
+    sideColor: "#FF6B6B"
+  },
+  without_movement: {
+    label: "Sem movimento",
+    color: "#D97706",
+    backgroundColor: "#FEF3C7",
+    sideColor: "#FBBF24"
+  },
+  stopped: {
+    label: "Parado",
+    color: "#B45309",
+    backgroundColor: "#FEF3C7",
+    sideColor: "#FACC15"
+  },
+  attention: {
+    label: "Atenção",
+    color: "#D97706",
+    backgroundColor: "#FFEDD5",
+    sideColor: "#FB923C"
+  },
+  healthy: {
+    label: "Giro recente",
+    color: "#16A34A",
+    backgroundColor: "#DCFCE7",
+    sideColor: "#22C55E"
+  }
 };
 
 const BUCKET_LABELS = {
@@ -41,6 +75,13 @@ const BUCKET_LABELS = {
   "61_90": "61-90 dias",
   "90_plus": "+90 dias"
 };
+
+const STATUS_CHIPS: Array<{ id: StatusFilter; label: string }> = [
+  { id: "all", label: "Todos" },
+  { id: "out_of_stock", label: "Sem estoque" },
+  { id: "without_movement", label: "Sem movimento" },
+  { id: "stopped", label: "Parado" }
+];
 
 const DEFAULT_STOPPED_DAYS = 30;
 const DASHBOARD_PRODUCT_LIMIT = 500;
@@ -70,19 +111,18 @@ export function DashboardScreen({ token }: Props) {
   const [dashboard, setDashboard] = useState<InventoryDashboard | null>(null);
   const [productQuery, setProductQuery] = useState("");
   const [debouncedProductQuery, setDebouncedProductQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [onlyStopped, setOnlyStopped] = useState(false);
-  const [onlyWithStock, setOnlyWithStock] = useState(true);
+  const [onlyWithStock, setOnlyWithStock] = useState(false);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchFocused, setSearchFocused] = useState(false);
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [indicatorsExpanded, setIndicatorsExpanded] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState("");
   const [datePreset, setDatePreset] = useState<DatePreset>("all");
   const [sortOption, setSortOption] = useState<SortOption>("stopped_desc");
-  const searchFocusAnim = useRef(new Animated.Value(0)).current;
 
   const selectedSort = SORT_OPTIONS.find((option) => option.id === sortOption) || SORT_OPTIONS[0];
   const movementFrom = useMemo(() => getPresetStartDate(datePreset), [datePreset]);
@@ -131,38 +171,29 @@ export function DashboardScreen({ token }: Props) {
     return () => clearTimeout(timer);
   }, [productQuery]);
 
-  useEffect(() => {
-    Animated.timing(searchFocusAnim, {
-      toValue: searchFocused ? 1 : 0,
-      duration: 180,
-      useNativeDriver: false
-    }).start();
-  }, [searchFocusAnim, searchFocused]);
-
-  const searchBorderColor = searchFocusAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["#e4eaf2", "#8ab4ff"]
-  });
-
-  const searchShadowOpacity = searchFocusAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.03, 0.1]
-  });
-
-  function showAllProducts() {
-    setOnlyStopped(false);
-    setOnlyWithStock(false);
-  }
-
   const filteredProducts = useMemo(
-    () => filterDashboardProducts(dashboard?.products ?? [], debouncedProductQuery),
-    [dashboard?.products, debouncedProductQuery]
+    () => filterDashboardProducts(dashboard?.products ?? [], debouncedProductQuery, statusFilter),
+    [dashboard?.products, debouncedProductQuery, statusFilter]
   );
   const branchOptions = useMemo(() => getBranchOptions(dashboard?.products ?? [], selectedBranch), [dashboard?.products, selectedBranch]);
 
   const toggleExpandedProduct = useCallback((productId: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpandedProductId((current) => (current === productId ? null : productId));
+  }, []);
+
+  const selectStatusFilter = useCallback((nextStatus: StatusFilter) => {
+    setStatusFilter(nextStatus);
+    setOnlyStopped(nextStatus === "stopped");
+    if (nextStatus !== "all") {
+      setOnlyWithStock(false);
+    }
+  }, []);
+
+  const showAllProducts = useCallback(() => {
+    setStatusFilter("all");
+    setOnlyStopped(false);
+    setOnlyWithStock(false);
   }, []);
 
   const renderProduct = useCallback(
@@ -176,378 +207,290 @@ export function DashboardScreen({ token }: Props) {
 
   return (
     <>
-    <FlatList
-      data={dashboard ? filteredProducts : []}
-      renderItem={renderProduct}
-      keyExtractor={productKeyExtractor}
-      style={styles.content}
-      contentContainerStyle={[styles.contentInner, styles.productListScreenInner]}
-      keyboardShouldPersistTaps="handled"
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadDashboard("refresh")} />}
-      initialNumToRender={12}
-      maxToRenderPerBatch={12}
-      updateCellsBatchingPeriod={45}
-      windowSize={8}
-      removeClippedSubviews
-      extraData={expandedProductId}
-      ListHeaderComponent={
-        <View style={localStyles.dashboardHeader}>
-      <View style={localStyles.filterPanel}>
-        <View style={localStyles.filterHeader}>
-          <Text style={localStyles.filterTitle}>Produto</Text>
-          <Text style={localStyles.filterHint}>Filtros rápidos</Text>
-        </View>
-
-        <Animated.View
-          style={[
-            localStyles.searchBox,
-            {
-              borderColor: searchBorderColor,
-              shadowOpacity: searchShadowOpacity
-            }
-          ]}
-        >
-          <Ionicons name="search-outline" size={18} color={searchFocused ? "#3b82f6" : "#8a95a5"} />
-          <TextInput
-            value={productQuery}
-            onChangeText={setProductQuery}
-            placeholder="Buscar produto..."
-            placeholderTextColor="#8a95a5"
-            returnKeyType="search"
-            style={localStyles.searchInput}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-            onSubmitEditing={() => setDebouncedProductQuery(productQuery)}
+      <FlatList
+        data={dashboard ? filteredProducts : []}
+        renderItem={renderProduct}
+        keyExtractor={productKeyExtractor}
+        style={localStyles.screen}
+        contentContainerStyle={localStyles.listContent}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadDashboard("refresh")} tintColor="#2563EB" />}
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        updateCellsBatchingPeriod={45}
+        windowSize={8}
+        removeClippedSubviews
+        extraData={expandedProductId}
+        ListHeaderComponent={
+          <DashboardHeaderContent
+            dashboard={dashboard}
+            loading={loading}
+            error={error}
+            productQuery={productQuery}
+            statusFilter={statusFilter}
+            onChangeProductQuery={setProductQuery}
+            onSubmitProductQuery={() => setDebouncedProductQuery(productQuery)}
+            onClearProductQuery={() => setProductQuery("")}
+            onOpenFilters={() => setFiltersVisible(true)}
+            onSelectStatusFilter={selectStatusFilter}
           />
-          {!!productQuery && (
-            <Pressable style={localStyles.clearSearchButton} onPress={() => setProductQuery("")} accessibilityLabel="Limpar busca">
-              <Ionicons name="close-outline" size={18} color="#64748b" />
-            </Pressable>
-          )}
-        </Animated.View>
+        }
+        ListEmptyComponent={
+          dashboard && !loading ? (
+            <View style={localStyles.emptyState}>
+              <Ionicons name="search-outline" size={26} color="#94A3B8" />
+              <Text style={localStyles.emptyTitle}>Nenhum produto encontrado</Text>
+              <Text style={localStyles.emptyText}>Ajuste a busca ou os filtros do dashboard.</Text>
+            </View>
+          ) : null
+        }
+      />
 
-        <Pressable style={localStyles.filtersTrigger} onPress={() => setFiltersVisible(true)}>
-          <Ionicons name="options-outline" size={18} color="#3b82f6" />
-          <Text style={localStyles.filtersTriggerText}>Filtros</Text>
-        </Pressable>
+      <Modal visible={filtersVisible} transparent animationType="slide" onRequestClose={() => setFiltersVisible(false)}>
+        <Pressable style={localStyles.sheetBackdrop} onPress={() => setFiltersVisible(false)}>
+          <Pressable style={localStyles.filterSheet} onPress={(event) => event.stopPropagation()}>
+            <View style={localStyles.sheetHandle} />
+            <View style={localStyles.sheetHeader}>
+              <Text style={localStyles.sheetTitle}>Filtros</Text>
+              <Pressable style={localStyles.sheetCloseButton} onPress={() => setFiltersVisible(false)} accessibilityLabel="Fechar filtros">
+                <Ionicons name="close-outline" size={21} color="#64748B" />
+              </Pressable>
+            </View>
 
-        <View style={localStyles.statusGroup}>
-          <Text style={localStyles.groupLabel}>Status</Text>
-          <View style={localStyles.chipRow}>
-            <FilterChip label="Todos" icon="apps-outline" selected={!onlyStopped && !onlyWithStock} onPress={showAllProducts} />
-            <FilterChip
-              label="Parados"
-              icon="pause-circle-outline"
-              selected={onlyStopped}
-              onPress={() => setOnlyStopped((current) => !current)}
-            />
-            <FilterChip
-              label="Em estoque"
-              icon="cube-outline"
-              selected={onlyWithStock}
-              onPress={() => setOnlyWithStock((current) => !current)}
-            />
-          </View>
-        </View>
-
-        <Pressable
-          style={({ pressed }) => [
-            localStyles.filterButton,
-            pressed && !loading && localStyles.filterButtonPressed,
-            loading && localStyles.filterButtonDisabled
-          ]}
-          onPress={() => loadDashboard()}
-          disabled={loading}
-        >
-          {loading ? <ActivityIndicator color="#ffffff" /> : <Ionicons name="search-outline" size={18} color="#ffffff" />}
-          <Text style={localStyles.filterButtonText}>Aplicar filtros</Text>
-        </Pressable>
-      </View>
-
-      {error && <Text style={styles.errorText}>{error}</Text>}
-
-      {loading && !dashboard && (
-        <View style={localStyles.loadingState}>
-          <ActivityIndicator color="#3b82f6" />
-        </View>
-      )}
-
-      {dashboard && (
-        <>
-          <View style={localStyles.metricsGrid}>
-            <MetricCard label="Produtos" value={dashboard.metrics.totalProducts} icon="cube-outline" />
-            <MetricCard label="Parados" value={dashboard.metrics.stoppedProducts} icon="pause-circle-outline" tone="warning" />
-            <MetricCard label="Média parada" value={`${dashboard.metrics.averageStoppedDays}d`} icon="time-outline" />
-            <MetricCard label="Unidades" value={dashboard.metrics.totalUnitsInStock} icon="layers-outline" />
-          </View>
-
-          {dashboard.metrics.oldestProduct && (
-            <View style={[localStyles.insightCard, localStyles.hiddenSection]}>
-              <View style={localStyles.insightIcon}>
-                <Ionicons name="trending-down-outline" size={22} color="#B45309" />
-              </View>
-              <View style={localStyles.insightText}>
-                <Text style={localStyles.insightTitle}>Maior tempo parado</Text>
-                <Text style={localStyles.insightBody}>
-                  {dashboard.metrics.oldestProduct.name} está parado há {dashboard.metrics.oldestProduct.daysStopped || 0} dias com{" "}
-                  {dashboard.metrics.oldestProduct.totalQuantity} unidade(s) no estoque.
-                </Text>
+            <View style={localStyles.sheetSection}>
+              <Text style={localStyles.groupLabel}>Status</Text>
+              <View style={localStyles.sheetChipRow}>
+                <SheetChip label="Todos" icon="apps-outline" selected={statusFilter === "all" && !onlyStopped && !onlyWithStock} onPress={showAllProducts} />
+                <SheetChip
+                  label="Sem estoque"
+                  icon="alert-circle-outline"
+                  selected={statusFilter === "out_of_stock"}
+                  onPress={() => selectStatusFilter("out_of_stock")}
+                />
+                <SheetChip
+                  label="Sem movimento"
+                  icon="remove-circle-outline"
+                  selected={statusFilter === "without_movement"}
+                  onPress={() => selectStatusFilter("without_movement")}
+                />
+                <SheetChip label="Parado" icon="pause-circle-outline" selected={statusFilter === "stopped"} onPress={() => selectStatusFilter("stopped")} />
+                <SheetChip
+                  label="Com estoque"
+                  icon="cube-outline"
+                  selected={onlyWithStock}
+                  onPress={() => {
+                    setOnlyWithStock((current) => !current);
+                    setStatusFilter("all");
+                  }}
+                />
               </View>
             </View>
-          )}
 
-              <View style={localStyles.hiddenSection}>
-                <Text style={styles.sectionTitle}>Tempo parado</Text>
-                <ScrollView
-                  horizontal
-                  nestedScrollEnabled
-                  directionalLockEnabled
-                  keyboardShouldPersistTaps="handled"
-                  showsHorizontalScrollIndicator={false}
-                  style={localStyles.bucketScroller}
-                  contentContainerStyle={localStyles.bucketChipRow}
+            <View style={localStyles.sheetSection}>
+              <Text style={localStyles.groupLabel}>Filial</Text>
+              <View style={localStyles.sheetChipRow}>
+                <SheetChip label="Todas" icon="git-branch-outline" selected={!selectedBranch} onPress={() => setSelectedBranch("")} />
+                {branchOptions.map((branch) => (
+                  <SheetChip
+                    key={branch}
+                    label={branch}
+                    icon="business-outline"
+                    selected={selectedBranch === branch}
+                    onPress={() => setSelectedBranch((current) => (current === branch ? "" : branch))}
+                  />
+                ))}
+              </View>
+            </View>
+
+            <View style={localStyles.sheetSection}>
+              <Text style={localStyles.groupLabel}>Datas</Text>
+              <View style={localStyles.sheetChipRow}>
+                {DATE_PRESETS.map((preset) => (
+                  <SheetChip
+                    key={preset.id}
+                    label={preset.label}
+                    icon="calendar-outline"
+                    selected={datePreset === preset.id}
+                    onPress={() => setDatePreset(preset.id)}
+                  />
+                ))}
+              </View>
+            </View>
+
+            <View style={localStyles.sheetSection}>
+              <Text style={localStyles.groupLabel}>Outros filtros</Text>
+              <View style={localStyles.sheetChipRow}>
+                {SORT_OPTIONS.map((option) => (
+                  <SheetChip
+                    key={option.id}
+                    label={option.label}
+                    icon="swap-vertical-outline"
+                    selected={sortOption === option.id}
+                    onPress={() => setSortOption(option.id)}
+                  />
+                ))}
+              </View>
+            </View>
+
+            {dashboard && (
+              <View style={localStyles.sheetSection}>
+                <Pressable
+                  style={localStyles.indicatorsHeader}
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setIndicatorsExpanded((current) => !current);
+                  }}
                 >
-                  {Object.entries(dashboard.agingBuckets).map(([key, value]) => (
-                    <View key={key} style={localStyles.bucketChip}>
-                      <Text style={localStyles.bucketValue}>{value}</Text>
-                      <Text style={localStyles.bucketLabel} numberOfLines={1}>
-                        {BUCKET_LABELS[key as keyof typeof BUCKET_LABELS]}
-                      </Text>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
+                  <View style={localStyles.indicatorsTitleRow}>
+                    <Ionicons name="analytics-outline" size={18} color="#2563EB" />
+                    <Text style={localStyles.indicatorsTitle}>Indicadores</Text>
+                  </View>
+                  <Ionicons name={indicatorsExpanded ? "chevron-up-outline" : "chevron-down-outline"} size={19} color="#2563EB" />
+                </Pressable>
 
-          <View style={localStyles.listHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>Produtos analisados</Text>
-              <Text style={styles.sectionSubtitle}>{filteredProducts.length} item(ns) no filtro atual</Text>
-            </View>
-            <Text style={styles.meta}>{formatDateTime(dashboard.generatedAt)}</Text>
-          </View>
-        </>
-      )}
-        </View>
-      }
-      ListEmptyComponent={
-        dashboard && !loading ? (
-          <View style={localStyles.emptyState}>
-            <Ionicons name="search-outline" size={28} color="#64748b" />
-            <Text style={localStyles.emptyTitle}>Nenhum produto encontrado</Text>
-            <Text style={styles.mutedText}>Ajuste a busca ou os filtros do dashboard.</Text>
-          </View>
-        ) : null
-      }
-      ListFooterComponent={null}
-      /*
-      ListFooterComponent={
-        dashboard ? (
-          <View style={localStyles.indicatorsAccordion}>
-            <Pressable
-              style={localStyles.indicatorsHeader}
-              onPress={() => {
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                setIndicatorsExpanded((current) => !current);
-              }}
-            >
-              <View style={localStyles.indicatorsTitleRow}>
-                <Ionicons name="analytics-outline" size={18} color="#3b82f6" />
-                <Text style={localStyles.indicatorsTitle}>Indicadores</Text>
-              </View>
-              <Ionicons name={indicatorsExpanded ? "chevron-up-outline" : "chevron-down-outline"} size={19} color="#3b82f6" />
-            </Pressable>
+                {indicatorsExpanded && (
+                  <View style={localStyles.indicatorsBody}>
+                    {dashboard.metrics.oldestProduct && (
+                      <View style={localStyles.insightCard}>
+                        <View style={localStyles.insightIcon}>
+                          <Ionicons name="trending-down-outline" size={20} color="#B45309" />
+                        </View>
+                        <View style={localStyles.insightText}>
+                          <Text style={localStyles.insightTitle}>Maior tempo parado</Text>
+                          <Text style={localStyles.insightBody}>
+                            {dashboard.metrics.oldestProduct.name} está parado há {dashboard.metrics.oldestProduct.daysStopped || 0} dias com{" "}
+                            {dashboard.metrics.oldestProduct.totalQuantity} unidade(s) no estoque.
+                          </Text>
+                        </View>
+                      </View>
+                    )}
 
-            {indicatorsExpanded && (
-              <View style={localStyles.indicatorsBody}>
-                {dashboard.metrics.oldestProduct && (
-                  <View style={localStyles.insightCard}>
-                    <View style={localStyles.insightIcon}>
-                      <Ionicons name="trending-down-outline" size={20} color="#B45309" />
-                    </View>
-                    <View style={localStyles.insightText}>
-                      <Text style={localStyles.insightTitle}>Maior tempo parado</Text>
-                      <Text style={localStyles.insightBody}>
-                        {dashboard.metrics.oldestProduct.name} está parado há {dashboard.metrics.oldestProduct.daysStopped || 0} dias com{" "}
-                        {dashboard.metrics.oldestProduct.totalQuantity} unidade(s) no estoque.
-                      </Text>
+                    <View style={localStyles.bucketPanel}>
+                      <Text style={localStyles.indicatorsSubtitle}>Tempo parado</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={localStyles.bucketChipRow}>
+                        {Object.entries(dashboard.agingBuckets).map(([key, value]) => (
+                          <View key={key} style={localStyles.bucketChip}>
+                            <Text style={localStyles.bucketValue}>{value}</Text>
+                            <Text style={localStyles.bucketLabel} numberOfLines={1}>
+                              {BUCKET_LABELS[key as keyof typeof BUCKET_LABELS]}
+                            </Text>
+                          </View>
+                        ))}
+                      </ScrollView>
                     </View>
                   </View>
                 )}
-
-                <View style={localStyles.bucketPanel}>
-                  <Text style={localStyles.indicatorsSubtitle}>Tempo parado</Text>
-                  <ScrollView
-                    horizontal
-                    nestedScrollEnabled
-                    directionalLockEnabled
-                    keyboardShouldPersistTaps="handled"
-                    showsHorizontalScrollIndicator={false}
-                    style={localStyles.bucketScroller}
-                    contentContainerStyle={localStyles.bucketChipRow}
-                  >
-                    {Object.entries(dashboard.agingBuckets).map(([key, value]) => (
-                      <View key={key} style={localStyles.bucketChip}>
-                        <Text style={localStyles.bucketValue}>{value}</Text>
-                        <Text style={localStyles.bucketLabel} numberOfLines={1}>
-                          {BUCKET_LABELS[key as keyof typeof BUCKET_LABELS]}
-                        </Text>
-                      </View>
-                    ))}
-                  </ScrollView>
-                </View>
               </View>
             )}
-          </View>
-        ) : null
-      }
-      */
-    />
-    <Modal visible={filtersVisible} transparent animationType="slide" onRequestClose={() => setFiltersVisible(false)}>
-      <Pressable style={localStyles.sheetBackdrop} onPress={() => setFiltersVisible(false)}>
-        <Pressable style={localStyles.filterSheet} onPress={(event) => event.stopPropagation()}>
-          <View style={localStyles.sheetHandle} />
-          <View style={localStyles.sheetHeader}>
-            <Text style={localStyles.sheetTitle}>Filtros</Text>
-            <Pressable style={localStyles.sheetCloseButton} onPress={() => setFiltersVisible(false)} accessibilityLabel="Fechar filtros">
-              <Ionicons name="close-outline" size={21} color="#64748b" />
+
+            <Pressable style={localStyles.sheetApplyButton} onPress={() => setFiltersVisible(false)}>
+              <Text style={localStyles.sheetApplyButtonText}>Aplicar filtros</Text>
             </Pressable>
-          </View>
-
-          <View style={localStyles.sheetSection}>
-            <Text style={localStyles.groupLabel}>Status</Text>
-            <View style={localStyles.chipRow}>
-              <FilterChip label="Todos" icon="apps-outline" selected={!onlyStopped && !onlyWithStock} onPress={showAllProducts} />
-              <FilterChip
-                label="Parados"
-                icon="pause-circle-outline"
-                selected={onlyStopped}
-                onPress={() => setOnlyStopped((current) => !current)}
-              />
-              <FilterChip
-                label="Em estoque"
-                icon="cube-outline"
-                selected={onlyWithStock}
-                onPress={() => setOnlyWithStock((current) => !current)}
-              />
-            </View>
-          </View>
-
-          <View style={localStyles.sheetSection}>
-            <Text style={localStyles.groupLabel}>Filial</Text>
-            <View style={localStyles.chipRow}>
-              <FilterChip label="Todas" icon="git-branch-outline" selected={!selectedBranch} onPress={() => setSelectedBranch("")} />
-              {branchOptions.map((branch) => (
-                <FilterChip
-                  key={branch}
-                  label={branch}
-                  icon="business-outline"
-                  selected={selectedBranch === branch}
-                  onPress={() => setSelectedBranch((current) => (current === branch ? "" : branch))}
-                />
-              ))}
-            </View>
-          </View>
-
-          <View style={localStyles.sheetSection}>
-            <Text style={localStyles.groupLabel}>Datas</Text>
-            <View style={localStyles.chipRow}>
-              {DATE_PRESETS.map((preset) => (
-                <FilterChip
-                  key={preset.id}
-                  label={preset.label}
-                  icon="calendar-outline"
-                  selected={datePreset === preset.id}
-                  onPress={() => setDatePreset(preset.id)}
-                />
-              ))}
-            </View>
-          </View>
-
-          <View style={localStyles.sheetSection}>
-            <Text style={localStyles.groupLabel}>Outros filtros</Text>
-            <View style={localStyles.chipRow}>
-              {SORT_OPTIONS.map((option) => (
-                <FilterChip
-                  key={option.id}
-                  label={option.label}
-                  icon="swap-vertical-outline"
-                  selected={sortOption === option.id}
-                  onPress={() => setSortOption(option.id)}
-                />
-              ))}
-            </View>
-          </View>
-
-          {dashboard && (
-            <View style={localStyles.sheetSection}>
-              <Pressable
-                style={localStyles.indicatorsHeader}
-                onPress={() => {
-                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                  setIndicatorsExpanded((current) => !current);
-                }}
-              >
-                <View style={localStyles.indicatorsTitleRow}>
-                  <Ionicons name="analytics-outline" size={18} color="#3b82f6" />
-                  <Text style={localStyles.indicatorsTitle}>Indicadores</Text>
-                </View>
-                <Ionicons name={indicatorsExpanded ? "chevron-up-outline" : "chevron-down-outline"} size={19} color="#3b82f6" />
-              </Pressable>
-
-              {indicatorsExpanded && (
-                <View style={localStyles.indicatorsBody}>
-                  {dashboard.metrics.oldestProduct && (
-                    <View style={localStyles.insightCard}>
-                      <View style={localStyles.insightIcon}>
-                        <Ionicons name="trending-down-outline" size={20} color="#B45309" />
-                      </View>
-                      <View style={localStyles.insightText}>
-                        <Text style={localStyles.insightTitle}>Maior tempo parado</Text>
-                        <Text style={localStyles.insightBody}>
-                          {dashboard.metrics.oldestProduct.name} está parado há {dashboard.metrics.oldestProduct.daysStopped || 0} dias com{" "}
-                          {dashboard.metrics.oldestProduct.totalQuantity} unidade(s) no estoque.
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-
-                  <View style={localStyles.bucketPanel}>
-                    <Text style={localStyles.indicatorsSubtitle}>Tempo parado</Text>
-                    <ScrollView
-                      horizontal
-                      nestedScrollEnabled
-                      directionalLockEnabled
-                      keyboardShouldPersistTaps="handled"
-                      showsHorizontalScrollIndicator={false}
-                      style={localStyles.bucketScroller}
-                      contentContainerStyle={localStyles.bucketChipRow}
-                    >
-                      {Object.entries(dashboard.agingBuckets).map(([key, value]) => (
-                        <View key={key} style={localStyles.bucketChip}>
-                          <Text style={localStyles.bucketValue}>{value}</Text>
-                          <Text style={localStyles.bucketLabel} numberOfLines={1}>
-                            {BUCKET_LABELS[key as keyof typeof BUCKET_LABELS]}
-                          </Text>
-                        </View>
-                      ))}
-                    </ScrollView>
-                  </View>
-                </View>
-              )}
-            </View>
-          )}
-
-          <Pressable style={localStyles.sheetApplyButton} onPress={() => setFiltersVisible(false)}>
-            <Text style={localStyles.sheetApplyButtonText}>Aplicar filtros</Text>
           </Pressable>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </Modal>
     </>
   );
 }
 
-function FilterChip({
+function DashboardHeaderContent({
+  dashboard,
+  loading,
+  error,
+  productQuery,
+  statusFilter,
+  onChangeProductQuery,
+  onSubmitProductQuery,
+  onClearProductQuery,
+  onOpenFilters,
+  onSelectStatusFilter
+}: {
+  dashboard: InventoryDashboard | null;
+  loading: boolean;
+  error: string | null;
+  productQuery: string;
+  statusFilter: StatusFilter;
+  onChangeProductQuery: (value: string) => void;
+  onSubmitProductQuery: () => void;
+  onClearProductQuery: () => void;
+  onOpenFilters: () => void;
+  onSelectStatusFilter: (status: StatusFilter) => void;
+}) {
+  return (
+    <View style={localStyles.dashboardHeader}>
+      <Text style={localStyles.contextText}>VISÃO GERAL · {formatDashboardDate(dashboard?.generatedAt)}</Text>
+
+      {dashboard && (
+        <View style={localStyles.metricsRow}>
+          <MetricCard label="Produtos" value={dashboard.metrics.totalProducts} icon="cube-outline" tone="blue" />
+          <MetricCard label="Parados" value={dashboard.metrics.stoppedProducts} icon="trending-down-outline" tone="red" />
+          <MetricCard label="Média\nparada" value={`${dashboard.metrics.averageStoppedDays}d`} icon="time-outline" tone="orange" />
+        </View>
+      )}
+
+      {loading && !dashboard && (
+        <View style={localStyles.loadingState}>
+          <ActivityIndicator color="#2563EB" />
+        </View>
+      )}
+
+      {error && <Text style={styles.errorText}>{error}</Text>}
+
+      <View style={localStyles.searchRow}>
+        <View style={localStyles.searchBox}>
+          <Ionicons name="search-outline" size={17} color="#94A3B8" />
+          <TextInput
+            value={productQuery}
+            onChangeText={onChangeProductQuery}
+            placeholder="Buscar produto..."
+            placeholderTextColor="#94A3B8"
+            returnKeyType="search"
+            style={localStyles.searchInput}
+            onSubmitEditing={onSubmitProductQuery}
+          />
+          {!!productQuery && (
+            <Pressable style={localStyles.clearSearchButton} onPress={onClearProductQuery} accessibilityRole="button" accessibilityLabel="Limpar busca">
+              <Ionicons name="close-outline" size={17} color="#94A3B8" />
+            </Pressable>
+          )}
+        </View>
+
+        <Pressable style={({ pressed }) => [localStyles.filtersTrigger, pressed && localStyles.pressed]} onPress={onOpenFilters} accessibilityRole="button">
+          <Ionicons name="options-outline" size={17} color="#071426" />
+          <Text style={localStyles.filtersTriggerText}>Filtros</Text>
+        </Pressable>
+      </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={localStyles.statusChipRow}
+        keyboardShouldPersistTaps="handled"
+      >
+        {STATUS_CHIPS.map((chip) => (
+          <StatusChip key={chip.id} label={chip.label} selected={statusFilter === chip.id} onPress={() => onSelectStatusFilter(chip.id)} />
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+function StatusChip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      style={({ pressed }) => [localStyles.statusChip, selected && localStyles.statusChipSelected, pressed && localStyles.pressed]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+    >
+      <Text style={[localStyles.statusChipText, selected && localStyles.statusChipTextSelected]} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function SheetChip({
   label,
   icon,
   selected,
@@ -560,15 +503,13 @@ function FilterChip({
 }) {
   return (
     <Pressable
-      style={({ pressed }) => [
-        localStyles.filterChip,
-        selected && localStyles.filterChipSelected,
-        pressed && localStyles.filterChipPressed
-      ]}
+      style={({ pressed }) => [localStyles.sheetChip, selected && localStyles.sheetChipSelected, pressed && localStyles.pressed]}
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
     >
-      <Ionicons name={icon} size={15} color={selected ? "#ffffff" : "#5f6d7d"} />
-      <Text style={[localStyles.filterChipText, selected && localStyles.filterChipTextSelected]} numberOfLines={1}>
+      <Ionicons name={icon} size={14} color={selected ? "#FFFFFF" : "#64748B"} />
+      <Text style={[localStyles.sheetChipText, selected && localStyles.sheetChipTextSelected]} numberOfLines={1}>
         {label}
       </Text>
     </Pressable>
@@ -579,26 +520,27 @@ function MetricCard({
   label,
   value,
   icon,
-  tone = "default"
+  tone
 }: {
   label: string;
   value: number | string;
   icon: keyof typeof Ionicons.glyphMap;
-  tone?: "default" | "warning";
+  tone: "blue" | "red" | "orange";
 }) {
+  const toneStyle = tone === "red" ? localStyles.metricIconRed : tone === "orange" ? localStyles.metricIconOrange : localStyles.metricIconBlue;
+  const iconColor = tone === "red" ? "#EF4444" : tone === "orange" ? "#F59E0B" : "#2563EB";
+
   return (
     <View style={localStyles.metricCard}>
-      <View style={localStyles.metricTop}>
-        <View style={[localStyles.metricIcon, tone === "warning" && localStyles.metricIconWarning]}>
-          <Ionicons name={icon} size={15} color={tone === "warning" ? "#B45309" : "#3b82f6"} />
-        </View>
+      <View style={localStyles.metricHeader}>
         <Text style={localStyles.metricNumber} numberOfLines={1} adjustsFontSizeToFit>
           {value}
         </Text>
+        <View style={[localStyles.metricIcon, toneStyle]}>
+          <Ionicons name={icon} size={14} color={iconColor} />
+        </View>
       </View>
-      <Text style={localStyles.metricText} numberOfLines={1} adjustsFontSizeToFit>
-        {label}
-      </Text>
+      <Text style={localStyles.metricText}>{label}</Text>
     </View>
   );
 }
@@ -617,62 +559,66 @@ const DashboardProductCard = memo(function DashboardProductCard({
   const handleToggle = useCallback(() => onToggle(product.id), [onToggle, product.id]);
 
   return (
-    <Pressable style={[localStyles.productCard, expanded && localStyles.productCardExpanded]} onPress={handleToggle}>
-      <View style={localStyles.productTop}>
-        <View style={localStyles.productTitleArea}>
-          <View style={localStyles.productTitleRow}>
-            <Text style={localStyles.productName} numberOfLines={2} ellipsizeMode="tail">
-              {product.name}
-            </Text>
-            <Text style={localStyles.productMeta} numberOfLines={1}>
-              EAN {product.ean}
-            </Text>
-          </View>
-        </View>
-        <View style={localStyles.compactSummary}>
-          
+    <Pressable
+      style={({ pressed }) => [localStyles.productCard, expanded && localStyles.productCardExpanded, pressed && localStyles.cardPressed]}
+      onPress={handleToggle}
+      accessibilityRole="button"
+      accessibilityLabel={`Produto ${product.name}`}
+    >
+      <View style={[localStyles.statusRail, { backgroundColor: status.sideColor }]} />
+
+      <View style={localStyles.productMain}>
+        <Text style={localStyles.productName} numberOfLines={2} ellipsizeMode="tail">
+          {product.name}
+        </Text>
+
+        <View style={localStyles.productMetaRow}>
           <View style={[localStyles.statusBadge, { backgroundColor: status.backgroundColor }]}>
-            <Ionicons name={status.icon} size={13} color={status.color} />
             <Text style={[localStyles.statusText, { color: status.color }]} numberOfLines={1}>
               {status.label}
             </Text>
           </View>
-        
-          <View style={localStyles.expandButton}>
-            <Ionicons name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={18} color="#3b82f6" />
-          </View>
+          <Text style={localStyles.productCode} numberOfLines={1} ellipsizeMode="tail">
+            {product.ean}
+          </Text>
         </View>
+
+        {expanded && (
+          <View style={localStyles.productDetails}>
+            <View style={localStyles.productNumbers}>
+              <SmallNumber label="Total" value={product.totalQuantity} />
+              <SmallNumber label="Central" value={product.centralQuantity} />
+              <SmallNumber label="Filiais" value={product.branchQuantity} />
+              <SmallNumber label="Parado" value={stoppedLabel} />
+            </View>
+
+            <View style={localStyles.hintRow}>
+              <Ionicons name="bulb-outline" size={16} color="#B45309" />
+              <Text style={localStyles.hintText}>{product.managementHint}</Text>
+            </View>
+
+            {!!product.lastMovementAt && <Text style={localStyles.detailMeta}>Última movimentação: {formatDateTime(product.lastMovementAt)}</Text>}
+
+            {product.branchStocks.length > 0 && (
+              <View style={localStyles.branchChips}>
+                {product.branchStocks.map((branch) => (
+                  <Text key={branch.branchName} style={localStyles.branchChip}>
+                    {branch.branchName}: {branch.quantity}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
       </View>
 
-      {expanded && (
-        <View style={localStyles.productDetails}>
-          <View style={localStyles.productNumbers}>
-            <SmallNumber label="Total" value={product.totalQuantity} />
-            <SmallNumber label="Central" value={product.centralQuantity} />
-            <SmallNumber label="Filiais" value={product.branchQuantity} />
-            <SmallNumber label="Parado" value={stoppedLabel} />
-          </View>
-
-          <View style={localStyles.hintRow}>
-            <Ionicons name="bulb-outline" size={17} color="#B45309" />
-            <Text style={localStyles.hintText}>{product.managementHint}</Text>
-          </View>
-
-          {!!product.lastMovementAt && (
-            <Text style={localStyles.detailMeta}>Última movimentação: {formatDateTime(product.lastMovementAt)}</Text>
-          )}
-
-          {product.branchStocks.length > 0 && (
-            <View style={localStyles.branchChips}>
-              {product.branchStocks.map((branch) => (
-                <Text key={branch.branchName} style={localStyles.branchChip}>
-                  {branch.branchName}: {branch.quantity}
-                </Text>
-              ))}
-            </View>
-          )}
-        </View>
-      )}
+      <View style={localStyles.quantityArea}>
+        <Text style={localStyles.quantityText} numberOfLines={1} adjustsFontSizeToFit>
+          {formatQuantity(product.totalQuantity)}
+        </Text>
+        <Text style={localStyles.unitText}>{getProductUnit(product)}</Text>
+        <Ionicons name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={16} color="#8AA1C1" style={localStyles.expandIcon} />
+      </View>
     </Pressable>
   );
 });
@@ -686,14 +632,15 @@ function SmallNumber({ label, value }: { label: string; value: number | string }
   );
 }
 
-function filterDashboardProducts(products: DashboardProduct[], query: string) {
+function filterDashboardProducts(products: DashboardProduct[], query: string, statusFilter: StatusFilter) {
   const normalizedQuery = normalizeSearch(query);
 
-  if (!normalizedQuery) {
-    return products;
-  }
-
-  return products.filter((product) => getDashboardProductSearchText(product).includes(normalizedQuery));
+  return products.filter((product) => {
+    const matchesStatus = statusFilter === "all" ? true : product.status === statusFilter;
+    if (!matchesStatus) return false;
+    if (!normalizedQuery) return true;
+    return getDashboardProductSearchText(product).includes(normalizedQuery);
+  });
 }
 
 function getPresetStartDate(preset: DatePreset) {
@@ -764,437 +711,325 @@ function formatDateTime(value: string) {
   });
 }
 
+function formatDashboardDate(value?: string) {
+  if (!value) return "--/--/----";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--/--/----";
+
+  return date.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  });
+}
+
+function formatQuantity(value: number) {
+  return Number.isInteger(value) ? String(value) : String(value).replace(".", ",");
+}
+
+function getProductUnit(product: DashboardProduct) {
+  const productWithUnit = product as DashboardProduct & {
+    unit?: string;
+    measureUnit?: string;
+    unidade?: string;
+  };
+
+  return productWithUnit.unit || productWithUnit.measureUnit || productWithUnit.unidade || "un";
+}
+
 const localStyles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: "#F7F9FC"
+  },
+  listContent: {
+    paddingHorizontal: 11,
+    paddingTop: 12,
+    paddingBottom: 22,
+    gap: 10
+  },
   dashboardHeader: {
-    gap: 8
+    gap: 10
   },
-  filterPanel: {
+  contextText: {
+    color: "#94A3B8",
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: "900",
+    letterSpacing: 0
+  },
+  metricsRow: {
     flexDirection: "row",
-    alignItems: "center",
     gap: 8
   },
-  filterHeader: {
-    display: "none",
+  metricCard: {
+    flex: 1,
+    minHeight: 73,
+    borderWidth: 1,
+    borderColor: "#DCE3EE",
+    borderRadius: 11,
+    paddingHorizontal: 11,
+    paddingTop: 11,
+    paddingBottom: 9,
+    backgroundColor: "#FFFFFF",
+    ...softShadow
+  },
+  metricHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 8,
+    gap: 4
   },
-  filterTitle: {
-    color: "#1f2937",
-    fontSize: 14,
+  metricNumber: {
+    flex: 1,
+    minWidth: 0,
+    color: "#020617",
+    fontSize: 22,
+    lineHeight: 25,
+    fontWeight: "900"
+  },
+  metricIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  metricIconBlue: {
+    backgroundColor: "#EAF2FF"
+  },
+  metricIconRed: {
+    backgroundColor: "#FFECEE"
+  },
+  metricIconOrange: {
+    backgroundColor: "#FFF7E6"
+  },
+  metricText: {
+    marginTop: 2,
+    color: "#64748B",
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "600"
   },
-  filterHint: {
-    color: "#8a95a5",
-    fontSize: 11,
-    fontWeight: "600"
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
   },
   searchBox: {
     flex: 1,
-    minHeight: 42,
+    minHeight: 38,
     borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 12,
+    borderColor: "#DCE3EE",
+    borderRadius: 11,
+    paddingHorizontal: 10,
     flexDirection: "row",
     alignItems: "center",
-    gap: 9,
-    backgroundColor: "#fbfdff",
-    shadowColor: "#3b82f6",
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 14,
-    elevation: 1
+    gap: 7,
+    backgroundColor: "#FBFDFF"
   },
   searchInput: {
     flex: 1,
     minWidth: 0,
-    minHeight: 40,
+    minHeight: 36,
     paddingVertical: 0,
-    color: "#1f2937",
-    fontSize: 14,
-    fontWeight: "600"
+    color: "#071426",
+    fontSize: 13,
+    lineHeight: 16,
+    fontWeight: "500"
   },
   clearSearchButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#eef4fb"
+    justifyContent: "center"
   },
   filtersTrigger: {
-    minHeight: 42,
+    minHeight: 38,
     borderWidth: 1,
-    borderColor: "#dbe7f5",
-    borderRadius: 14,
+    borderColor: "#DCE3EE",
+    borderRadius: 10,
     paddingHorizontal: 11,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
-    backgroundColor: "#ffffff"
+    backgroundColor: "#FFFFFF"
   },
   filtersTriggerText: {
-    color: "#3b82f6",
+    color: "#071426",
     fontSize: 12,
-    fontWeight: "900"
-  },
-  statusGroup: {
-    display: "none",
-    gap: 10
-  },
-  groupLabel: {
-    color: "#596579",
-    fontSize: 12,
-    fontWeight: "600"
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8
-  },
-  filterChip: {
-    minHeight: 34,
-    borderWidth: 1,
-    borderColor: "#e5ebf3",
-    borderRadius: 17,
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#f7f9fc"
-  },
-  filterChipSelected: {
-    borderColor: "#3b82f6",
-    backgroundColor: "#3b82f6",
-    shadowColor: "#3b82f6",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.16,
-    shadowRadius: 10,
-    elevation: 2
-  },
-  filterChipPressed: {
-    opacity: 0.82,
-    transform: [{ scale: 0.98 }]
-  },
-  filterChipText: {
-    color: "#5f6d7d",
-    fontSize: 12,
-    fontWeight: "700"
-  },
-  filterChipTextSelected: {
-    color: "#ffffff"
-  },
-  filterButton: {
-    display: "none",
-    minHeight: 46,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#3b82f6",
-    shadowColor: "#2563eb",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.16,
-    shadowRadius: 14,
-    elevation: 3
-  },
-  filterButtonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.99 }]
-  },
-  filterButtonDisabled: {
-    opacity: 0.65
-  },
-  filterButtonText: {
-    color: "#ffffff",
-    fontSize: 14,
+    lineHeight: 15,
     fontWeight: "800"
   },
-  metricsGrid: {
+  statusChipRow: {
     flexDirection: "row",
+    gap: 8,
+    paddingRight: 2
+  },
+  statusChip: {
+    minHeight: 28,
+    borderRadius: 999,
+    paddingHorizontal: 13,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 0,
-    borderRadius: 12,
-    paddingHorizontal: 2,
-    paddingVertical: 4,
-    backgroundColor: "#ffffff"
+    backgroundColor: "#F1F5F9"
   },
-  metricCard: {
-    width: "25%",
-    minHeight: 42,
-    paddingHorizontal: 1,
-    paddingVertical: 4,
+  statusChipSelected: {
+    backgroundColor: "#2563EB"
+  },
+  statusChipText: {
+    color: "#071426",
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "800"
+  },
+  statusChipTextSelected: {
+    color: "#FFFFFF"
+  },
+  loadingState: {
+    minHeight: 78,
     alignItems: "center",
     justifyContent: "center"
   },
-  metricTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-    gap: 3
-  },
-  metricIcon: {
-    width: 18,
-    height: 18,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#eaf4ff"
-  },
-  metricIconWarning: {
-    backgroundColor: "#FFF4D6"
-  },
-  metricNumber: {
-    color: "#1f2937",
-    fontSize: 14,
-    fontWeight: "900"
-  },
-  metricText: {
-    marginTop: 2,
-    color: "#64748b",
-    width: "100%",
-    fontSize: 8,
-    textAlign: "center",
-    fontWeight: "800"
-  },
-  insightCard: {
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderLeftWidth: 4,
-    borderLeftColor: "#F59E0B",
-    borderRadius: 8,
-    padding: 12,
-    flexDirection: "row",
-    gap: 10,
-    backgroundColor: "#ffffff",
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.05,
-    shadowRadius: 18,
-    elevation: 2
-  },
-  insightIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFF4D6"
-  },
-  insightText: {
-    flex: 1
-  },
-  insightTitle: {
-    color: "#1F2937",
-    fontSize: 14,
-    fontWeight: "900"
-  },
-  insightBody: {
-    marginTop: 3,
-    color: "#64748B",
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "700"
-  },
-  bucketPanel: {
-    gap: 8
-  },
-  bucketScroller: {
-    width: "100%"
-  },
-  bucketChipRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingRight: 28
-  },
-  bucketChip: {
-    minWidth: 86,
-    minHeight: 46,
-    borderWidth: 1,
-    borderColor: "#d8dee9",
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    justifyContent: "center",
-    backgroundColor: "#ffffff"
-  },
-  bucketValue: {
-    color: "#3b82f6",
-    fontSize: 16,
-    lineHeight: 19,
-    fontWeight: "900"
-  },
-  bucketLabel: {
-    marginTop: 1,
-    color: "#475569",
-    fontSize: 10,
-    lineHeight: 12,
-    fontWeight: "800"
-  },
-  listHeader: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 10
-  },
   emptyState: {
-    minHeight: 140,
+    minHeight: 130,
     borderWidth: 1,
-    borderColor: "#d8dee9",
-    borderRadius: 8,
+    borderColor: "#DCE3EE",
+    borderRadius: 10,
     padding: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f8fafc"
+    backgroundColor: "#FFFFFF"
   },
   emptyTitle: {
     marginTop: 8,
-    color: "#1f2937",
-    fontSize: 16,
+    color: "#020617",
+    fontSize: 15,
     fontWeight: "900"
   },
-  hiddenSection: {
-    display: "none"
-  },
-  loadingState: {
-    minHeight: 96,
-    alignItems: "center",
-    justifyContent: "center"
+  emptyText: {
+    marginTop: 4,
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center"
   },
   productCard: {
-    width: "100%",
+    minHeight: 69,
     borderWidth: 1,
-    borderColor: "#d8dee9",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    backgroundColor: "#ffffff",
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.04,
-    shadowRadius: 14,
-    elevation: 1
+    borderColor: "#DCE3EE",
+    borderRadius: 11,
+    paddingHorizontal: 11,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: "#FFFFFF",
+    ...softShadow
   },
   productCardExpanded: {
-    borderColor: "#bfdbfe"
+    borderColor: "#BFDBFE"
   },
-  productTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8
+  cardPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.995 }]
   },
-  productTitleArea: {
+  statusRail: {
+    width: 6,
+    minHeight: 37,
+    borderRadius: 999,
+    marginTop: 5
+  },
+  productMain: {
     flex: 1,
     minWidth: 0
   },
-  productTitleRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    flexWrap: "wrap",
-    columnGap: 8,
-    rowGap: 2
-  },
   productName: {
-    color: "#1f2937",
-    fontSize: 15,
-    lineHeight: 20,
-    fontWeight: "900",
-    flexShrink: 1,
-    minWidth: "48%",
-    maxWidth: "100%"
-  },
-  productMeta: {
-    color: "#64748b",
-    fontSize: 10,
-    lineHeight: 14,
-    fontWeight: "800",
-    flexShrink: 1,
-    maxWidth: "100%"
-  },
-  detailMeta: {
-    color: "#64748b",
-    fontSize: 12,
+    color: "#020617",
+    fontSize: 13,
     lineHeight: 17,
-    fontWeight: "800"
+    fontWeight: "900"
   },
-  compactSummary: {
+  productMetaRow: {
+    marginTop: 5,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 6
-  },
-  compactQuantity: {
-    minWidth: 28,
-    color: "#3b82f6",
-    fontSize: 17,
-    lineHeight: 21,
-    textAlign: "right",
-    fontWeight: "900"
+    gap: 7
   },
   statusBadge: {
-    minHeight: 26,
-    borderRadius: 8,
+    minHeight: 18,
+    borderRadius: 999,
     paddingHorizontal: 7,
-    flexDirection: "row",
     alignItems: "center",
-    gap: 4
+    justifyContent: "center"
   },
   statusText: {
-    fontSize: 10,
+    fontSize: 9,
+    lineHeight: 12,
     fontWeight: "900"
   },
-  daysBadge: {
-    minHeight: 26,
-    borderRadius: 8,
-    paddingHorizontal: 7,
-    paddingTop: 5,
-    overflow: "hidden",
-    color: "#1f2937",
-    backgroundColor: "#f1f5f9",
-    fontSize: 11,
-    fontWeight: "900"
+  productCode: {
+    flex: 1,
+    minWidth: 0,
+    color: "#94A3B8",
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: "700"
   },
-  expandButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 12,
+  quantityArea: {
+    width: 39,
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#eaf4ff"
+    paddingTop: 1
+  },
+  quantityText: {
+    width: "100%",
+    color: "#020617",
+    fontSize: 17,
+    lineHeight: 21,
+    textAlign: "center",
+    fontWeight: "900"
+  },
+  unitText: {
+    marginTop: 1,
+    color: "#8AA1C1",
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: "800",
+    textAlign: "center"
+  },
+  expandIcon: {
+    marginTop: 5
   },
   productDetails: {
-    gap: 10,
+    gap: 9,
     marginTop: 10
   },
   productNumbers: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8
+    gap: 7
   },
   smallNumber: {
     flexGrow: 1,
     flexBasis: "23%",
-    minWidth: 68,
-    minHeight: 58,
+    minWidth: 62,
+    minHeight: 52,
     borderRadius: 8,
-    padding: 8,
-    backgroundColor: "#f8fafc"
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    backgroundColor: "#F8FAFC"
   },
   smallNumberValue: {
-    color: "#1f2937",
-    fontSize: 15,
+    color: "#020617",
+    fontSize: 14,
     fontWeight: "900"
   },
   smallNumberLabel: {
     marginTop: 2,
-    color: "#64748b",
+    color: "#64748B",
     fontSize: 10,
     fontWeight: "800"
   },
@@ -1217,6 +1052,12 @@ const localStyles = StyleSheet.create({
     lineHeight: 17,
     fontWeight: "800"
   },
+  detailMeta: {
+    color: "#64748B",
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "800"
+  },
   branchChips: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1227,46 +1068,19 @@ const localStyles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 5,
     overflow: "hidden",
-    color: "#3b82f6",
-    backgroundColor: "#eaf4ff",
+    color: "#2563EB",
+    backgroundColor: "#EAF2FF",
     fontSize: 11,
     fontWeight: "900"
   },
-  indicatorsAccordion: {
-    marginTop: 8,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: "#dbe7f5",
-    borderRadius: 12,
-    backgroundColor: "#ffffff",
-    overflow: "hidden"
+  groupLabel: {
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "800"
   },
-  indicatorsHeader: {
-    minHeight: 44,
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between"
-  },
-  indicatorsTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8
-  },
-  indicatorsTitle: {
-    color: "#1f2937",
-    fontSize: 15,
-    fontWeight: "900"
-  },
-  indicatorsBody: {
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingBottom: 12
-  },
-  indicatorsSubtitle: {
-    color: "#1f2937",
-    fontSize: 13,
-    fontWeight: "900"
+  pressed: {
+    opacity: 0.82,
+    transform: [{ scale: 0.98 }]
   },
   sheetBackdrop: {
     flex: 1,
@@ -1274,20 +1088,21 @@ const localStyles = StyleSheet.create({
     backgroundColor: "rgba(15, 23, 42, 0.28)"
   },
   filterSheet: {
+    maxHeight: "92%",
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 22,
     gap: 14,
-    backgroundColor: "#ffffff"
+    backgroundColor: "#FFFFFF"
   },
   sheetHandle: {
     alignSelf: "center",
     width: 42,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#d8e1ee"
+    backgroundColor: "#D8E1EE"
   },
   sheetHeader: {
     flexDirection: "row",
@@ -1295,7 +1110,7 @@ const localStyles = StyleSheet.create({
     justifyContent: "space-between"
   },
   sheetTitle: {
-    color: "#1f2937",
+    color: "#020617",
     fontSize: 18,
     fontWeight: "900"
   },
@@ -1305,34 +1120,143 @@ const localStyles = StyleSheet.create({
     borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f1f5f9"
+    backgroundColor: "#F1F5F9"
   },
   sheetSection: {
     gap: 8
   },
-  compactOption: {
-    minHeight: 38,
-    borderWidth: 1,
-    borderColor: "#e5ebf3",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    justifyContent: "center",
-    backgroundColor: "#f8fafc"
+  sheetChipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8
   },
-  compactOptionText: {
-    color: "#64748b",
+  sheetChip: {
+    minHeight: 34,
+    borderWidth: 1,
+    borderColor: "#E5EBF3",
+    borderRadius: 17,
+    paddingHorizontal: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#F7F9FC"
+  },
+  sheetChipSelected: {
+    borderColor: "#2563EB",
+    backgroundColor: "#2563EB"
+  },
+  sheetChipText: {
+    color: "#64748B",
     fontSize: 12,
+    fontWeight: "800"
+  },
+  sheetChipTextSelected: {
+    color: "#FFFFFF"
+  },
+  indicatorsHeader: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderColor: "#DCE3EE",
+    borderRadius: 10,
+    paddingHorizontal: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#FFFFFF"
+  },
+  indicatorsTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  indicatorsTitle: {
+    color: "#020617",
+    fontSize: 14,
+    fontWeight: "900"
+  },
+  indicatorsBody: {
+    gap: 10
+  },
+  insightCard: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderLeftWidth: 4,
+    borderLeftColor: "#F59E0B",
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: "row",
+    gap: 10,
+    backgroundColor: "#FFFFFF"
+  },
+  insightIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF7E6"
+  },
+  insightText: {
+    flex: 1
+  },
+  insightTitle: {
+    color: "#020617",
+    fontSize: 13,
+    fontWeight: "900"
+  },
+  insightBody: {
+    marginTop: 3,
+    color: "#64748B",
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "700"
+  },
+  bucketPanel: {
+    gap: 8
+  },
+  indicatorsSubtitle: {
+    color: "#020617",
+    fontSize: 13,
+    fontWeight: "900"
+  },
+  bucketChipRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingRight: 22
+  },
+  bucketChip: {
+    minWidth: 84,
+    minHeight: 46,
+    borderWidth: 1,
+    borderColor: "#DCE3EE",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF"
+  },
+  bucketValue: {
+    color: "#2563EB",
+    fontSize: 16,
+    lineHeight: 19,
+    fontWeight: "900"
+  },
+  bucketLabel: {
+    marginTop: 1,
+    color: "#475569",
+    fontSize: 10,
+    lineHeight: 12,
     fontWeight: "800"
   },
   sheetApplyButton: {
     minHeight: 44,
-    borderRadius: 14,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#3b82f6"
+    backgroundColor: "#2563EB"
   },
   sheetApplyButtonText: {
-    color: "#ffffff",
+    color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "900"
   }

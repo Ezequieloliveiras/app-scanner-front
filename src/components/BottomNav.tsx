@@ -27,7 +27,7 @@ export function BottomNav({
         <BottomNavItem icon="analytics-outline" label="Dash" active={activeScreen === "dashboard"} onPress={onDashboard} />
       )}
       {canAccessModule(user, "scan") && (
-        <BottomNavItem icon="camera-outline" label="Câmera" active={activeScreen === "scan"} onPress={onScan} />
+        <BottomNavItem icon="camera-outline" label="Câmera" active={activeScreen === "scan"} prominent onPress={onScan} />
       )}
       {canAccessModule(user, "products") && (
         <BottomNavItem icon="cube-outline" label="Produtos" active={activeScreen === "products"} onPress={onProducts} />

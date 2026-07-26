@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { styles } from "../styles/appStyles";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { StockRequest, StockRequestStatus } from "../types/product";
 
 type Props = {
@@ -12,114 +11,143 @@ type Props = {
 };
 
 type PeriodFilter = "all" | "today" | "7d" | "30d" | "month";
+type RequestTab = "pending" | "history";
 
 const PERIOD_FILTERS: Array<{ label: string; value: PeriodFilter }> = [
   { label: "Todos", value: "all" },
   { label: "Hoje", value: "today" },
   { label: "7 dias", value: "7d" },
   { label: "30 dias", value: "30d" },
-  { label: "Mes", value: "month" }
+  { label: "Mês", value: "month" }
 ];
 
 export function StockRequestsScreen({ requests, loading, onApprove, onReject }: Props) {
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState<PeriodFilter>("all");
-  const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<RequestTab>("pending");
+  const [expandedRequestId, setExpandedRequestId] = useState<string | null | "none">(null);
 
   const filteredRequests = useMemo(() => filterStockRequests(requests, search, period), [period, requests, search]);
   const pendingRequests = filteredRequests.filter((request) => request.status === "pending");
   const reviewedRequests = filteredRequests.filter((request) => request.status !== "pending");
-  const hasActiveFilter = !!search.trim() || period !== "all";
+  const visibleRequests = activeTab === "pending" ? pendingRequests : reviewedRequests;
+  const effectiveExpandedId = expandedRequestId === null ? visibleRequests[0]?._id ?? null : expandedRequestId === "none" ? null : expandedRequestId;
 
   function toggleRequest(id: string) {
-    setExpandedRequestId((current) => (current === id ? null : id));
+    setExpandedRequestId((current) => {
+      const currentExpandedId = current === null ? visibleRequests[0]?._id ?? null : current === "none" ? null : current;
+      return currentExpandedId === id ? "none" : id;
+    });
+  }
+
+  function selectTab(tab: RequestTab) {
+    setActiveTab(tab);
+    setExpandedRequestId(null);
   }
 
   return (
-    <ScrollView style={styles.content} contentContainerStyle={styles.contentInner} keyboardShouldPersistTaps="handled">
-      <View style={localStyles.filterPanel}>
-        <View style={localStyles.searchBox}>
-          <Ionicons name="search-outline" size={18} color="#64748b" />
+    <View style={requestStyles.root}>
+      <View style={requestStyles.topArea}>
+        <View style={requestStyles.searchBox}>
+          <Ionicons name="search-outline" size={17} color="#94a3b8" />
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder="Buscar produto, EAN ou ID"
-            placeholderTextColor="#8a95a5"
+            placeholderTextColor="#94a3b8"
             returnKeyType="search"
             autoCapitalize="none"
             autoCorrect={false}
-            style={localStyles.searchInput}
+            style={requestStyles.searchInput}
           />
           {!!search && (
-            <Pressable style={localStyles.clearButton} onPress={() => setSearch("")} accessibilityLabel="Limpar busca">
-              <Ionicons name="close-outline" size={18} color="#64748b" />
+            <Pressable style={requestStyles.clearButton} onPress={() => setSearch("")} accessibilityLabel="Limpar busca">
+              <Ionicons name="close-outline" size={17} color="#64748b" />
             </Pressable>
           )}
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={localStyles.periodRow}>
-          {PERIOD_FILTERS.map((filter) => (
-            <Pressable
-              key={filter.value}
-              style={[localStyles.periodChip, period === filter.value && localStyles.periodChipActive]}
-              onPress={() => setPeriod(filter.value)}
-            >
-              <Text style={[localStyles.periodChipText, period === filter.value && localStyles.periodChipTextActive]}>
-                {filter.label}
-              </Text>
-            </Pressable>
-          ))}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={requestStyles.periodRow}>
+          {PERIOD_FILTERS.map((filter) => {
+            const selected = period === filter.value;
+
+            return (
+              <Pressable
+                key={filter.value}
+                style={({ pressed }) => [requestStyles.periodChip, selected && requestStyles.periodChipActive, pressed && requestStyles.pressed]}
+                onPress={() => setPeriod(filter.value)}
+              >
+                <Text style={[requestStyles.periodChipText, selected && requestStyles.periodChipTextActive]}>{filter.label}</Text>
+              </Pressable>
+            );
+          })}
         </ScrollView>
+
+        <View style={requestStyles.tabRow}>
+          <RequestTabButton
+            icon="time-outline"
+            label="Pendentes"
+            active={activeTab === "pending"}
+            badge={pendingRequests.length}
+            onPress={() => selectTab("pending")}
+          />
+          <RequestTabButton
+            icon="refresh-outline"
+            label="Histórico"
+            active={activeTab === "history"}
+            onPress={() => selectTab("history")}
+          />
+        </View>
       </View>
 
-      <View style={styles.pendingHeader}>
-        {pendingRequests.length > 0 && <Text style={styles.pendingCount}>{pendingRequests.length}</Text>}
-      </View>
+      <ScrollView style={requestStyles.list} contentContainerStyle={requestStyles.listContent} keyboardShouldPersistTaps="handled">
+        {requests.length === 0 ? (
+          <Text style={requestStyles.emptyText}>Nenhuma solicitação de estoque encontrada.</Text>
+        ) : visibleRequests.length === 0 ? (
+          <Text style={requestStyles.emptyText}>
+            {activeTab === "pending" ? "Nenhuma solicitação pendente." : "Nenhuma solicitação no histórico."}
+          </Text>
+        ) : (
+          visibleRequests.map((request) => (
+            <StockRequestCard
+              key={request._id}
+              request={request}
+              expanded={effectiveExpandedId === request._id}
+              loading={loading}
+              onToggle={() => toggleRequest(request._id)}
+              onApprove={onApprove}
+              onReject={onReject}
+            />
+          ))
+        )}
+      </ScrollView>
+    </View>
+  );
+}
 
-      {requests.length === 0 ? (
-        <Text style={styles.mutedText}>Nenhuma solicitacao de estoque encontrada.</Text>
-      ) : filteredRequests.length === 0 ? (
-        <Text style={styles.mutedText}>Nenhuma solicitacao encontrada com os filtros atuais.</Text>
-      ) : (
-        <>
-          <View style={styles.pendingSection}>
-            <Text style={styles.fieldLabel}>Pendentes</Text>
-            {pendingRequests.length === 0 ? (
-              <Text style={styles.mutedText}>{hasActiveFilter ? "Nenhuma pendente no filtro atual." : "Nenhuma solicitacao pendente."}</Text>
-            ) : (
-              pendingRequests.map((request) => (
-                <StockRequestCard
-                  key={request._id}
-                  request={request}
-                  expanded={expandedRequestId === request._id}
-                  loading={loading}
-                  onToggle={() => toggleRequest(request._id)}
-                  onApprove={onApprove}
-                  onReject={onReject}
-                />
-              ))
-            )}
-          </View>
-
-          {reviewedRequests.length > 0 && (
-            <View style={styles.pendingSection}>
-              <Text style={styles.fieldLabel}>Historico</Text>
-              {reviewedRequests.map((request) => (
-                <StockRequestCard
-                  key={request._id}
-                  request={request}
-                  expanded={expandedRequestId === request._id}
-                  loading={loading}
-                  onToggle={() => toggleRequest(request._id)}
-                  onApprove={onApprove}
-                  onReject={onReject}
-                />
-              ))}
-            </View>
-          )}
-        </>
+function RequestTabButton({
+  icon,
+  label,
+  active,
+  badge,
+  onPress
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  active: boolean;
+  badge?: number;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={[requestStyles.tabButton, active && requestStyles.tabButtonActive]} onPress={onPress}>
+      <Ionicons name={icon} size={15} color={active ? "#2563eb" : "#94a3b8"} />
+      <Text style={[requestStyles.tabText, active && requestStyles.tabTextActive]}>{label}</Text>
+      {Boolean(badge) && (
+        <View style={requestStyles.tabBadge}>
+          <Text style={requestStyles.tabBadgeText}>{badge}</Text>
+        </View>
       )}
-    </ScrollView>
+    </Pressable>
   );
 }
 
@@ -141,60 +169,74 @@ function StockRequestCard({
   const pending = request.status === "pending";
 
   return (
-    <Pressable style={styles.stockRequestCard} onPress={onToggle}>
-      <View style={styles.pendingTopRow}>
-        <View style={styles.pendingTitleArea}>
-          <Text style={styles.branchProductName} numberOfLines={2} ellipsizeMode="tail">
-            {request.productName}
-          </Text>
-          <Text style={styles.branchProductMeta}>
-            {request.requesterName} solicitou {request.quantity} unidade(s).
-          </Text>
+    <View style={requestStyles.card}>
+      <Pressable style={({ pressed }) => [requestStyles.cardPressArea, pressed && requestStyles.pressed]} onPress={onToggle}>
+        <View style={requestStyles.cardHeader}>
+          <View style={requestStyles.cardTitleArea}>
+            <Text style={requestStyles.productName} numberOfLines={2}>
+              {request.productName}
+            </Text>
+            <View style={requestStyles.metaRow}>
+              <Text style={[requestStyles.statusBadge, getStatusStyle(request.status)]}>{getStatusLabel(request.status)}</Text>
+              <Text style={requestStyles.requesterText} numberOfLines={1}>{request.requesterName || "Não identificado"}</Text>
+              <Text style={requestStyles.quantityText}>·</Text>
+              <Text style={requestStyles.quantityText}>{formatQuantity(request.quantity)} un.</Text>
+            </View>
+          </View>
+          <Ionicons name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={18} color="#8aa0ba" />
         </View>
-        <View style={localStyles.cardRight}>
-          <Text style={[styles.stockRequestStatus, getStatusStyle(request.status)]}>{getStatusLabel(request.status)}</Text>
-          <Ionicons name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={20} color="#3b82f6" />
-        </View>
-      </View>
+      </Pressable>
 
       {expanded && (
-        <>
-          <Text style={styles.branchProductMeta}>EAN: {request.ean}</Text>
-          <Text selectable style={styles.branchProductMeta}>
-            ID: {request._id}
-          </Text>
-          {request.observation && <Text style={styles.stockRequestObservation}>{request.observation}</Text>}
+        <View style={requestStyles.expandedBody}>
+          <View style={requestStyles.detailGrid}>
+            <View style={requestStyles.detailItem}>
+              <Text style={requestStyles.detailLabel}>ID</Text>
+              <Text selectable style={requestStyles.detailValue}>{formatRequestId(request._id)}</Text>
+            </View>
+            <View style={requestStyles.detailItem}>
+              <Text style={requestStyles.detailLabel}>EAN</Text>
+              <Text selectable style={requestStyles.detailValue}>{request.ean}</Text>
+            </View>
+            <View style={requestStyles.detailItem}>
+              <Text style={requestStyles.detailLabel}>Data</Text>
+              <Text style={requestStyles.detailValue}>{formatDateTime(request.createdAt)}</Text>
+            </View>
+          </View>
+
+          {request.observation && <Text style={requestStyles.observationText}>"{request.observation}"</Text>}
+
           {request.reviewerName && (
-            <Text style={styles.branchProductMeta}>
+            <Text style={requestStyles.reviewText}>
               Analisado por {request.reviewerName}
-              {request.reviewedAt ? ` em ${formatDate(request.reviewedAt)}` : ""}
+              {request.reviewedAt ? ` em ${formatDateTime(request.reviewedAt)}` : ""}
             </Text>
           )}
-          {request.reviewObservation && <Text style={styles.branchProductMeta}>{request.reviewObservation}</Text>}
-        </>
-      )}
+          {request.reviewObservation && <Text style={requestStyles.reviewText}>{request.reviewObservation}</Text>}
 
-      {pending && expanded && (
-        <View style={styles.notificationActions}>
-          <Pressable
-            style={[styles.notificationActionButton, loading && styles.disabledButton]}
-            disabled={loading}
-            onPress={() => onApprove(request._id)}
-          >
-            <Ionicons name="checkmark-circle-outline" size={18} color="#ffffff" />
-            <Text style={styles.notificationActionText}>Aceitar</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.notificationRejectButton, loading && styles.disabledButton]}
-            disabled={loading}
-            onPress={() => onReject(request._id)}
-          >
-            <Ionicons name="close-circle-outline" size={18} color="#991b1b" />
-            <Text style={styles.notificationRejectText}>Recusar</Text>
-          </Pressable>
+          {pending && (
+            <View style={requestStyles.actionRow}>
+              <Pressable
+                style={({ pressed }) => [requestStyles.rejectButton, loading && requestStyles.disabledButton, pressed && !loading && requestStyles.pressed]}
+                disabled={loading}
+                onPress={() => onReject(request._id)}
+              >
+                {loading ? <ActivityIndicator color="#ef4444" size="small" /> : <Ionicons name="close-outline" size={17} color="#ef4444" />}
+                <Text style={requestStyles.rejectText}>Recusar</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [requestStyles.approveButton, loading && requestStyles.disabledButton, pressed && !loading && requestStyles.pressed]}
+                disabled={loading}
+                onPress={() => onApprove(request._id)}
+              >
+                {loading ? <ActivityIndicator color="#ffffff" size="small" /> : <Ionicons name="checkmark-outline" size={17} color="#ffffff" />}
+                <Text style={requestStyles.approveText}>Aceitar</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
       )}
-    </Pressable>
+    </View>
   );
 }
 
@@ -250,84 +292,323 @@ function getStatusLabel(status: StockRequestStatus) {
 }
 
 function getStatusStyle(status: StockRequestStatus) {
-  if (status === "approved") return styles.stockRequestApproved;
-  if (status === "rejected") return styles.stockRequestRejected;
-  return styles.stockRequestPending;
+  if (status === "approved") return requestStyles.statusApproved;
+  if (status === "rejected") return requestStyles.statusRejected;
+  return requestStyles.statusPending;
 }
 
-function formatDate(value: string) {
+function formatDateTime(value: string) {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "sem horario";
+    return "Não identificado";
   }
 
-  return date.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day} ${hour}:${minute}`;
 }
 
-const localStyles = StyleSheet.create({
-  filterPanel: {
-    gap: 8
+function formatRequestId(id: string) {
+  return id.length > 8 ? `SOL-${id.slice(-3).toUpperCase()}` : id;
+}
+
+function formatQuantity(value: number) {
+  return Number.isInteger(value) ? String(value) : String(value).replace(".", ",");
+}
+
+const requestStyles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: "#f7f9fc"
+  },
+  topArea: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5edf6",
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    backgroundColor: "#ffffff"
   },
   searchBox: {
-    minHeight: 42,
+    minHeight: 38,
     borderWidth: 1,
-    borderColor: "#dbe7f5",
-    borderRadius: 14,
-    paddingHorizontal: 12,
+    borderColor: "#d9e2ef",
+    borderRadius: 9,
+    paddingHorizontal: 11,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#ffffff"
+    backgroundColor: "#f8fafc"
   },
   searchInput: {
     flex: 1,
     minWidth: 0,
-    color: "#1f2937",
-    fontSize: 14,
-    fontWeight: "700"
+    minHeight: 36,
+    paddingVertical: 0,
+    color: "#020617",
+    fontSize: 13,
+    fontWeight: "500"
   },
   clearButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f1f5f9"
+    backgroundColor: "#edf2f7"
   },
   periodRow: {
-    gap: 8,
-    paddingRight: 12
+    gap: 9,
+    paddingTop: 12,
+    paddingBottom: 10
   },
   periodChip: {
-    minHeight: 32,
-    borderWidth: 1,
-    borderColor: "#dbe7f5",
-    borderRadius: 16,
-    paddingHorizontal: 12,
+    minHeight: 27,
+    borderRadius: 14,
+    paddingHorizontal: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#ffffff"
+    backgroundColor: "#eef2f7"
   },
   periodChipActive: {
-    borderColor: "#3b82f6",
-    backgroundColor: "#3b82f6"
+    backgroundColor: "#2563eb"
   },
   periodChipText: {
-    color: "#64748b",
+    color: "#475569",
     fontSize: 12,
-    fontWeight: "900"
+    lineHeight: 15,
+    fontWeight: "800"
   },
   periodChipTextActive: {
     color: "#ffffff"
   },
-  cardRight: {
+  tabRow: {
+    height: 31,
+    flexDirection: "row",
     alignItems: "flex-end",
+    gap: 18
+  },
+  tabButton: {
+    height: 31,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: "transparent"
+  },
+  tabButtonActive: {
+    borderBottomColor: "#2563eb"
+  },
+  tabText: {
+    color: "#94a3b8",
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: "800"
+  },
+  tabTextActive: {
+    color: "#2563eb"
+  },
+  tabBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#2563eb"
+  },
+  tabBadgeText: {
+    color: "#ffffff",
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: "900"
+  },
+  list: {
+    flex: 1,
+    backgroundColor: "#f7f9fc"
+  },
+  listContent: {
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 98
+  },
+  card: {
+    borderWidth: 1,
+    borderColor: "#d9e2ef",
+    borderRadius: 11,
+    backgroundColor: "#ffffff",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 9,
+    elevation: 1,
+    overflow: "hidden"
+  },
+  cardPressArea: {
+    paddingHorizontal: 15,
+    paddingVertical: 13
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10
+  },
+  cardTitleArea: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6
+  },
+  productName: {
+    color: "#020617",
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: "900"
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7
+  },
+  statusBadge: {
+    borderRadius: 7,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    overflow: "hidden",
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: "900"
+  },
+  statusPending: {
+    color: "#b45309",
+    backgroundColor: "#fff4d6"
+  },
+  statusApproved: {
+    color: "#2563eb",
+    backgroundColor: "#dbeafe"
+  },
+  statusRejected: {
+    color: "#991b1b",
+    backgroundColor: "#fee2e2"
+  },
+  requesterText: {
+    maxWidth: 105,
+    color: "#64748b",
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "600"
+  },
+  quantityText: {
+    color: "#020617",
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "900"
+  },
+  expandedBody: {
+    borderTopWidth: 1,
+    borderTopColor: "#edf2f7",
+    paddingHorizontal: 15,
+    paddingTop: 12,
+    paddingBottom: 14,
+    gap: 11
+  },
+  detailGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    rowGap: 10
+  },
+  detailItem: {
+    width: "50%",
+    gap: 3
+  },
+  detailLabel: {
+    color: "#94a3b8",
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: "700"
+  },
+  detailValue: {
+    color: "#020617",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "700"
+  },
+  observationText: {
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    overflow: "hidden",
+    color: "#334155",
+    backgroundColor: "#f8fafc",
+    fontSize: 12,
+    lineHeight: 17,
+    fontStyle: "italic"
+  },
+  reviewText: {
+    color: "#64748b",
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "600"
+  },
+  actionRow: {
+    flexDirection: "row",
     gap: 8
+  },
+  rejectButton: {
+    flex: 1,
+    minHeight: 32,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    borderRadius: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    backgroundColor: "#fff1f2"
+  },
+  rejectText: {
+    color: "#dc2626",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "900"
+  },
+  approveButton: {
+    flex: 1,
+    minHeight: 32,
+    borderRadius: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    backgroundColor: "#2563eb",
+    shadowColor: "#2563eb",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 9,
+    elevation: 2
+  },
+  approveText: {
+    color: "#ffffff",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "900"
+  },
+  emptyText: {
+    paddingTop: 18,
+    color: "#64748b",
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+    fontWeight: "700"
+  },
+  disabledButton: {
+    opacity: 0.65
+  },
+  pressed: {
+    opacity: 0.82
   }
 });

@@ -22,9 +22,6 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 1
   },
-  bottomNavItemProminent: {
-    transform: [{ translateY: -3 }]
-  },
   bottomNavIconBox: {
     width: 34,
     height: 30,
@@ -35,12 +32,6 @@ export const styles = StyleSheet.create({
   },
   bottomNavIconBoxActive: {
     backgroundColor: "#eef4ff"
-  },
-  bottomNavIconBoxProminent: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "#071426"
   },
   bottomNavLabel: {
     color: colors.muted,

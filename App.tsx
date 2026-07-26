@@ -74,6 +74,8 @@ function MainApp() {
   const [certificateStatus, setCertificateStatus] = useState<CertificateStatus | null>(null);
   const [plans, setPlans] = useState<PlanDefinition[]>([]);
   const [screen, setScreen] = useState<Screen>("home");
+  const [productDetailOpen, setProductDetailOpen] = useState(false);
+  const [productDetailBackRequest, setProductDetailBackRequest] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [branchTransfers, setBranchTransfers] = useState<BranchTransfer[]>([]);
@@ -482,6 +484,7 @@ function MainApp() {
     if (!ensureModule("products")) return;
     setError(null);
     setMenuOpen(false);
+    setProductDetailOpen(false);
     setScreen("products");
     loadProducts().catch(() => setError("Não consegui atualizar os produtos."));
     loadStockRequests().catch(() => undefined);
@@ -1076,8 +1079,15 @@ function MainApp() {
     <View style={styles.safeArea}>
       <StatusBar style={screen === "scan" ? "light" : "dark"} />
       <AppHeader
-        title={getScreenTitle(screen, pendingInvoice)}
-        onMenuPress={() => setMenuOpen(true)}
+        title={screen === "products" && productDetailOpen ? "Detalhe" : screen === "access" ? "Gerenciar acessos" : getScreenTitle(screen, pendingInvoice)}
+        onMenuPress={() => {
+          if (screen === "products" && productDetailOpen) {
+            setProductDetailBackRequest((current) => current + 1);
+            return;
+          }
+
+          setMenuOpen(true);
+        }}
         onNotificationPress={() => {
           setError(null);
           setLiveNotifications([]);
@@ -1087,6 +1097,16 @@ function MainApp() {
         topInset={insets.top}
         hasNotification={hasNotifications}
         isHome={screen === "home"}
+        compactTitle={
+          screen === "products" ||
+          screen === "dashboard" ||
+          screen === "notifications" ||
+          screen === "access" ||
+          screen === "certificate" ||
+          screen === "billing" ||
+          screen === "profile"
+        }
+        showBackButton={screen === "products" && productDetailOpen}
       />
 
       <View style={styles.screenBody}>
@@ -1136,6 +1156,9 @@ function MainApp() {
             products={products}
             onScan={goToScan}
             onSimulate={simulateInvoice}
+            onDetailChange={setProductDetailOpen}
+            detailOpen={productDetailOpen}
+            detailBackRequest={productDetailBackRequest}
             onRegisterMissingDelivered={registerMissingDelivered}
             onCreateStockRequest={createStockRequest}
           />
@@ -1252,6 +1275,7 @@ function MainApp() {
 
       <SideMenu
         visible={menuOpen}
+        activeScreen={screen}
         user={currentUser}
         onClose={() => setMenuOpen(false)}
         onHome={() => {
@@ -1274,6 +1298,7 @@ function MainApp() {
           simulateInvoice();
         }}
         topInset={insets.top}
+        bottomInset={insets.bottom}
       />
 
       <InvoiceReviewModal
