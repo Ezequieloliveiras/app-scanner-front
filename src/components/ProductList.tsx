@@ -1,6 +1,19 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
+} from "react-native";
 import { Product, StockEntry } from "../types/product";
 
 type Props = {
@@ -76,6 +89,7 @@ export function ProductList({ products, onDetailChange, detailBackRequest = 0, o
   const [withdrawQuantityInput, setWithdrawQuantityInput] = useState("");
   const [withdrawObservationInput, setWithdrawObservationInput] = useState("");
   const [expandedAction, setExpandedAction] = useState<ExpandedAction>(null);
+  const [actionMenuVisible, setActionMenuVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [historyQuery, setHistoryQuery] = useState("");
   const [historyTypeFilter, setHistoryTypeFilter] = useState<HistoryTypeFilter>("all");
@@ -83,7 +97,6 @@ export function ProductList({ products, onDetailChange, detailBackRequest = 0, o
   const [historyCustomStart, setHistoryCustomStart] = useState("");
   const [historyCustomEnd, setHistoryCustomEnd] = useState("");
   const [historySortMode, setHistorySortMode] = useState<HistorySortMode>("recent");
-  const [sortOptionsVisible, setSortOptionsVisible] = useState(false);
   const [historyFiltersExpanded, setHistoryFiltersExpanded] = useState(false);
   const [dateRangePickerVisible, setDateRangePickerVisible] = useState(false);
   const [draftRangeStart, setDraftRangeStart] = useState("");
@@ -134,13 +147,13 @@ export function ProductList({ products, onDetailChange, detailBackRequest = 0, o
     setWithdrawQuantityInput("");
     setWithdrawObservationInput("");
     setExpandedAction(null);
+    setActionMenuVisible(false);
     setHistoryQuery("");
     setHistoryTypeFilter("all");
     setHistoryDateFilter("all");
     setHistoryCustomStart("");
     setHistoryCustomEnd("");
     setHistorySortMode("recent");
-    setSortOptionsVisible(false);
     setHistoryFiltersExpanded(false);
     setDateRangePickerVisible(false);
     setDraftRangeStart("");
@@ -304,69 +317,133 @@ export function ProductList({ products, onDetailChange, detailBackRequest = 0, o
   }
 
   function renderActions() {
+    const openActionModal = (action: Exclude<ExpandedAction, null>) => {
+      if (!saving) {
+        setActionMenuVisible(false);
+        setExpandedAction(action);
+      }
+    };
+
+    const closeActionModal = () => {
+      if (!saving) {
+        setExpandedAction(null);
+      }
+    };
+
+    const isMissingAction = expandedAction === "missing";
+    const actionTitle = isMissingAction ? "Incluir faltante" : "Solicitar retirada";
+    const actionIcon = isMissingAction ? "add-circle-outline" : "file-tray-full-outline";
+    const actionColor = isMissingAction ? "#16a34a" : "#ef4444";
+    const actionButtonLabel = isMissingAction ? "Adicionar ao estoque" : "Enviar solicitação";
+    const actionButtonIcon = isMissingAction ? "add-circle-outline" : "send-outline";
+
     return (
       <View style={styles.actionArea}>
-        <ActionHeader
-          title="Incluir faltante"
-          icon="add-circle-outline"
-          expanded={expandedAction === "missing"}
-          onPress={() => setExpandedAction(expandedAction === "missing" ? null : "missing")}
-        />
-        {expandedAction === "missing" && (
-          <View style={styles.actionBody}>
-            <TextInput
-              value={quantityInput}
-              onChangeText={setQuantityInput}
-              keyboardType="decimal-pad"
-              placeholder="Quantidade entregue"
-              returnKeyType="next"
-              style={styles.input}
-            />
-            <TextInput
-              value={observationInput}
-              onChangeText={setObservationInput}
-              placeholder="Observação da entrega faltante"
-              style={[styles.input, styles.textArea]}
-              multiline
-              returnKeyType="done"
-            />
-            <Pressable style={[styles.saveButton, saving && styles.disabledButton]} disabled={saving} onPress={registerMissingDelivered}>
-              <Ionicons name="add-circle-outline" size={18} color="#ffffff" />
-              <Text style={styles.saveButtonText}>Adicionar ao estoque</Text>
+        <Pressable
+          accessibilityLabel="Ações do produto"
+          style={({ pressed }) => [styles.actionGearButton, pressed && styles.actionIconButtonPressed]}
+          onPress={() => setActionMenuVisible((current) => !current)}
+        >
+          <Ionicons name="settings-outline" size={18} color="#64748b" />
+        </Pressable>
+
+        {actionMenuVisible && (
+          <View style={styles.actionDropdown}>
+            <Pressable style={styles.actionDropdownItem} onPress={() => openActionModal("missing")}>
+              <Ionicons name="add-circle-outline" size={17} color="#16a34a" />
+              <Text style={styles.actionDropdownText}>Incluir faltante</Text>
+            </Pressable>
+            <View style={styles.actionDropdownDivider} />
+            <Pressable style={styles.actionDropdownItem} onPress={() => openActionModal("withdraw")}>
+              <Ionicons name="file-tray-full-outline" size={17} color="#ef4444" />
+              <Text style={styles.actionDropdownText}>Solicitar retirada</Text>
             </Pressable>
           </View>
         )}
 
-        <ActionHeader
-          title="Solicitar retirada de estoque"
-          icon="file-tray-full-outline"
-          expanded={expandedAction === "withdraw"}
-          onPress={() => setExpandedAction(expandedAction === "withdraw" ? null : "withdraw")}
-        />
-        {expandedAction === "withdraw" && (
-          <View style={styles.actionBody}>
-            <TextInput
-              value={withdrawQuantityInput}
-              onChangeText={setWithdrawQuantityInput}
-              keyboardType="decimal-pad"
-              placeholder="Quantidade para retirada"
-              returnKeyType="next"
-              style={styles.input}
-            />
-            <TextInput
-              value={withdrawObservationInput}
-              onChangeText={setWithdrawObservationInput}
-              placeholder="Observação da solicitação"
-              style={[styles.input, styles.textArea]}
-              multiline
-              returnKeyType="done"
-            />
-            <Pressable style={[styles.saveButton, saving && styles.disabledButton]} disabled={saving} onPress={createStockRequest}>
-              <Ionicons name="send-outline" size={18} color="#ffffff" />
-              <Text style={styles.saveButtonText}>Enviar solicitação</Text>
-            </Pressable>
-          </View>
-        )}
+        <Modal visible={expandedAction !== null} transparent animationType="fade" onRequestClose={closeActionModal}>
+          <KeyboardAvoidingView
+            style={styles.actionModalKeyboardAvoider}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+          >
+            <View style={styles.actionModalOverlay}>
+              <Pressable style={styles.actionModalBackdrop} disabled={saving} onPress={closeActionModal} />
+              <View style={styles.actionModalSheet}>
+                <View style={styles.actionModalHandle} />
+                <View style={styles.actionModalHeader}>
+                  <View style={[styles.actionModalIcon, { backgroundColor: `${actionColor}14` }]}>
+                    <Ionicons name={actionIcon} size={21} color={actionColor} />
+                  </View>
+                  <View style={styles.actionModalTitleArea}>
+                    <Text style={styles.actionModalTitle}>{actionTitle}</Text>
+                    <Text style={styles.actionModalSubtitle}>{isMissingAction ? "Registre a quantidade entregue depois." : "Envie a quantidade para análise."}</Text>
+                  </View>
+                  <Pressable disabled={saving} style={styles.actionModalCloseButton} onPress={closeActionModal}>
+                    <Ionicons name="close-outline" size={22} color="#64748b" />
+                  </Pressable>
+                </View>
+
+                <ScrollView
+                  contentContainerStyle={styles.actionBody}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  {isMissingAction ? (
+                    <>
+                      <TextInput
+                        value={quantityInput}
+                        onChangeText={setQuantityInput}
+                        keyboardType="decimal-pad"
+                        placeholder="Quantidade entregue"
+                        returnKeyType="next"
+                        style={styles.input}
+                      />
+                      <TextInput
+                        value={observationInput}
+                        onChangeText={setObservationInput}
+                        placeholder="Observação da entrega faltante"
+                        style={[styles.input, styles.textArea]}
+                        multiline
+                        returnKeyType="done"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <TextInput
+                        value={withdrawQuantityInput}
+                        onChangeText={setWithdrawQuantityInput}
+                        keyboardType="decimal-pad"
+                        placeholder="Quantidade para retirada"
+                        returnKeyType="next"
+                        style={styles.input}
+                      />
+                      <TextInput
+                        value={withdrawObservationInput}
+                        onChangeText={setWithdrawObservationInput}
+                        placeholder="Observação da solicitação"
+                        style={[styles.input, styles.textArea]}
+                        multiline
+                        returnKeyType="done"
+                      />
+                    </>
+                  )}
+                  <Pressable
+                    style={[styles.saveButton, saving && styles.disabledButton]}
+                    disabled={saving}
+                    onPress={isMissingAction ? registerMissingDelivered : createStockRequest}
+                  >
+                    {saving ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <Ionicons name={actionButtonIcon} size={18} color="#ffffff" />
+                    )}
+                    <Text style={styles.saveButtonText}>{saving ? "Aguarde..." : actionButtonLabel}</Text>
+                  </Pressable>
+                </ScrollView>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
       </View>
     );
   }
@@ -380,7 +457,7 @@ export function ProductList({ products, onDetailChange, detailBackRequest = 0, o
               <Ionicons name="cube-outline" size={22} color="#2563eb" />
             </View>
             <View style={styles.titleArea}>
-              <Text style={styles.detailTitle} numberOfLines={2}>{activeProduct.name}</Text>
+              <Text style={styles.detailTitle}>{activeProduct.name}</Text>
               <Text style={styles.detailSubtitle}>{activeProduct.ean}</Text>
             </View>
           </View>
@@ -389,20 +466,18 @@ export function ProductList({ products, onDetailChange, detailBackRequest = 0, o
             <DetailMetric icon="cube-outline" value={activeProduct.quantity || 0} label="em estoque" />
             <DetailMetric icon="file-tray-stacked-outline" value={historyEntries.length} label="entradas" />
           </View>
+          {renderActions()}
         </View>
 
         <View style={styles.detailLowerSection}>
-          {renderActions()}
-
           <View style={styles.historySection}>
             <View style={styles.historyToolbar}>
-              <Text style={styles.sectionTitle}>HISTÓRICO{"\n"}COMPLETO</Text>
               <View style={styles.historySearchBox}>
                 <Ionicons name="search-outline" size={17} color="#94a3b8" />
                 <TextInput
                   value={historyQuery}
                   onChangeText={setHistoryQuery}
-                  placeholder="Pesq"
+                  placeholder="Pesquisar..."
                   placeholderTextColor="#94a3b8"
                   returnKeyType="search"
                   style={styles.historySearchInput}
@@ -411,10 +486,6 @@ export function ProductList({ products, onDetailChange, detailBackRequest = 0, o
               <Pressable style={styles.historyMiniButton} onPress={() => setHistoryFiltersExpanded((current) => !current)}>
                 <Ionicons name="filter-outline" size={13} color="#475569" />
                 <Text style={styles.historyMiniButtonText}>Filtros</Text>
-              </Pressable>
-              <Pressable style={styles.historyMiniButton} onPress={() => setSortOptionsVisible((current) => !current)}>
-                <Ionicons name="swap-vertical-outline" size={13} color="#475569" />
-                <Text style={styles.historyMiniButtonText}>Recentes</Text>
               </Pressable>
             </View>
 
@@ -436,28 +507,27 @@ export function ProductList({ products, onDetailChange, detailBackRequest = 0, o
               </View>
             ) : (
               <>
-                {(historyFiltersExpanded || sortOptionsVisible) && (
+                {historyFiltersExpanded && (
                   <View style={styles.historyPanel}>
-                    {historyFiltersExpanded && (
-                      <View style={styles.historyAdvancedFilters}>
-                        <View style={styles.historyFilterGroup}>
-                          <Text style={styles.historyFilterLabel}>Período</Text>
-                          <View style={styles.historyChipRow}>
-                            {DATE_FILTERS.map((filter) => (
-                              <HistoryFilterChip
-                                key={filter.value}
-                                label={filter.label}
-                                selected={historyDateFilter === filter.value}
-                                onPress={() => {
-                                  setHistoryDateFilter(filter.value);
-                                  if (filter.value === "custom") {
-                                    openDateRangePicker();
-                                  }
-                                }}
-                              />
-                            ))}
-                          </View>
+                    <View style={styles.historyAdvancedFilters}>
+                      <View style={styles.historyFilterGroup}>
+                        <Text style={styles.historyFilterLabel}>Período</Text>
+                        <View style={styles.historyChipRow}>
+                          {DATE_FILTERS.map((filter) => (
+                            <HistoryFilterChip
+                              key={filter.value}
+                              label={filter.label}
+                              selected={historyDateFilter === filter.value}
+                              onPress={() => {
+                                setHistoryDateFilter(filter.value);
+                                if (filter.value === "custom") {
+                                  openDateRangePicker();
+                                }
+                              }}
+                            />
+                          ))}
                         </View>
+                      </View>
 
                       {historyDateFilter === "custom" && (
                         <Pressable style={styles.dateRangeField} onPress={openDateRangePicker}>
@@ -471,26 +541,23 @@ export function ProductList({ products, onDetailChange, detailBackRequest = 0, o
                           <Ionicons name="chevron-forward-outline" size={18} color="#64748b" />
                         </Pressable>
                       )}
-                    </View>
-                  )}
 
-                  {sortOptionsVisible && (
-                    <View style={styles.historySortOptions}>
-                      {SORT_OPTIONS.map((option) => (
-                        <HistoryFilterChip
-                          key={option.value}
-                          label={option.label}
-                          selected={historySortMode === option.value}
-                          onPress={() => {
-                            setHistorySortMode(option.value);
-                            setSortOptionsVisible(false);
-                          }}
-                        />
-                      ))}
+                      <View style={styles.historyFilterGroup}>
+                        <Text style={styles.historyFilterLabel}>Ordenação</Text>
+                        <View style={styles.historySortOptions}>
+                          {SORT_OPTIONS.map((option) => (
+                            <HistoryFilterChip
+                              key={option.value}
+                              label={option.label}
+                              selected={historySortMode === option.value}
+                              onPress={() => setHistorySortMode(option.value)}
+                            />
+                          ))}
+                        </View>
+                      </View>
                     </View>
-                  )}
-                </View>
-              )}
+                  </View>
+                )}
 
               {filteredHistoryEntries.length === 0 ? (
                 <View style={styles.emptyHistory}>
@@ -520,72 +587,6 @@ export function ProductList({ products, onDetailChange, detailBackRequest = 0, o
           onSelectShortcut={selectDateRangeShortcut}
           onMoveMonth={moveCalendarMonth}
         />
-
-        {/*
-        <View style={styles.actionArea}>
-          <ActionHeader
-            title="Incluir faltante"
-            icon="add-circle-outline"
-            expanded={expandedAction === "missing"}
-            onPress={() => setExpandedAction(expandedAction === "missing" ? null : "missing")}
-          />
-          {expandedAction === "missing" && (
-            <View style={styles.actionBody}>
-              <TextInput
-                value={quantityInput}
-                onChangeText={setQuantityInput}
-                keyboardType="decimal-pad"
-                placeholder="Quantidade entregue"
-                returnKeyType="next"
-                style={styles.input}
-              />
-              <TextInput
-                value={observationInput}
-                onChangeText={setObservationInput}
-                placeholder="Observação da entrega faltante"
-                style={[styles.input, styles.textArea]}
-                multiline
-                returnKeyType="done"
-              />
-              <Pressable style={[styles.saveButton, saving && styles.disabledButton]} disabled={saving} onPress={registerMissingDelivered}>
-                <Ionicons name="add-circle-outline" size={18} color="#ffffff" />
-                <Text style={styles.saveButtonText}>Adicionar ao estoque</Text>
-              </Pressable>
-            </View>
-          )}
-
-          <ActionHeader
-            title="Solicitar retirada de estoque"
-            icon="file-tray-full-outline"
-            expanded={expandedAction === "withdraw"}
-            onPress={() => setExpandedAction(expandedAction === "withdraw" ? null : "withdraw")}
-          />
-          {expandedAction === "withdraw" && (
-            <View style={styles.actionBody}>
-              <TextInput
-                value={withdrawQuantityInput}
-                onChangeText={setWithdrawQuantityInput}
-                keyboardType="decimal-pad"
-                placeholder="Quantidade para retirada"
-                returnKeyType="next"
-                style={styles.input}
-              />
-              <TextInput
-                value={withdrawObservationInput}
-                onChangeText={setWithdrawObservationInput}
-                placeholder="Observação da solicitação"
-                style={[styles.input, styles.textArea]}
-                multiline
-                returnKeyType="done"
-              />
-              <Pressable style={[styles.saveButton, saving && styles.disabledButton]} disabled={saving} onPress={createStockRequest}>
-                <Ionicons name="send-outline" size={18} color="#ffffff" />
-                <Text style={styles.saveButtonText}>Enviar solicitação</Text>
-              </Pressable>
-            </View>
-          )}
-        </View>
-        */}
       </ScrollView>
     );
   }
@@ -905,30 +906,6 @@ function HistoryEntryCard({ entry }: { entry: StockEntry }) {
           <Text style={styles.historyObservationText}>{entry.observation}</Text>
         </View>
       )}
-    </Pressable>
-  );
-}
-
-function ActionHeader({
-  title,
-  icon,
-  expanded,
-  onPress
-}: {
-  title: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  expanded: boolean;
-  onPress: () => void;
-}) {
-  const toneColor = icon === "add-circle-outline" ? "#16a34a" : "#ef4444";
-
-  return (
-    <Pressable style={styles.actionHeader} onPress={onPress}>
-      <View style={styles.actionHeaderTitle}>
-        <Ionicons name={icon} size={18} color={toneColor} />
-        <Text style={styles.actionHeaderText}>{title}</Text>
-      </View>
-      <Ionicons name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={18} color="#94a3b8" />
     </Pressable>
   );
 }
@@ -1647,6 +1624,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc"
   },
   detailTopSection: {
+    position: "relative",
+    zIndex: 2,
+    overflow: "visible",
     gap: 10,
     paddingHorizontal: 10,
     paddingTop: 10,
@@ -1664,10 +1644,11 @@ const styles = StyleSheet.create({
   productDetailHero: {
     minHeight: 48,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12
   },
   detailProductIcon: {
+    marginTop: 1,
     width: 44,
     height: 44,
     borderRadius: 10,
@@ -1694,15 +1675,20 @@ const styles = StyleSheet.create({
   },
   detailSummaryGrid: {
     flexDirection: "row",
+    justifyContent: "center",
     gap: 8
   },
   detailMetric: {
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 1,
+    flexBasis: "34%",
+    maxWidth: 132,
     minHeight: 69,
-    minWidth: 0,
+    minWidth: 112,
     borderRadius: 9,
     paddingHorizontal: 12,
     paddingVertical: 12,
+    alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#eef5ff"
   },
@@ -1713,6 +1699,7 @@ const styles = StyleSheet.create({
     color: "#2563eb",
     fontSize: 23,
     lineHeight: 28,
+    textAlign: "center",
     fontWeight: "900"
   },
   summaryValueNeutral: {
@@ -1723,6 +1710,7 @@ const styles = StyleSheet.create({
     color: "#2563eb",
     fontSize: 11,
     lineHeight: 14,
+    textAlign: "center",
     fontWeight: "700"
   },
   summaryLabelNeutral: {
@@ -1736,13 +1724,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6
-  },
-  sectionTitle: {
-    width: 73,
-    color: "#334155",
-    fontSize: 12,
-    lineHeight: 14,
-    fontWeight: "900"
   },
   historyPanel: {
     gap: 10,
@@ -2092,26 +2073,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "900"
   },
-  historySortArea: {
-    gap: 8
-  },
-  historySortButton: {
-    alignSelf: "flex-start",
-    minHeight: 36,
-    borderWidth: 1,
-    borderColor: "#DBEAFE",
-    borderRadius: 18,
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    backgroundColor: "#EAF4FF"
-  },
-  historySortText: {
-    color: ui.primary,
-    fontSize: 12,
-    fontWeight: "900"
-  },
   historySortOptions: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -2274,37 +2235,130 @@ const styles = StyleSheet.create({
     lineHeight: 18
   },
   actionArea: {
-    gap: 8
+    position: "absolute",
+    right: 10,
+    bottom: 16,
+    zIndex: 20,
+    alignItems: "flex-end"
   },
-  actionHeader: {
-    minHeight: 41,
+  actionGearButton: {
+    width: 32,
+    height: 32,
     borderWidth: 1,
-    borderColor: "#dce3ee",
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    flexDirection: "row",
+    borderColor: "#E2E8F0",
+    borderRadius: 16,
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
     shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.035,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 1
+    elevation: 2
   },
-  actionHeaderTitle: {
-    flex: 1,
+  actionIconButtonPressed: {
+    opacity: 0.75,
+    transform: [{ scale: 0.97 }]
+  },
+  actionDropdown: {
+    position: "absolute",
+    top: 38,
+    right: 0,
+    width: 190,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    paddingVertical: 6,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 5
+  },
+  actionDropdownItem: {
+    minHeight: 40,
+    paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8
+    gap: 9
   },
-  actionHeaderText: {
+  actionDropdownText: {
     flex: 1,
-    color: "#020617",
+    color: ui.text,
     fontSize: 13,
     lineHeight: 17,
+    fontWeight: "800"
+  },
+  actionDropdownDivider: {
+    height: 1,
+    marginHorizontal: 10,
+    backgroundColor: "#F1F5F9"
+  },
+  actionModalKeyboardAvoider: {
+    flex: 1
+  },
+  actionModalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(15,23,42,0.36)"
+  },
+  actionModalBackdrop: {
+    ...StyleSheet.absoluteFillObject
+  },
+  actionModalSheet: {
+    maxHeight: "88%",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 18,
+    gap: 16,
+    backgroundColor: ui.surface
+  },
+  actionModalHandle: {
+    alignSelf: "center",
+    width: 52,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "#CBD5E1"
+  },
+  actionModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10
+  },
+  actionModalIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  actionModalTitleArea: {
+    flex: 1,
+    minWidth: 0
+  },
+  actionModalTitle: {
+    color: ui.text,
+    fontSize: 18,
+    lineHeight: 23,
     fontWeight: "900"
+  },
+  actionModalSubtitle: {
+    marginTop: 2,
+    color: ui.muted,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "700"
+  },
+  actionModalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F8FAFC"
   },
   actionBody: {
     gap: 8

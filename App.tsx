@@ -1,6 +1,6 @@
 import { BarcodeScanningResult, useCameraPermissions } from "expo-camera";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, AppState, Linking, Text, View } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "./src/api/client";
@@ -14,6 +14,7 @@ import { DashboardScreen } from "./src/components/DashboardScreen";
 import { HomeScreen } from "./src/components/HomeScreen";
 import { InvoiceReviewModal } from "./src/components/InvoiceReviewModal";
 import { AppNotification, NotificationsScreen } from "./src/components/NotificationsScreen";
+import { PendingConferencesModal } from "./src/components/PendingConferencesModal";
 import { ProductsScreen } from "./src/components/ProductsScreen";
 import { ProfileScreen } from "./src/components/ProfileScreen";
 import { PlansScreen } from "./src/components/PlansScreen";
@@ -37,20 +38,55 @@ import {
   UserPlan,
   UserRole
 } from "./src/types/app";
-import { BranchTransfer, BranchTransferStatus, InvoiceResult, Product, StockRequest } from "./src/types/product";
+import { BranchTransfer, BranchTransferStatus, InvoiceResult, PendingConference, Product, StockRequest } from "./src/types/product";
 import { canAccessModule, canManageAccess, canManageCertificate, formatQuantity, getScreenTitle, parseQuantity } from "./src/utils/appHelpers";
 import { canApplyProfileRefresh, isLatestProfileMutation } from "./src/utils/cameraPreference";
 import { getExpoPushToken } from "./src/utils/pushNotifications";
 
-const BRANCH_OPTIONS: BranchOption[] = [
-  { code: "CENTRAL", name: "Estoque central" },
-  { code: "FILIAL-01", name: "Filial 01" },
-  { code: "FILIAL-02", name: "Filial 02" },
-  { code: "FILIAL-03", name: "Filial 03" }
-];
+const CENTRAL_BRANCH: BranchOption = { code: "CENTRAL", name: "Estoque central" };
+const BRANCH_OPTIONS: BranchOption[] = [CENTRAL_BRANCH];
 
 const LIVE_SYNC_INTERVAL_MS = 15000;
 const ERROR_AUTO_DISMISS_MS = 6000;
+
+function buildBranchOptions(managedBranches: BranchOption[], hiddenBranchKeys: string[]) {
+  const options: BranchOption[] = [];
+  const hiddenKeys = new Set(hiddenBranchKeys);
+
+  const addBranch = (branch?: Partial<BranchOption> | null) => {
+    const name = String(branch?.name || "").trim();
+    const code = normalizeBranchCode(branch?.code || name);
+
+    if (!name || !code) return;
+    if (hiddenKeys.has(normalizeBranchKey(code)) || hiddenKeys.has(normalizeBranchKey(name))) return;
+
+    const exists = options.some(
+      (option) => normalizeBranchKey(option.code) === normalizeBranchKey(code) || normalizeBranchKey(option.name) === normalizeBranchKey(name)
+    );
+
+    if (!exists) {
+      options.push({ ...branch, code, name });
+    }
+  };
+
+  BRANCH_OPTIONS.forEach(addBranch);
+  managedBranches.forEach(addBranch);
+
+  return options;
+}
+
+function normalizeBranchCode(value?: string) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toUpperCase();
+}
+
+function normalizeBranchKey(value?: string) {
+  return normalizeBranchCode(value).toLowerCase();
+}
 
 export default function App() {
   return (
@@ -79,6 +115,8 @@ function MainApp() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [branchTransfers, setBranchTransfers] = useState<BranchTransfer[]>([]);
+  const [managedBranchOptions, setManagedBranchOptions] = useState<BranchOption[]>([]);
+  const [hiddenBranchKeys, setHiddenBranchKeys] = useState<string[]>([]);
   const [stockRequests, setStockRequests] = useState<StockRequest[]>([]);
   const stockRequestStatusRef = useRef<Record<string, StockRequest["status"]>>({});
   const liveSyncInFlightRef = useRef(false);
@@ -88,7 +126,7 @@ function MainApp() {
   const profileMutationInFlightRef = useRef(0);
   const [branchProductId, setBranchProductId] = useState("");
   const [branchProductSearch, setBranchProductSearch] = useState("");
-  const [sourceBranch, setSourceBranch] = useState<BranchOption>(BRANCH_OPTIONS[0]);
+  const [sourceBranch, setSourceBranch] = useState<BranchOption>(CENTRAL_BRANCH);
   const [sourceBranchSearch, setSourceBranchSearch] = useState("");
   const [targetBranch, setTargetBranch] = useState<BranchOption | null>(null);
   const [targetBranchSearch, setTargetBranchSearch] = useState("");
@@ -97,12 +135,35 @@ function MainApp() {
   const [branchObservation, setBranchObservation] = useState("");
   const [pendingInvoice, setPendingInvoice] = useState<InvoiceResult | null>(null);
   const [pendingProducts, setPendingProducts] = useState<EditableInvoiceProduct[]>([]);
+  const [pendingConferences, setPendingConferences] = useState<PendingConference[]>([]);
+  const [pendingConferencesVisible, setPendingConferencesVisible] = useState(false);
+  const [activePendingConferenceId, setActivePendingConferenceId] = useState<string | null>(null);
   const [editingProductIndex, setEditingProductIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [liveNotifications, setLiveNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const [homeRefreshing, setHomeRefreshing] = useState(false);
   const [scannerEnabled, setScannerEnabled] = useState(true);
+  const branchOptions = useMemo(
+    () => buildBranchOptions(managedBranchOptions, hiddenBranchKeys),
+    [managedBranchOptions, hiddenBranchKeys]
+  );
+  const canManageBranchOptions = currentUser?.role === "master";
+
+  const loadPendingConferencesFromApi = useCallback(async () => {
+    if (!authToken) return;
+    const conferences = await api.listPendingConferences(authToken);
+    setPendingConferences(conferences);
+  }, [authToken]);
+
+  useEffect(() => {
+    if (!authToken || !currentUser?._id) {
+      setPendingConferences([]);
+      return;
+    }
+
+    loadPendingConferencesFromApi().catch(() => setPendingConferences([]));
+  }, [authToken, currentUser?._id, loadPendingConferencesFromApi]);
 
   const loadProducts = useCallback(async () => {
     if (!authToken) return;
@@ -114,6 +175,12 @@ function MainApp() {
     if (!authToken) return;
     const data = await api.listBranchTransfers(authToken);
     setBranchTransfers(data);
+  }, [authToken]);
+
+  const loadBranches = useCallback(async () => {
+    if (!authToken) return;
+    const data = await api.listBranches(authToken);
+    setManagedBranchOptions(data);
   }, [authToken]);
 
   const loadStockRequests = useCallback(async () => {
@@ -167,11 +234,12 @@ function MainApp() {
     loadStockRequests().catch(() => undefined);
     if (canAccessModule(currentUser, "branches")) {
       loadBranchTransfers().catch(() => undefined);
+      loadBranches().catch(() => undefined);
     }
     if (canManageCertificate(currentUser)) {
       loadCertificateStatus().catch(() => undefined);
     }
-  }, [currentUser, loadProducts, loadBranchTransfers, loadStockRequests, loadCertificateStatus]);
+  }, [currentUser, loadProducts, loadBranchTransfers, loadBranches, loadStockRequests, loadCertificateStatus]);
 
   const refreshHome = useCallback(async () => {
     if (!currentUser) return;
@@ -180,10 +248,11 @@ function MainApp() {
       setHomeRefreshing(true);
       setError(null);
 
-      const tasks = [loadProducts(), loadStockRequests(), loadPlans()];
+      const tasks = [loadProducts(), loadStockRequests(), loadPlans(), loadPendingConferencesFromApi()];
 
       if (canAccessModule(currentUser, "branches")) {
         tasks.push(loadBranchTransfers());
+        tasks.push(loadBranches());
       }
 
       if (canManageAccess(currentUser)) {
@@ -200,7 +269,17 @@ function MainApp() {
     } finally {
       setHomeRefreshing(false);
     }
-  }, [currentUser, loadProducts, loadStockRequests, loadPlans, loadBranchTransfers, loadManagedUsers, loadCertificateStatus]);
+  }, [
+    currentUser,
+    loadProducts,
+    loadStockRequests,
+    loadPlans,
+    loadPendingConferencesFromApi,
+    loadBranchTransfers,
+    loadBranches,
+    loadManagedUsers,
+    loadCertificateStatus
+  ]);
 
   useEffect(() => {
     if (
@@ -411,6 +490,9 @@ function MainApp() {
     setLiveNotifications([]);
     setPendingInvoice(null);
     setPendingProducts([]);
+    setPendingConferences([]);
+    setPendingConferencesVisible(false);
+    setActivePendingConferenceId(null);
     setEditingProductIndex(null);
     setMenuOpen(false);
     setScreen("home");
@@ -428,6 +510,7 @@ function MainApp() {
       setLoading(true);
       setError(null);
       const result = await action();
+      setActivePendingConferenceId(null);
       setPendingInvoice(result);
       setPendingProducts(
         result.products.map((product) => ({
@@ -502,7 +585,7 @@ function MainApp() {
     setError(null);
     setMenuOpen(false);
     setScreen("branches");
-    Promise.all([loadProducts(), loadBranchTransfers()]).catch(() => setError("Não consegui atualizar filial."));
+    Promise.all([loadProducts(), loadBranchTransfers(), loadBranches()]).catch(() => setError("Não consegui atualizar filial."));
   }
 
   function goToStockRequests() {
@@ -559,6 +642,7 @@ function MainApp() {
   function closeInvoiceReview() {
     setPendingInvoice(null);
     setPendingProducts([]);
+    setActivePendingConferenceId(null);
     setEditingProductIndex(null);
     setScannerEnabled(true);
   }
@@ -571,6 +655,65 @@ function MainApp() {
   function updatePendingProduct(index: number, changes: Partial<EditableInvoiceProduct>) {
     setPendingProducts((current) =>
       current.map((product, productIndex) => (productIndex === index ? { ...product, ...changes } : product))
+    );
+  }
+
+  async function saveConferenceForLater() {
+    if (!authToken || !pendingInvoice || loading) return;
+
+    try {
+      setLoading(true);
+      await api.savePendingConference(
+        authToken,
+        {
+          invoice: {
+            invoiceKey: pendingInvoice.invoiceKey,
+            source: pendingInvoice.source
+          },
+          products: pendingProducts
+        },
+        activePendingConferenceId
+      );
+      setPendingConferences(await api.listPendingConferences(authToken));
+      setPendingInvoice(null);
+      setPendingProducts([]);
+      setEditingProductIndex(null);
+      setActivePendingConferenceId(null);
+      setScannerEnabled(true);
+      Alert.alert("Conferencia salva", "Voce pode continuar depois pelo card de conferências pendentes.");
+    } catch {
+      Alert.alert("Não foi possivel salvar", "Tente novamente antes de sair da conferência.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function resumePendingConference(conference: PendingConference) {
+    setPendingConferencesVisible(false);
+    setPendingInvoice({ ...conference.invoice, products: conference.products });
+    setPendingProducts(conference.products);
+    setActivePendingConferenceId(conference._id);
+    setEditingProductIndex(null);
+    setScannerEnabled(false);
+  }
+
+  function deletePendingConference(conference: PendingConference) {
+    if (!authToken) return;
+
+    Alert.alert(
+      "Excluir conferencia?",
+      `Remover a conferencia de ${conference.invoice.source || "fornecedor nao informado"}?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: async () => {
+            await api.deletePendingConference(authToken, conference._id);
+            setPendingConferences((current) => current.filter((item) => item._id !== conference._id));
+          }
+        }
+      ]
     );
   }
 
@@ -616,6 +759,11 @@ function MainApp() {
       setPendingInvoice(null);
       setPendingProducts([]);
       setEditingProductIndex(null);
+      if (activePendingConferenceId) {
+        await api.deletePendingConference(authToken, activePendingConferenceId);
+        setPendingConferences((current) => current.filter((conference) => conference._id !== activePendingConferenceId));
+        setActivePendingConferenceId(null);
+      }
       await loadProducts();
       Alert.alert("Entrada registrada", "Os produtos foram enviados para o estoque.");
     } catch (err) {
@@ -682,6 +830,86 @@ function MainApp() {
     }
   }
 
+  async function createBranchOption(branch: BranchOption) {
+    if (!authToken || !canManageBranchOptions) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const createdBranch = await api.createBranch(authToken, { name: branch.name, code: branch.code });
+      setHiddenBranchKeys((current) =>
+        current.filter((key) => key !== normalizeBranchKey(createdBranch.code) && key !== normalizeBranchKey(createdBranch.name))
+      );
+      await loadBranches();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao criar filial.";
+      setError(message);
+      Alert.alert("Filial nao criada", message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function updateBranchOption(previousBranch: BranchOption, branch: BranchOption) {
+    if (!authToken || !canManageBranchOptions || !previousBranch._id) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const updatedBranch = await api.updateBranch(authToken, previousBranch._id, { name: branch.name, code: branch.code });
+      await loadBranches();
+
+      if (normalizeBranchKey(sourceBranch.code) === normalizeBranchKey(previousBranch.code)) {
+        setSourceBranch(updatedBranch);
+        setSourceBranchSearch("");
+      }
+
+      if (targetBranch && normalizeBranchKey(targetBranch.code) === normalizeBranchKey(previousBranch.code)) {
+        setTargetBranch(updatedBranch);
+        setTargetBranchSearch("");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao atualizar filial.";
+      setError(message);
+      Alert.alert("Filial nao atualizada", message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteBranchOption(branch: BranchOption) {
+    if (!authToken || !canManageBranchOptions || !branch._id || branch.code === "CENTRAL") return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      await api.deleteBranch(authToken, branch._id);
+
+      const deletedKeys = [branch.code, branch.name].map(normalizeBranchKey).filter(Boolean);
+      setHiddenBranchKeys((current) => Array.from(new Set([...current, ...deletedKeys])));
+      await loadBranches();
+
+      if (normalizeBranchKey(sourceBranch.code) === normalizeBranchKey(branch.code)) {
+        setSourceBranch(CENTRAL_BRANCH);
+        setSourceBranchSearch("");
+      }
+
+      if (targetBranch && normalizeBranchKey(targetBranch.code) === normalizeBranchKey(branch.code)) {
+        setTargetBranch(null);
+        setTargetBranchSearch("");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao excluir filial.";
+      setError(message);
+      Alert.alert("Filial nao excluida", message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function createBranchTransfer() {
     if (!authToken) return;
 
@@ -707,7 +935,7 @@ function MainApp() {
       });
       setBranchProductId("");
       setBranchProductSearch("");
-      setSourceBranch(BRANCH_OPTIONS[0]);
+      setSourceBranch(CENTRAL_BRANCH);
       setSourceBranchSearch("");
       setTargetBranch(null);
       setTargetBranchSearch("");
@@ -1047,12 +1275,12 @@ function MainApp() {
           }
         ]
       : []),
-    ...(pendingProducts.length > 0
+    ...(pendingConferences.length > 0
       ? [
           {
             id: "pending-products",
             title: "Entrada pendente",
-            text: `${pendingProducts.length} produto(s) aguardando envio ao estoque.`,
+            text: `${pendingConferences.length} conferencia(s) aguardando continuidade.`,
             tone: "warning" as const
           }
         ]
@@ -1115,7 +1343,7 @@ function MainApp() {
         {screen === "home" && (
           <HomeScreen
             productsCount={products.length}
-            pendingCount={pendingProducts.length}
+            pendingCount={pendingConferences.length}
             pendingStockRequestsCount={pendingStockRequests.length}
             refreshing={homeRefreshing}
             user={currentUser}
@@ -1125,6 +1353,7 @@ function MainApp() {
             onProducts={goToProducts}
             onBranches={goToBranches}
             onStockRequests={goToStockRequests}
+            onPendingConferences={() => setPendingConferencesVisible(true)}
             onAccess={goToAccess}
             onCertificate={goToCertificate}
             onBilling={goToBilling}
@@ -1137,7 +1366,6 @@ function MainApp() {
             permissionGranted={permission?.granted}
             loading={loading}
             scannerEnabled={scannerEnabled}
-            cameraAutoEnabled={currentUser.cameraEnabled}
             topInset={insets.top}
             onRequestPermission={requestPermission}
             onBarcodeScanned={handleBarcodeScanned}
@@ -1170,7 +1398,7 @@ function MainApp() {
             transfers={branchTransfers}
             selectedProductId={branchProductId}
             productSearch={branchProductSearch}
-            branchOptions={BRANCH_OPTIONS}
+            branchOptions={branchOptions}
             sourceBranch={sourceBranch}
             sourceBranchSearch={sourceBranchSearch}
             targetBranch={targetBranch}
@@ -1179,6 +1407,7 @@ function MainApp() {
             lot={branchLot}
             observation={branchObservation}
             loading={loading}
+            canManageBranches={canManageBranchOptions}
             onSelectProduct={setBranchProductId}
             onChangeProductSearch={setBranchProductSearch}
             onSelectSourceBranch={setSourceBranch}
@@ -1188,6 +1417,9 @@ function MainApp() {
             onChangeQuantity={setBranchQuantity}
             onChangeLot={setBranchLot}
             onChangeObservation={setBranchObservation}
+            onCreateBranch={createBranchOption}
+            onUpdateBranch={updateBranchOption}
+            onDeleteBranch={deleteBranchOption}
             onCreateTransfer={createBranchTransfer}
             onUpdateStatus={updateBranchTransferStatus}
             onCancelTransfer={confirmCancelBranchTransfer}
@@ -1313,8 +1545,19 @@ function MainApp() {
         onEditProduct={setEditingProductIndex}
         onCloseEdit={() => setEditingProductIndex(null)}
         onCommit={confirmCommitStock}
+        onSaveForLater={saveConferenceForLater}
         onClose={closeInvoiceReview}
         onBackToScan={backToScannerFromReview}
+      />
+
+      <PendingConferencesModal
+        visible={pendingConferencesVisible}
+        conferences={pendingConferences}
+        topInset={insets.top}
+        bottomInset={insets.bottom}
+        onClose={() => setPendingConferencesVisible(false)}
+        onResume={resumePendingConference}
+        onDelete={deletePendingConference}
       />
 
     </View>

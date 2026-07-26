@@ -108,8 +108,12 @@ export type EditableInvoiceProduct = InvoicePreviewProduct & {
 };
 
 export type BranchOption = {
+  _id?: string;
+  owner?: string;
   code: string;
   name: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type AuthUser = {

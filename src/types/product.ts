@@ -37,6 +37,27 @@ export type InvoiceResult = {
   products: InvoicePreviewProduct[];
 };
 
+export type PendingConferenceProduct = InvoicePreviewProduct & {
+  quantityInput: string;
+};
+
+export type PendingConference = {
+  _id: string;
+  owner: string;
+  invoice: {
+    invoiceKey?: string;
+    source: string;
+  };
+  products: PendingConferenceProduct[];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type PendingConferencePayload = {
+  invoice: PendingConference["invoice"];
+  products: PendingConferenceProduct[];
+};
+
 export type CommitStockPayload = {
   invoiceKey?: string;
   source: string;

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useState, type ComponentProps } from "react";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { BranchOption } from "../types/app";
 import { BranchTransfer, BranchTransferStatus, Product } from "../types/product";
 import { filterProducts, filterTransfers, formatDateTime, getTransferHistoryText, getTransferStatusLabel } from "../utils/appHelpers";
@@ -20,6 +20,7 @@ export function BranchScreen({
   lot,
   observation,
   loading,
+  canManageBranches,
   onSelectProduct,
   onChangeProductSearch,
   onSelectSourceBranch,
@@ -29,6 +30,9 @@ export function BranchScreen({
   onChangeQuantity,
   onChangeLot,
   onChangeObservation,
+  onCreateBranch,
+  onUpdateBranch,
+  onDeleteBranch,
   onCreateTransfer,
   onUpdateStatus,
   onCancelTransfer
@@ -46,6 +50,7 @@ export function BranchScreen({
   lot: string;
   observation: string;
   loading: boolean;
+  canManageBranches: boolean;
   onSelectProduct: (productId: string) => void;
   onChangeProductSearch: (value: string) => void;
   onSelectSourceBranch: (branch: BranchOption) => void;
@@ -55,17 +60,25 @@ export function BranchScreen({
   onChangeQuantity: (value: string) => void;
   onChangeLot: (value: string) => void;
   onChangeObservation: (value: string) => void;
+  onCreateBranch: (branch: BranchOption) => Promise<void>;
+  onUpdateBranch: (branch: BranchOption, nextBranch: BranchOption) => Promise<void>;
+  onDeleteBranch: (branch: BranchOption) => Promise<void>;
   onCreateTransfer: () => void;
   onUpdateStatus: (id: string, status: Exclude<BranchTransferStatus, "reserved">) => void;
   onCancelTransfer: (id: string) => void;
 }) {
-  const [selectModal, setSelectModal] = useState<"product" | "source" | "target" | "filterSource" | "filterTarget" | null>(null);
-  const [reserveExpanded, setReserveExpanded] = useState(true);
-  const [movementsExpanded, setMovementsExpanded] = useState(true);
+  const [selectModal, setSelectModal] = useState<"product" | "source" | "target" | "filterSource" | "filterTarget" | "createBranch" | null>(null);
+  const [reserveExpanded, setReserveExpanded] = useState(false);
+  const [managementExpanded, setManagementExpanded] = useState(false);
+  const [movementsExpanded, setMovementsExpanded] = useState(false);
   const [movementIdSearch, setMovementIdSearch] = useState("");
   const [filterSourceBranch, setFilterSourceBranch] = useState<BranchOption | null>(null);
   const [filterTargetBranch, setFilterTargetBranch] = useState<BranchOption | null>(null);
   const [expandedTransferId, setExpandedTransferId] = useState<string | null>(null);
+  const [newBranchName, setNewBranchName] = useState("");
+  const [newBranchCode, setNewBranchCode] = useState("");
+  const [branchFormError, setBranchFormError] = useState<string | null>(null);
+  const [editingBranch, setEditingBranch] = useState<BranchOption | null>(null);
 
   const selectedProduct = products.find((product) => product._id === selectedProductId);
   const productResults = filterProducts(products, productSearch).slice(0, 6);
@@ -74,6 +87,106 @@ export function BranchScreen({
   const canReserve = Boolean(selectedProduct && targetBranch && Number.isFinite(quantityNumber) && quantityNumber > 0 && !loading);
   const sourceLabel = sourceBranchSearch || `${sourceBranch.code} - ${sourceBranch.name}`;
   const targetLabel = targetBranchSearch || (targetBranch ? `${targetBranch.code} - ${targetBranch.name}` : "Selecionar");
+  const manageableBranches = branchOptions.filter((branch) => branch.code !== "CENTRAL");
+  const registeredBranchCount = manageableBranches.length;
+  const branchPreviewName = newBranchName.trim() || "Nome da filial";
+  const branchPreviewCode = normalizeBranchCode(newBranchCode || newBranchName) || "CODIGO";
+
+  function openCreateBranch() {
+    if (!canManageBranches) return;
+    setEditingBranch(null);
+    setNewBranchName("");
+    setNewBranchCode("");
+    setBranchFormError(null);
+    setSelectModal("createBranch");
+  }
+
+  function openEditBranch(branch: BranchOption) {
+    if (!canManageBranches) return;
+    setEditingBranch(branch);
+    setNewBranchName(branch.name);
+    setNewBranchCode(branch.code);
+    setBranchFormError(null);
+    setSelectModal("createBranch");
+  }
+
+  function closeBranchForm() {
+    setEditingBranch(null);
+    setNewBranchName("");
+    setNewBranchCode("");
+    setBranchFormError(null);
+    setSelectModal(null);
+  }
+
+  async function submitNewBranch() {
+    if (!canManageBranches) return;
+
+    const name = newBranchName.trim();
+    const code = normalizeBranchCode(newBranchCode || name);
+    const duplicated = branchOptions.some(
+      (branch) =>
+        branch.code !== editingBranch?.code &&
+        (normalizeBranchCode(branch.code) === code || normalizeBranchName(branch.name) === normalizeBranchName(name))
+    );
+
+    if (name.length < 2) {
+      setBranchFormError("Informe o nome da filial.");
+      return;
+    }
+
+    if (code.length < 2) {
+      setBranchFormError("Informe um codigo valido.");
+      return;
+    }
+
+    if (duplicated) {
+      setBranchFormError("Ja existe uma filial com esse nome ou codigo.");
+      return;
+    }
+
+    const branch = { code, name };
+    try {
+      if (editingBranch) {
+        await onUpdateBranch(editingBranch, branch);
+      } else {
+        await onCreateBranch(branch);
+        onSelectTargetBranch(branch);
+        onChangeTargetBranchSearch("");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Nao foi possivel salvar a filial.";
+      setBranchFormError(message);
+      return;
+    }
+
+    setEditingBranch(null);
+    setNewBranchName("");
+    setNewBranchCode("");
+    setBranchFormError(null);
+    setSelectModal(null);
+  }
+
+  function confirmDeleteBranch(branch: BranchOption) {
+    if (!canManageBranches) return;
+
+    Alert.alert(
+      "Excluir filial?",
+      `A filial ${branch.name} saira das proximas movimentacoes. Historico ja criado continua aparecendo nas movimentacoes.`,
+      [
+        { text: "Voltar", style: "cancel" },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: () => {
+            onDeleteBranch(branch).catch((err) => {
+              const message = err instanceof Error ? err.message : "Nao foi possivel excluir a filial.";
+              setBranchFormError(message);
+            });
+          }
+        }
+      ]
+    );
+  }
 
   return (
     <KeyboardAvoidingView style={branchStyles.root} behavior={Platform.OS === "ios" ? "padding" : "height"}>
@@ -84,18 +197,14 @@ export function BranchScreen({
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
       >
         <View style={branchStyles.reserveSection}>
-          <Pressable
-            style={({ pressed }) => [branchStyles.sectionHeader, pressed && branchStyles.pressed]}
+          <AccordionHeader
+            title="Reservar estoque para filial"
+            subtitle="Produto, origem, destino e quantidade"
+            icon="cube-outline"
+            expanded={reserveExpanded}
             onPress={() => setReserveExpanded((current) => !current)}
-            accessibilityRole="button"
             accessibilityLabel={reserveExpanded ? "Fechar reserva de estoque" : "Abrir reserva de estoque"}
-          >
-            <View style={branchStyles.sectionTitleRow}>
-              <Ionicons name="cube-outline" size={17} color="#2563eb" />
-              <Text style={branchStyles.sectionTitle}>Reservar estoque para filial</Text>
-            </View>
-            <Ionicons name={reserveExpanded ? "chevron-up-outline" : "chevron-down-outline"} size={18} color="#8aa0ba" />
-          </Pressable>
+          />
 
           {reserveExpanded && (
             <View style={branchStyles.formBody}>
@@ -221,11 +330,90 @@ export function BranchScreen({
           )}
         </View>
 
+        {canManageBranches && (
+          <>
+            <View style={branchStyles.sectionBreak} />
+
+            <View style={branchStyles.managementSection}>
+              <AccordionHeader
+                title="Gerenciar filiais"
+                subtitle={`${registeredBranchCount} ${registeredBranchCount === 1 ? "filial cadastrada" : "filiais cadastradas"}`}
+                icon="business-outline"
+                expanded={managementExpanded}
+                onPress={() => setManagementExpanded((current) => !current)}
+                accessibilityLabel={managementExpanded ? "Fechar gerenciamento de filiais" : "Abrir gerenciamento de filiais"}
+              />
+
+              {managementExpanded && (
+                <View style={branchStyles.managementBody}>
+                  <View style={branchStyles.managementIntroRow}>
+                    <View style={branchStyles.branchManagerTextArea}>
+                      <Text style={branchStyles.branchManagerTitle}>Filiais cadastradas</Text>
+                      <Text style={branchStyles.branchManagerMeta}>
+                        {registeredBranchCount} {registeredBranchCount === 1 ? "filial disponivel" : "filiais disponiveis"} para movimentacao.
+                      </Text>
+                    </View>
+
+                    <Pressable
+                      style={({ pressed }) => [branchStyles.addBranchButton, loading && branchStyles.actionDisabled, pressed && !loading && branchStyles.pressed]}
+                      onPress={openCreateBranch}
+                      disabled={loading}
+                      accessibilityRole="button"
+                      accessibilityLabel="Criar nova filial"
+                      accessibilityState={{ disabled: loading }}
+                    >
+                      <Ionicons name="add-circle-outline" size={17} color="#2563eb" />
+                      <Text style={branchStyles.addBranchButtonText}>Nova filial</Text>
+                    </Pressable>
+                  </View>
+
+                  {manageableBranches.length === 0 ? (
+                    <Text style={branchStyles.emptyText}>Nenhuma filial cadastrada.</Text>
+                  ) : (
+                    manageableBranches.map((branch) => (
+                      <View key={branch.code} style={branchStyles.branchManagementItem}>
+                        <View style={branchStyles.branchManagementTextArea}>
+                          <Text style={branchStyles.optionTitle}>{branch.name}</Text>
+                          <Text style={branchStyles.optionMeta}>Código: {branch.code}</Text>
+                        </View>
+
+                        <View style={branchStyles.branchActionRow}>
+                          <Pressable
+                            style={({ pressed }) => [branchStyles.iconActionButton, loading && branchStyles.actionDisabled, pressed && !loading && branchStyles.pressed]}
+                            onPress={() => openEditBranch(branch)}
+                            disabled={loading}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Editar filial ${branch.name}`}
+                            accessibilityState={{ disabled: loading }}
+                          >
+                            <Ionicons name="create-outline" size={18} color="#2563eb" />
+                          </Pressable>
+
+                          <Pressable
+                            style={({ pressed }) => [branchStyles.iconDangerButton, loading && branchStyles.actionDisabled, pressed && !loading && branchStyles.pressed]}
+                            onPress={() => confirmDeleteBranch(branch)}
+                            disabled={loading}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Excluir filial ${branch.name}`}
+                            accessibilityState={{ disabled: loading }}
+                          >
+                            <Ionicons name="trash-outline" size={18} color="#991b1b" />
+                          </Pressable>
+                        </View>
+                      </View>
+                    ))
+                  )}
+                </View>
+              )}
+            </View>
+          </>
+        )}
+
         <View style={branchStyles.sectionBreak} />
 
         <View style={branchStyles.movementsSection}>
           <Pressable
-            style={({ pressed }) => [branchStyles.movementHeader, pressed && branchStyles.pressed]}
+            style={({ pressed }) => [branchStyles.movementHeader, movementsExpanded && branchStyles.sectionHeaderActive, pressed && branchStyles.pressed]}
             onPress={() => setMovementsExpanded((current) => !current)}
             accessibilityRole="button"
             accessibilityLabel={movementsExpanded ? "Fechar movimentações entre filiais" : "Abrir movimentações entre filiais"}
@@ -565,8 +753,113 @@ export function BranchScreen({
             </Pressable>
           ))}
         </SelectorModal>
+
+        <SelectorModal
+          visible={selectModal === "createBranch"}
+          title={editingBranch ? "Editar filial" : "Nova filial"}
+          subtitle="Informe nome e código para usar nas movimentações."
+          onClose={closeBranchForm}
+        >
+          <View style={branchStyles.createBranchForm}>
+            <View style={branchStyles.branchPreviewCard}>
+              <View style={branchStyles.branchPreviewIcon}>
+                <Ionicons name="business-outline" size={19} color="#2563eb" />
+              </View>
+              <View style={branchStyles.branchPreviewTextArea}>
+                <Text style={branchStyles.branchPreviewName} numberOfLines={1}>{branchPreviewName}</Text>
+                <Text style={branchStyles.branchPreviewCode} numberOfLines={1}>Código: {branchPreviewCode}</Text>
+              </View>
+            </View>
+
+            <BranchFormInput
+              label="Nome da filial"
+              icon="storefront-outline"
+              value={newBranchName}
+              onChangeText={(value) => {
+                setNewBranchName(value);
+                if (!newBranchCode.trim()) {
+                  setNewBranchCode(normalizeBranchCode(value));
+                }
+                setBranchFormError(null);
+              }}
+              placeholder="Ex: Filial Praia do Canto"
+              accessibilityLabel="Nome da filial"
+            />
+
+            <BranchFormInput
+              label="Código"
+              icon="barcode-outline"
+              value={newBranchCode}
+              onChangeText={(value) => {
+                setNewBranchCode(normalizeBranchCode(value));
+                setBranchFormError(null);
+              }}
+              placeholder="Ex: FILIAL-PRAIA"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              accessibilityLabel="Código da filial"
+            />
+
+            {branchFormError && <Text style={branchStyles.formErrorText}>{branchFormError}</Text>}
+
+            <Pressable
+              style={({ pressed }) => [branchStyles.createBranchButton, loading && branchStyles.createBranchButtonDisabled, pressed && !loading && branchStyles.pressed]}
+              onPress={submitNewBranch}
+              disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel="Salvar filial"
+              accessibilityState={{ disabled: loading }}
+            >
+              {loading ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <Ionicons name="checkmark-circle-outline" size={17} color="#ffffff" />
+              )}
+              <Text style={branchStyles.createBranchButtonText}>{loading ? "Salvando..." : editingBranch ? "Salvar alterações" : "Salvar filial"}</Text>
+            </Pressable>
+          </View>
+        </SelectorModal>
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+function AccordionHeader({
+  title,
+  subtitle,
+  icon,
+  expanded,
+  accessibilityLabel,
+  onPress
+}: {
+  title: string;
+  subtitle: string;
+  icon: ComponentProps<typeof Ionicons>["name"];
+  expanded: boolean;
+  accessibilityLabel: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [branchStyles.sectionHeader, expanded && branchStyles.sectionHeaderActive, pressed && branchStyles.pressed]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ expanded }}
+    >
+      <View style={branchStyles.headerIconBadge}>
+        <Ionicons name={icon} size={17} color="#2563eb" />
+      </View>
+
+      <View style={branchStyles.headerTextArea}>
+        <Text style={branchStyles.sectionTitle} numberOfLines={1}>{title}</Text>
+        <Text style={branchStyles.sectionSubtitle} numberOfLines={1}>{subtitle}</Text>
+      </View>
+
+      <View style={[branchStyles.chevronBadge, expanded && branchStyles.chevronBadgeActive]}>
+        <Ionicons name={expanded ? "chevron-up-outline" : "chevron-down-outline"} size={17} color={expanded ? "#2563eb" : "#64748b"} />
+      </View>
+    </Pressable>
   );
 }
 
@@ -613,6 +906,48 @@ function BranchSelect({
   );
 }
 
+function BranchFormInput({
+  label,
+  icon,
+  value,
+  onChangeText,
+  placeholder,
+  accessibilityLabel,
+  autoCapitalize = "sentences",
+  autoCorrect = true
+}: {
+  label: string;
+  icon: ComponentProps<typeof Ionicons>["name"];
+  value: string;
+  onChangeText: (value: string) => void;
+  placeholder: string;
+  accessibilityLabel: string;
+  autoCapitalize?: ComponentProps<typeof TextInput>["autoCapitalize"];
+  autoCorrect?: boolean;
+}) {
+  return (
+    <View style={branchStyles.branchFormField}>
+      <Text style={branchStyles.branchFormLabel}>{label}</Text>
+      <View style={branchStyles.branchFormInputShell}>
+        <View style={branchStyles.branchFormInputIcon}>
+          <Ionicons name={icon} size={17} color="#64748b" />
+        </View>
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor="#94a3b8"
+          autoCapitalize={autoCapitalize}
+          autoCorrect={autoCorrect}
+          returnKeyType="next"
+          style={branchStyles.branchFormInput}
+          accessibilityLabel={accessibilityLabel}
+        />
+      </View>
+    </View>
+  );
+}
+
 function formatTransferShortId(id: string) {
   return id.length > 7 ? `TRF-${id.slice(-3).toUpperCase()}` : id;
 }
@@ -634,6 +969,23 @@ function getTransferStatusStyle(status: BranchTransferStatus) {
   return branchStyles.transferStatusReserved;
 }
 
+function normalizeBranchCode(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toUpperCase();
+}
+
+function normalizeBranchName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 const branchStyles = StyleSheet.create({
   root: {
     flex: 1,
@@ -648,17 +1000,44 @@ const branchStyles = StyleSheet.create({
     backgroundColor: "#f7f9fc"
   },
   reserveSection: {
-    backgroundColor: "#ffffff"
+    backgroundColor: "#f7f9fc"
   },
   sectionHeader: {
-    minHeight: 42,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
+    minHeight: 64,
+    marginHorizontal: 10,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "#dfe7f2",
+    borderRadius: 12,
+    paddingHorizontal: 11,
+    paddingVertical: 9,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
-    backgroundColor: "#ffffff"
+    backgroundColor: "#ffffff",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.035,
+    shadowRadius: 8,
+    elevation: 1
+  },
+  sectionHeaderActive: {
+    borderColor: "#bfdbfe",
+    backgroundColor: "#f8fbff"
+  },
+  headerIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#eff6ff"
+  },
+  headerTextArea: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2
   },
   sectionTitleRow: {
     flex: 1,
@@ -668,17 +1047,77 @@ const branchStyles = StyleSheet.create({
     gap: 7
   },
   sectionTitle: {
-    flex: 1,
     color: "#020617",
-    fontSize: 15,
-    lineHeight: 19,
+    fontSize: 14,
+    lineHeight: 18,
     fontWeight: "900"
+  },
+  sectionSubtitle: {
+    color: "#64748b",
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "600"
+  },
+  chevronBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f1f5f9"
+  },
+  chevronBadgeActive: {
+    backgroundColor: "#dbeafe"
   },
   formBody: {
     gap: 12,
+    marginHorizontal: 10,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#dfe7f2",
+    borderRadius: 12,
     paddingHorizontal: 13,
+    paddingTop: 13,
     paddingBottom: 13,
     backgroundColor: "#ffffff"
+  },
+  branchManagerTextArea: {
+    flex: 1,
+    minWidth: 0
+  },
+  branchManagerTitle: {
+    color: "#020617",
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: "900"
+  },
+  branchManagerMeta: {
+    marginTop: 2,
+    color: "#64748b",
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "600"
+  },
+  addBranchButton: {
+    minHeight: 34,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    borderRadius: 7,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#eff6ff"
+  },
+  addBranchButtonText: {
+    color: "#2563eb",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "900"
+  },
+  actionDisabled: {
+    opacity: 0.55
   },
   helperText: {
     marginTop: 1,
@@ -771,32 +1210,111 @@ const branchStyles = StyleSheet.create({
     fontWeight: "900"
   },
   sectionBreak: {
-    height: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#edf2f7",
+    height: 2,
     backgroundColor: "#f7f9fc"
   },
   movementsSection: {
-    backgroundColor: "#ffffff"
+    backgroundColor: "#f7f9fc"
+  },
+  managementSection: {
+    backgroundColor: "#f7f9fc"
   },
   movementHeader: {
-    minHeight: 49,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: "#e5edf6",
+    minHeight: 64,
+    marginHorizontal: 10,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "#dfe7f2",
+    borderRadius: 12,
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    backgroundColor: "#ffffff",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.035,
+    shadowRadius: 8,
+    elevation: 1
+  },
+  movementsBody: {
+    gap: 10,
+    marginHorizontal: 10,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#dfe7f2",
+    borderRadius: 12,
     paddingHorizontal: 13,
+    paddingTop: 13,
+    paddingBottom: 14,
+    backgroundColor: "#ffffff"
+  },
+  managementBody: {
+    gap: 10,
+    marginHorizontal: 10,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#dfe7f2",
+    borderRadius: 12,
+    paddingHorizontal: 13,
+    paddingTop: 13,
+    paddingBottom: 14,
+    backgroundColor: "#ffffff"
+  },
+  managementIntroRow: {
+    borderWidth: 1,
+    borderColor: "#d9e2ef",
+    borderRadius: 9,
+    paddingHorizontal: 11,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    backgroundColor: "#f8fafc"
+  },
+  branchManagementItem: {
+    borderWidth: 1,
+    borderColor: "#d9e2ef",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
     backgroundColor: "#ffffff"
   },
-  movementsBody: {
-    gap: 10,
-    paddingHorizontal: 13,
-    paddingTop: 13,
-    paddingBottom: 14,
-    backgroundColor: "#ffffff"
+  branchManagementTextArea: {
+    flex: 1,
+    minWidth: 0
+  },
+  branchActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  iconActionButton: {
+    width: 34,
+    height: 34,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#eff6ff"
+  },
+  iconDangerButton: {
+    width: 34,
+    height: 34,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fee2e2"
   },
   movementHelperText: {
     color: "#64748b",
@@ -856,6 +1374,113 @@ const branchStyles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     backgroundColor: "#f8fafc"
+  },
+  createBranchForm: {
+    width: "100%",
+    gap: 16,
+    paddingHorizontal: 4,
+    paddingTop: 4,
+    paddingBottom: 8
+  },
+  branchPreviewCard: {
+    minHeight: 74,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#eff6ff"
+  },
+  branchPreviewIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffff"
+  },
+  branchPreviewTextArea: {
+    flex: 1,
+    minWidth: 0
+  },
+  branchPreviewName: {
+    color: "#020617",
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: "900"
+  },
+  branchPreviewCode: {
+    marginTop: 3,
+    color: "#2563eb",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "800"
+  },
+  branchFormField: {
+    gap: 7
+  },
+  branchFormLabel: {
+    color: "#020617",
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: "800"
+  },
+  branchFormInputShell: {
+    minHeight: 54,
+    borderWidth: 1,
+    borderColor: "#d9e2ef",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#ffffff"
+  },
+  branchFormInputIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f1f5f9"
+  },
+  branchFormInput: {
+    flex: 1,
+    minHeight: 52,
+    paddingVertical: 0,
+    color: "#020617",
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: "600"
+  },
+  formErrorText: {
+    color: "#991b1b",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "700"
+  },
+  createBranchButton: {
+    minHeight: 52,
+    marginTop: 4,
+    borderRadius: 12,
+    paddingHorizontal: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    backgroundColor: "#2563eb"
+  },
+  createBranchButtonDisabled: {
+    backgroundColor: "#88a9ef"
+  },
+  createBranchButtonText: {
+    color: "#ffffff",
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: "900"
   },
   optionTitle: {
     color: "#020617",

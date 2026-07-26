@@ -371,8 +371,8 @@ const certificateStyles = StyleSheet.create({
   },
   cardTitle: {
     color: "#020617",
-    fontSize: 12,
-    lineHeight: 15,
+    fontSize: 16,
+    lineHeight: 20,
     fontWeight: "900"
   },
   statusBadge: {
@@ -382,8 +382,8 @@ const certificateStyles = StyleSheet.create({
     overflow: "hidden",
     color: "#16A34A",
     backgroundColor: "#ECFDF3",
-    fontSize: 8,
-    lineHeight: 11,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: "900"
   },
   statusBadgePending: {
@@ -393,8 +393,8 @@ const certificateStyles = StyleSheet.create({
   statusDescription: {
     marginTop: 3,
     color: "#64748B",
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: "500"
   },
   infoGrid: {
@@ -405,7 +405,7 @@ const certificateStyles = StyleSheet.create({
   },
   infoTile: {
     width: "48%",
-    minHeight: 38,
+    minHeight: 50,
     borderRadius: 8,
     paddingHorizontal: 9,
     paddingVertical: 7,
@@ -413,15 +413,15 @@ const certificateStyles = StyleSheet.create({
   },
   infoLabel: {
     color: "#7C8DA5",
-    fontSize: 7,
-    lineHeight: 9,
+    fontSize: 10,
+    lineHeight: 13,
     fontWeight: "900"
   },
   infoValue: {
     marginTop: 4,
     color: "#0F172A",
-    fontSize: 9,
-    lineHeight: 12,
+    fontSize: 13,
+    lineHeight: 17,
     fontWeight: "800"
   },
   formCard: {
@@ -442,15 +442,15 @@ const certificateStyles = StyleSheet.create({
   formTitle: {
     marginBottom: 12,
     color: "#020617",
-    fontSize: 13,
-    lineHeight: 16,
+    fontSize: 18,
+    lineHeight: 23,
     fontWeight: "900"
   },
   fieldLabel: {
     marginBottom: 7,
     color: "#0F172A",
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 13,
+    lineHeight: 17,
     fontWeight: "800"
   },
   segmentRow: {
@@ -460,7 +460,7 @@ const certificateStyles = StyleSheet.create({
   },
   segmentButtonBlue: {
     flex: 1,
-    height: 36,
+    height: 44,
     borderWidth: 1,
     borderColor: "#DCE3EE",
     borderRadius: 8,
@@ -474,7 +474,7 @@ const certificateStyles = StyleSheet.create({
   },
   segmentButtonDark: {
     flex: 1,
-    height: 36,
+    height: 44,
     borderWidth: 1,
     borderColor: "#DCE3EE",
     borderRadius: 8,
@@ -488,8 +488,8 @@ const certificateStyles = StyleSheet.create({
   },
   segmentText: {
     color: "#475569",
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 14,
+    lineHeight: 18,
     fontWeight: "800"
   },
   segmentTextActive: {
@@ -501,20 +501,20 @@ const certificateStyles = StyleSheet.create({
     fontWeight: "900"
   },
   input: {
-    height: 42,
+    height: 52,
     marginBottom: 14,
     borderWidth: 1,
     borderColor: "#DCE3EE",
     borderRadius: 8,
     paddingHorizontal: 12,
     color: "#0F172A",
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 15,
+    lineHeight: 19,
     fontWeight: "600",
     backgroundColor: "#FFFFFF"
   },
   fileSelectedRow: {
-    height: 36,
+    height: 46,
     marginBottom: 14,
     borderWidth: 1,
     borderColor: "#86EFAC",
@@ -529,8 +529,8 @@ const certificateStyles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     color: "#16A34A",
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 14,
+    lineHeight: 18,
     fontWeight: "800"
   },
   fileTrashButton: {
@@ -540,7 +540,7 @@ const certificateStyles = StyleSheet.create({
     justifyContent: "center"
   },
   filePickerButton: {
-    height: 36,
+    height: 46,
     marginBottom: 14,
     borderWidth: 1,
     borderColor: "#DCE3EE",
@@ -554,12 +554,12 @@ const certificateStyles = StyleSheet.create({
   },
   filePickerText: {
     color: "#2563EB",
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 14,
+    lineHeight: 18,
     fontWeight: "900"
   },
   saveButton: {
-    height: 43,
+    height: 52,
     marginTop: 10,
     borderRadius: 8,
     alignItems: "center",
@@ -573,12 +573,12 @@ const certificateStyles = StyleSheet.create({
   },
   saveButtonText: {
     color: "#FFFFFF",
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 15,
+    lineHeight: 19,
     fontWeight: "900"
   },
   removeButton: {
-    height: 43,
+    height: 52,
     marginTop: 8,
     borderWidth: 1,
     borderColor: "#FCA5A5",
@@ -591,8 +591,8 @@ const certificateStyles = StyleSheet.create({
   },
   removeButtonText: {
     color: "#EF4444",
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 15,
+    lineHeight: 19,
     fontWeight: "900"
   },
   disabledButton: {

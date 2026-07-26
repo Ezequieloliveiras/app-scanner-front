@@ -16,6 +16,7 @@ type InvoiceReviewModalProps = {
   onEditProduct: (index: number) => void;
   onCloseEdit: () => void;
   onCommit: () => void;
+  onSaveForLater: () => void;
   onClose: () => void;
   onBackToScan: () => void;
 };
@@ -41,17 +42,21 @@ export function InvoiceReviewModal({
   visible,
   pendingInvoice,
   pendingProducts,
+  editingProductIndex,
   loading,
   topInset,
   bottomInset,
   onUpdateProduct,
+  onEditProduct,
+  onCloseEdit,
   onCommit,
+  onSaveForLater,
   onBackToScan
 }: InvoiceReviewModalProps) {
   const safeBottom = Math.max(bottomInset, 52);
   const divergentCount = pendingProducts.filter((product) => {
     const countedQuantity = parseQuantity(product.quantityInput);
-    return countedQuantity > 0 && countedQuantity !== product.quantity;
+    return countedQuantity !== product.quantity;
   }).length;
 
   function updateCountedQuantity(index: number, value: number) {
@@ -105,14 +110,36 @@ export function InvoiceReviewModal({
             <ProductReviewCard
               product={item}
               index={index}
+              observationOpen={editingProductIndex === index}
               onChangeQuantity={(value) => onUpdateProduct(index, { quantityInput: value })}
+              onChangeObservation={(value) => onUpdateProduct(index, { observation: value })}
               onDecrease={() => updateCountedQuantity(index, parseQuantity(item.quantityInput) - 1)}
               onIncrease={() => updateCountedQuantity(index, parseQuantity(item.quantityInput) + 1)}
+              onToggleObservation={() => {
+                if (editingProductIndex === index) {
+                  onCloseEdit();
+                  return;
+                }
+
+                onEditProduct(index);
+              }}
             />
           )}
         />
 
         <View style={[reviewStyles.footer, { paddingBottom: safeBottom }]}>
+          <Pressable
+            style={({ pressed }) => [
+              reviewStyles.saveLaterButton,
+              pressed && !loading && reviewStyles.commitButtonPressed,
+              loading && reviewStyles.disabledButton
+            ]}
+            disabled={loading}
+            onPress={onSaveForLater}
+          >
+            <Ionicons name="time-outline" size={18} color={reviewPalette.blue} />
+            <Text style={reviewStyles.saveLaterButtonText}>Conferir depois</Text>
+          </Pressable>
           <Pressable
             style={({ pressed }) => [reviewStyles.commitButton, pressed && !loading && reviewStyles.commitButtonPressed, loading && reviewStyles.disabledButton]}
             disabled={loading}
@@ -136,19 +163,27 @@ export function InvoiceReviewModal({
 function ProductReviewCard({
   product,
   index,
+  observationOpen,
   onChangeQuantity,
+  onChangeObservation,
   onDecrease,
-  onIncrease
+  onIncrease,
+  onToggleObservation
 }: {
   product: EditableInvoiceProduct;
   index: number;
+  observationOpen: boolean;
   onChangeQuantity: (value: string) => void;
+  onChangeObservation: (value: string) => void;
   onDecrease: () => void;
   onIncrease: () => void;
+  onToggleObservation: () => void;
 }) {
   const invoiceQuantity = product.quantity;
   const countedQuantity = parseQuantity(product.quantityInput);
-  const hasDivergence = countedQuantity > 0 && countedQuantity !== invoiceQuantity;
+  const hasDivergence = countedQuantity !== invoiceQuantity;
+  const hasObservation = Boolean(product.observation?.trim());
+  const divergenceText = countedQuantity > invoiceQuantity ? "Sobra" : "Falta";
   const countColorStyle = hasDivergence ? reviewStyles.countValueDivergent : reviewStyles.countValueOk;
 
   return (
@@ -163,7 +198,24 @@ function ProductReviewCard({
           </Text>
         </View>
         {hasDivergence && (
-          <Text style={reviewStyles.divergenceBadge}>Divergência</Text>
+          <View style={reviewStyles.divergenceActions}>
+            <Text style={reviewStyles.divergenceBadge}>{divergenceText}</Text>
+            <Pressable
+              style={[
+                reviewStyles.observationIconButton,
+                (observationOpen || hasObservation) && reviewStyles.observationIconButtonActive
+              ]}
+              onPress={onToggleObservation}
+              accessibilityRole="button"
+              accessibilityLabel={`Adicionar observacao para ${product.name}`}
+            >
+              <Ionicons
+                name={hasObservation ? "chatbox-ellipses" : "chatbox-ellipses-outline"}
+                size={17}
+                color={observationOpen || hasObservation ? reviewPalette.blue : "#64748b"}
+              />
+            </Pressable>
+          </View>
         )}
       </View>
 
@@ -196,6 +248,24 @@ function ProductReviewCard({
           </Pressable>
         </View>
       </View>
+
+      {hasDivergence && observationOpen && (
+        <View style={reviewStyles.observationBox}>
+          <View style={reviewStyles.observationHeader}>
+            <Ionicons name="create-outline" size={15} color={reviewPalette.blue} />
+            <Text style={reviewStyles.observationTitle}>Observacao da entrada</Text>
+          </View>
+          <TextInput
+            value={product.observation || ""}
+            onChangeText={onChangeObservation}
+            placeholder={countedQuantity > invoiceQuantity ? "Ex: vieram unidades a mais na entrega" : "Ex: faltaram unidades na entrega"}
+            placeholderTextColor="#94a3b8"
+            multiline
+            style={reviewStyles.observationInput}
+            accessibilityLabel={`Observacao da entrada de ${product.name}`}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -339,6 +409,25 @@ const reviewStyles = StyleSheet.create({
     lineHeight: 12,
     fontWeight: "800"
   },
+  divergenceActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7
+  },
+  observationIconButton: {
+    width: 32,
+    height: 32,
+    borderWidth: 1,
+    borderColor: reviewPalette.border,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: reviewPalette.white
+  },
+  observationIconButtonActive: {
+    borderColor: "#bfdbfe",
+    backgroundColor: "#eff6ff"
+  },
   quantityRow: {
     marginTop: 14,
     flexDirection: "row",
@@ -412,12 +501,65 @@ const reviewStyles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: reviewPalette.blue
   },
+  observationBox: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    borderRadius: 11,
+    padding: 10,
+    backgroundColor: "#f8fbff"
+  },
+  observationHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8
+  },
+  observationTitle: {
+    color: reviewPalette.text,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "900"
+  },
+  observationInput: {
+    minHeight: 76,
+    borderWidth: 1,
+    borderColor: reviewPalette.border,
+    borderRadius: 10,
+    paddingHorizontal: 11,
+    paddingTop: 9,
+    paddingBottom: 9,
+    color: reviewPalette.text,
+    backgroundColor: reviewPalette.white,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "600",
+    textAlignVertical: "top"
+  },
   footer: {
     borderTopWidth: 1,
     borderTopColor: "#edf2f7",
     paddingHorizontal: 12,
     paddingTop: 10,
+    gap: 8,
     backgroundColor: reviewPalette.background
+  },
+  saveLaterButton: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#eff6ff"
+  },
+  saveLaterButtonText: {
+    color: reviewPalette.blue,
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: "900"
   },
   commitButton: {
     minHeight: 44,

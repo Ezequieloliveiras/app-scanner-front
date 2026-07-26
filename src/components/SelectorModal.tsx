@@ -3,14 +3,17 @@ import { ReactNode } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { styles } from "../styles/appStyles";
 import { styles as appHeaderStyles } from "./AppHeader.styles";
+
 export function SelectorModal({
   visible,
   title,
+  subtitle = "Toque em uma opcao para selecionar.",
   children,
   onClose
 }: {
   visible: boolean;
   title: string;
+  subtitle?: string;
   children: ReactNode;
   onClose: () => void;
 }) {
@@ -21,7 +24,7 @@ export function SelectorModal({
           <View style={styles.modalHeader}>
             <View style={styles.modalTitleArea}>
               <Text style={styles.modalTitle}>{title}</Text>
-              <Text style={styles.modalSubtitle}>Toque em uma opção para selecionar.</Text>
+              <Text style={styles.modalSubtitle}>{subtitle}</Text>
             </View>
             <Pressable style={appHeaderStyles.headerIconButton} onPress={onClose}>
               <Ionicons name="close-outline" size={24} color="#1f2937" />

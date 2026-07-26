@@ -28,6 +28,7 @@ export function HomeScreen({
   onProducts,
   onBranches,
   onStockRequests,
+  onPendingConferences,
   onAccess,
   onCertificate,
   onBilling
@@ -43,6 +44,7 @@ export function HomeScreen({
   onProducts: () => void;
   onBranches: () => void;
   onStockRequests: () => void;
+  onPendingConferences: () => void;
   onAccess: () => void;
   onCertificate: () => void;
   onBilling: () => void;
@@ -81,7 +83,7 @@ export function HomeScreen({
 
         <View style={homeStyles.metricsRow}>
           <MetricCard value={productsCount} label="produtos em estoque" accent="blue" />
-          <MetricCard value={pendingCount} label="itens para conferir" accent="orange" />
+          <MetricCard value={pendingCount} label="conferencias pendentes" accent="orange" onPress={onPendingConferences} />
         </View>
       </View>
 
@@ -111,14 +113,37 @@ export function HomeScreen({
   );
 }
 
-function MetricCard({ value, label, accent }: { value: number; label: string; accent: "blue" | "orange" }) {
+function MetricCard({
+  value,
+  label,
+  accent,
+  onPress
+}: {
+  value: number;
+  label: string;
+  accent: "blue" | "orange";
+  onPress?: () => void;
+}) {
   const accentStyle = accent === "blue" ? homeStyles.metricAccentBlue : homeStyles.metricAccentOrange;
-
-  return (
-    <View style={homeStyles.metricCard}>
+  const content = (
+    <>
       <View style={[homeStyles.metricAccent, accentStyle]} />
       <Text style={homeStyles.metricValue}>{value}</Text>
       <Text style={homeStyles.metricLabel}>{label}</Text>
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <Pressable style={({ pressed }) => [homeStyles.metricCard, pressed && homeStyles.pressed]} onPress={onPress}>
+        {content}
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={homeStyles.metricCard}>
+      {content}
     </View>
   );
 }

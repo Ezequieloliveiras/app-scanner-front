@@ -4,6 +4,7 @@ import {
   AuthUser,
   BillingCheckoutPayload,
   BillingCheckoutResult,
+  BranchOption,
   CertificateStatus,
   CreateManagedUserPayload,
   InventoryDashboard,
@@ -22,6 +23,8 @@ import {
   CreateStockRequestPayload,
   InvoiceResult,
   MissingDeliveredPayload,
+  PendingConference,
+  PendingConferencePayload,
   Product,
   StockRequest
 } from "../types/product";
@@ -214,6 +217,25 @@ export const api = {
     });
   },
 
+  listPendingConferences(token: string) {
+    return request<PendingConference[]>("/api/pending-conferences", { token });
+  },
+
+  savePendingConference(token: string, payload: PendingConferencePayload, conferenceId?: string | null) {
+    return request<PendingConference>(conferenceId ? `/api/pending-conferences/${conferenceId}` : "/api/pending-conferences", {
+      method: conferenceId ? "PUT" : "POST",
+      token,
+      body: JSON.stringify(payload)
+    });
+  },
+
+  deletePendingConference(token: string, conferenceId: string) {
+    return request<{ ok: true }>(`/api/pending-conferences/${conferenceId}`, {
+      method: "DELETE",
+      token
+    });
+  },
+
   listProducts(token: string) {
     return request<Product[]>("/api/products", { token });
   },
@@ -261,6 +283,33 @@ export const api = {
 
   listBranchTransfers(token: string) {
     return request<BranchTransfer[]>("/api/branches/transfers", { token });
+  },
+
+  listBranches(token: string) {
+    return request<BranchOption[]>("/api/branches", { token });
+  },
+
+  createBranch(token: string, payload: Pick<BranchOption, "name" | "code">) {
+    return request<BranchOption>("/api/branches", {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload)
+    });
+  },
+
+  updateBranch(token: string, id: string, payload: Pick<BranchOption, "name" | "code">) {
+    return request<BranchOption>(`/api/branches/${id}`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload)
+    });
+  },
+
+  deleteBranch(token: string, id: string) {
+    return request<{ ok: true }>(`/api/branches/${id}`, {
+      method: "DELETE",
+      token
+    });
   },
 
   createBranchTransfer(token: string, payload: CreateBranchTransferPayload) {

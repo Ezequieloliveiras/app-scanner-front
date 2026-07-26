@@ -10,7 +10,6 @@ export function ScanScreen({
   permissionGranted,
   loading,
   scannerEnabled,
-  cameraAutoEnabled = false,
   onRequestPermission,
   onBarcodeScanned,
   onManualSubmit,
@@ -21,7 +20,6 @@ export function ScanScreen({
   permissionGranted?: boolean;
   loading: boolean;
   scannerEnabled: boolean;
-  cameraAutoEnabled?: boolean;
   topInset: number;
   onRequestPermission: () => void;
   onBarcodeScanned: (result: BarcodeScanningResult) => void;
@@ -32,8 +30,8 @@ export function ScanScreen({
   const cameraRef = useRef<CameraView | null>(null);
   const [mode, setMode] = useState<ScanMode>("barcode");
   const [manualInput, setManualInput] = useState("");
-  const [barcodeScanArmed, setBarcodeScanArmed] = useState(cameraAutoEnabled);
-  const [torchEnabled, setTorchEnabled] = useState(cameraAutoEnabled);
+  const [barcodeScanArmed, setBarcodeScanArmed] = useState(false);
+  const [torchEnabled, setTorchEnabled] = useState(false);
   const [scannerFrameHeight, setScannerFrameHeight] = useState(0);
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const cameraActive = mode === "barcode" || mode === "qr" || mode === "ai";
@@ -50,13 +48,6 @@ export function ScanScreen({
       setTorchEnabled(false);
     }
   }, [cameraActive, torchEnabled]);
-
-  useEffect(() => {
-    if (!cameraAutoEnabled || mode !== "barcode") return;
-
-    setBarcodeScanArmed(true);
-    setTorchEnabled(true);
-  }, [cameraAutoEnabled, mode]);
 
   useEffect(() => {
     if (!cameraActive || mode !== "barcode") {
@@ -101,6 +92,14 @@ export function ScanScreen({
     setBarcodeScanArmed(false);
     setTorchEnabled(false);
     onBarcodeScanned(result);
+  }
+
+  function toggleBarcodeScan() {
+    setBarcodeScanArmed((armed) => {
+      const nextArmed = !armed;
+      setTorchEnabled(nextArmed);
+      return nextArmed;
+    });
   }
 
   function submitManualInput() {
@@ -243,7 +242,7 @@ export function ScanScreen({
                   loading && styles.disabledButton
                 ]}
                 disabled={loading}
-                onPress={() => setBarcodeScanArmed((armed) => !armed)}
+                onPress={toggleBarcodeScan}
               >
                 <Ionicons name={barcodeScanArmed ? "stop-circle-outline" : "barcode-outline"} size={20} color="#ffffff" />
                 <Text style={styles.scanReadButtonText}>
