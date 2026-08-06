@@ -1244,6 +1244,39 @@ function MainApp() {
     }
   }
 
+  async function validatePasswordReset(email: string, token: string) {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await api.validatePasswordReset(email, token);
+      Alert.alert("Token validado", result.message);
+      return result;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao validar token.";
+      setError(message);
+      Alert.alert("Token não validado", message);
+      return undefined;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function completePasswordReset(email: string, token: string, password: string) {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await api.completePasswordReset(email, token, password);
+      Alert.alert("Senha redefinida", result.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao redefinir senha.";
+      setError(message);
+      Alert.alert("Senha não redefinida", message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function adminResetPassword(user: AuthUser, password: string) {
     if (!authToken) return;
 
@@ -1318,6 +1351,8 @@ function MainApp() {
           onLogin={handleLogin}
           onRegister={handleRegister}
           onRequestPasswordReset={requestPasswordReset}
+          onValidatePasswordReset={validatePasswordReset}
+          onCompletePasswordReset={completePasswordReset}
         />
       </View>
     );

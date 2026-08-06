@@ -159,6 +159,20 @@ export const api = {
     });
   },
 
+  validatePasswordReset(email: string, token: string) {
+    return request<{ message: string }>("/api/auth/password-reset/validate", {
+      method: "POST",
+      body: JSON.stringify({ email, token })
+    });
+  },
+
+  completePasswordReset(email: string, token: string, password: string) {
+    return request<{ message: string }>("/api/auth/password-reset/complete", {
+      method: "POST",
+      body: JSON.stringify({ email, token, password })
+    });
+  },
+
   async createUser(token: string, payload: CreateManagedUserPayload) {
     const user = await request<AuthUser>("/api/auth/users", {
       method: "POST",
