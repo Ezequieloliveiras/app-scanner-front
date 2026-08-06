@@ -153,16 +153,9 @@ export const api = {
   },
 
   requestPasswordReset(email: string) {
-    return request<{ message: string; resetToken?: string }>("/api/auth/password-reset/request", {
+    return request<{ message: string }>("/api/auth/password-reset/request", {
       method: "POST",
       body: JSON.stringify({ email })
-    });
-  },
-
-  completePasswordReset(token: string, password: string) {
-    return request<{ message: string }>("/api/auth/password-reset/complete", {
-      method: "POST",
-      body: JSON.stringify({ token, password })
     });
   },
 

@@ -18,8 +18,7 @@ type AuthScreenProps = {
   error: string | null;
   onLogin: (email: string, password: string) => Promise<void>;
   onRegister: (payload: RegisterCredentials) => Promise<void>;
-  onRequestPasswordReset: (email: string) => Promise<{ message: string; resetToken?: string } | undefined>;
-  onCompletePasswordReset: (token: string, password: string) => Promise<void>;
+  onRequestPasswordReset: (email: string) => Promise<{ message: string } | undefined>;
 };
 
 const palette = {
@@ -37,40 +36,19 @@ const palette = {
   dangerSoft: "#fee2e2"
 };
 
-export function AuthScreen({ loading, error, onLogin, onRegister, onRequestPasswordReset, onCompletePasswordReset }: AuthScreenProps) {
+export function AuthScreen({ loading, error, onLogin, onRegister, onRequestPasswordReset }: AuthScreenProps) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [resetRequested, setResetRequested] = useState(false);
-  const [resetToken, setResetToken] = useState("");
-  const [resetPassword, setResetPassword] = useState("");
-  const [resetPasswordVisible, setResetPasswordVisible] = useState(false);
   const emailInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
-  const resetTokenInputRef = useRef<TextInput>(null);
-  const resetPasswordInputRef = useRef<TextInput>(null);
 
   async function submit() {
     if (mode === "reset") {
-      if (!resetRequested) {
-        const result = await onRequestPasswordReset(email);
-        if (result) {
-          setResetRequested(true);
-          if (result.resetToken) {
-            setResetToken(result.resetToken);
-          }
-          setTimeout(() => resetTokenInputRef.current?.focus(), 150);
-        }
-        return;
-      }
-
-      await onCompletePasswordReset(resetToken, resetPassword);
-      setMode("login");
-      setResetRequested(false);
-      setResetToken("");
-      setResetPassword("");
+      const result = await onRequestPasswordReset(email);
+      if (result) setMode("login");
       return;
     }
 
@@ -83,7 +61,7 @@ export function AuthScreen({ loading, error, onLogin, onRegister, onRequestPassw
   }
 
   const primaryLabel =
-    mode === "login" ? "Entrar" : mode === "register" ? "Criar acesso" : resetRequested ? "Redefinir senha" : "Enviar e-mail de redefinição";
+    mode === "login" ? "Entrar" : mode === "register" ? "Criar acesso" : "Enviar e-mail de redefinição";
 
   return (
     <View style={screenStyles.shell}>
@@ -156,7 +134,7 @@ export function AuthScreen({ loading, error, onLogin, onRegister, onRequestPassw
                   returnKeyType="next"
                   blurOnSubmit={false}
                   onPressIn={() => emailInputRef.current?.focus()}
-                  onSubmitEditing={() => (mode === "reset" && resetRequested ? resetTokenInputRef.current?.focus() : passwordInputRef.current?.focus())}
+                  onSubmitEditing={() => (mode === "reset" ? submit() : passwordInputRef.current?.focus())}
                   style={screenStyles.input}
                 />
               </View>
@@ -195,58 +173,6 @@ export function AuthScreen({ loading, error, onLogin, onRegister, onRequestPassw
                 </View>
               )}
 
-              {mode === "reset" && resetRequested && (
-                <>
-                  <View style={screenStyles.fieldGroup}>
-                    <Text style={screenStyles.label}>Token recebido por e-mail</Text>
-                    <TextInput
-                      ref={resetTokenInputRef}
-                      value={resetToken}
-                      onChangeText={setResetToken}
-                      placeholder="Cole o token aqui"
-                      placeholderTextColor={palette.placeholder}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      editable={!loading}
-                      returnKeyType="next"
-                      blurOnSubmit={false}
-                      onSubmitEditing={() => resetPasswordInputRef.current?.focus()}
-                      style={screenStyles.input}
-                    />
-                  </View>
-
-                  <View style={screenStyles.fieldGroup}>
-                    <Text style={screenStyles.label}>Nova senha</Text>
-                    <View style={screenStyles.passwordInput}>
-                      <TextInput
-                        ref={resetPasswordInputRef}
-                        value={resetPassword}
-                        onChangeText={setResetPassword}
-                        placeholder="Minimo 8 caracteres"
-                        placeholderTextColor={palette.placeholder}
-                        autoComplete="new-password"
-                        editable={!loading}
-                        importantForAutofill="yes"
-                        secureTextEntry={!resetPasswordVisible}
-                        textContentType="newPassword"
-                        returnKeyType="done"
-                        onSubmitEditing={submit}
-                        style={screenStyles.passwordTextInput}
-                      />
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={resetPasswordVisible ? "Ocultar nova senha" : "Mostrar nova senha"}
-                        hitSlop={8}
-                        style={screenStyles.eyeButton}
-                        onPress={() => setResetPasswordVisible((visible) => !visible)}
-                      >
-                        <Ionicons name={resetPasswordVisible ? "eye-off-outline" : "eye-outline"} size={19} color="#98a2b3" />
-                      </Pressable>
-                    </View>
-                  </View>
-                </>
-              )}
-
               <Pressable
                 style={({ pressed }) => [
                   screenStyles.primaryButton,
@@ -269,9 +195,6 @@ export function AuthScreen({ loading, error, onLogin, onRegister, onRequestPassw
                   disabled={loading}
                   onPress={() => {
                     setMode("reset");
-                    setResetRequested(false);
-                    setResetToken("");
-                    setResetPassword("");
                   }}
                 >
                   <Text style={screenStyles.textLinkLabel}>Redefinir senha</Text>
@@ -282,9 +205,6 @@ export function AuthScreen({ loading, error, onLogin, onRegister, onRequestPassw
                   disabled={loading}
                   onPress={() => {
                     setMode("login");
-                    setResetRequested(false);
-                    setResetToken("");
-                    setResetPassword("");
                   }}
                 >
                   <Text style={screenStyles.textLinkLabel}>Voltar para login</Text>

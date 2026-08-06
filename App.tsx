@@ -1232,30 +1232,13 @@ function MainApp() {
       setLoading(true);
       setError(null);
       const result = await api.requestPasswordReset(email);
-      const passwordResetResult = result;
-      Alert.alert("Redefinição solicitada", result.resetToken ? `${result.message}\nToken dev: ${result.resetToken}` : result.message);
-      return passwordResetResult;
+      Alert.alert("Redefinição solicitada", result.message);
+      return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao solicitar redefinição.";
       setError(message);
       Alert.alert("Redefinição não solicitada", message);
       return undefined;
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function completePasswordReset(token: string, password: string) {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await api.completePasswordReset(token, password);
-      Alert.alert("Senha redefinida", result.message);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao redefinir senha.";
-      setError(message);
-      Alert.alert("Senha não redefinida", message);
-      throw err;
     } finally {
       setLoading(false);
     }
@@ -1335,7 +1318,6 @@ function MainApp() {
           onLogin={handleLogin}
           onRegister={handleRegister}
           onRequestPasswordReset={requestPasswordReset}
-          onCompletePasswordReset={completePasswordReset}
         />
       </View>
     );
