@@ -30,23 +30,56 @@ import {
 } from "../types/product";
 import { normalizeCameraEnabled } from "../utils/cameraPreference";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3333";
+const REQUEST_TIMEOUT_MS = Number(process.env.EXPO_PUBLIC_API_TIMEOUT_MS || 30000);
+
+function getApiUrl() {
+  const rawApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+
+  if (!rawApiUrl) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("EXPO_PUBLIC_API_URL nao configurada no build de producao.");
+    }
+
+    return "http://localhost:3333";
+  }
+
+  const apiUrl = rawApiUrl.replace(/\/$/, "");
+
+  if (process.env.NODE_ENV === "production") {
+    const parsedUrl = new URL(apiUrl);
+    if (parsedUrl.protocol !== "https:") {
+      throw new Error("EXPO_PUBLIC_API_URL precisa usar HTTPS em producao.");
+    }
+  }
+
+  return apiUrl;
+}
 
 async function request<T>(path: string, options?: RequestInit & { token?: string }): Promise<T> {
   let response: Response;
+  const apiUrl = getApiUrl();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(`${apiUrl}${path}`, {
       headers: {
         "Content-Type": "application/json",
         ...(options?.token ? { Authorization: `Bearer ${options.token}` } : {}),
         ...(options?.headers || {})
       },
       credentials: "include",
+      signal: controller.signal,
       ...options
     });
-  } catch {
-    throw new Error(`Nao consegui conectar na API em ${API_URL}. Confira se backend e celular estao na mesma rede.`);
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("A API demorou para responder. Tente novamente.");
+    }
+
+    throw new Error(`Nao consegui conectar na API em ${apiUrl}. Confira a URL configurada no ambiente.`);
+  } finally {
+    clearTimeout(timeout);
   }
 
   const data = await response.json().catch(() => ({}));
@@ -126,6 +159,13 @@ export const api = {
     });
   },
 
+  completePasswordReset(token: string, password: string) {
+    return request<{ message: string }>("/api/auth/password-reset/complete", {
+      method: "POST",
+      body: JSON.stringify({ token, password })
+    });
+  },
+
   async createUser(token: string, payload: CreateManagedUserPayload) {
     const user = await request<AuthUser>("/api/auth/users", {
       method: "POST",
@@ -172,6 +212,14 @@ export const api = {
     return request<{ ok: true }>(`/api/auth/users/${userId}`, {
       method: "DELETE",
       token
+    });
+  },
+
+  deleteAccount(token: string, currentPassword: string) {
+    return request<{ ok: true }>("/api/auth/me", {
+      method: "DELETE",
+      token,
+      body: JSON.stringify({ currentPassword })
     });
   },
 

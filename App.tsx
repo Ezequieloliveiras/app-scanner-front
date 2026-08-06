@@ -1232,11 +1232,30 @@ function MainApp() {
       setLoading(true);
       setError(null);
       const result = await api.requestPasswordReset(email);
+      const passwordResetResult = result;
       Alert.alert("Redefinição solicitada", result.resetToken ? `${result.message}\nToken dev: ${result.resetToken}` : result.message);
+      return passwordResetResult;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao solicitar redefinição.";
       setError(message);
       Alert.alert("Redefinição não solicitada", message);
+      return undefined;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function completePasswordReset(token: string, password: string) {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await api.completePasswordReset(token, password);
+      Alert.alert("Senha redefinida", result.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao redefinir senha.";
+      setError(message);
+      Alert.alert("Senha não redefinida", message);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -1254,6 +1273,24 @@ function MainApp() {
       const message = err instanceof Error ? err.message : "Erro ao redefinir senha.";
       setError(message);
       Alert.alert("Senha não atualizada", message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteOwnAccount(currentPassword: string) {
+    if (!authToken) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      await api.deleteAccount(authToken, currentPassword);
+      Alert.alert("Conta excluida", "Sua conta foi removida.");
+      logout();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao excluir conta.";
+      setError(message);
+      Alert.alert("Conta nao excluida", message);
     } finally {
       setLoading(false);
     }
@@ -1298,6 +1335,7 @@ function MainApp() {
           onLogin={handleLogin}
           onRegister={handleRegister}
           onRequestPasswordReset={requestPasswordReset}
+          onCompletePasswordReset={completePasswordReset}
         />
       </View>
     );
@@ -1477,6 +1515,7 @@ function MainApp() {
             loading={loading}
             onUpdateProfile={updateProfile}
             onUpgradePlan={goToBilling}
+            onDeleteAccount={deleteOwnAccount}
           />
         )}
 

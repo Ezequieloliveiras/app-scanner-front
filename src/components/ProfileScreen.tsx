@@ -25,6 +25,7 @@ type ProfileScreenProps = {
   loading: boolean;
   onUpdateProfile: (payload: UpdateProfilePayload, options?: { silent?: boolean }) => Promise<AuthUser | undefined>;
   onUpgradePlan: () => void;
+  onDeleteAccount: (currentPassword: string) => Promise<void>;
 };
 
 type SelectedProfilePhoto = {
@@ -34,7 +35,7 @@ type SelectedProfilePhoto = {
   base64: string;
 };
 
-export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan }: ProfileScreenProps) {
+export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan, onDeleteAccount }: ProfileScreenProps) {
   const cameraPreferenceDirtyRef = useRef(false);
   const cameraPreferenceSavingRef = useRef(false);
   const loadedUserIdRef = useRef(user._id);
@@ -46,6 +47,8 @@ export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan }:
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [currentPasswordVisible, setCurrentPasswordVisible] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deletePasswordVisible, setDeletePasswordVisible] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(normalizeCameraEnabled(user.cameraEnabled));
   const [cameraPreferenceSaving, setCameraPreferenceSaving] = useState(false);
 
@@ -143,6 +146,26 @@ export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan }:
     setRemovePhoto(false);
     setCurrentPassword("");
     setNewPassword("");
+  }
+
+  function confirmDeleteAccount() {
+    if (!deletePassword) {
+      Alert.alert("Senha obrigatoria", "Informe sua senha atual para excluir a conta.");
+      return;
+    }
+
+    Alert.alert("Excluir conta?", "Esta acao remove sua conta e nao pode ser desfeita.", [
+      { text: "Voltar", style: "cancel" },
+      {
+        text: "Excluir conta",
+        style: "destructive",
+        onPress: async () => {
+          const password = deletePassword;
+          setDeletePassword("");
+          await onDeleteAccount(password);
+        }
+      }
+    ]);
   }
 
   async function toggleCameraPreference() {
@@ -317,6 +340,44 @@ export function ProfileScreen({ user, loading, onUpdateProfile, onUpgradePlan }:
           {loading && <ActivityIndicator color="#ffffff" />}
           <Text style={profileStyles.saveButtonText}>Salvar perfil</Text>
         </Pressable>
+
+        <View style={profileStyles.dangerCard}>
+          <Text style={profileStyles.dangerTitle}>Excluir conta</Text>
+          <ProfileField label="Senha atual" accessibilityLabel="Senha atual para excluir conta">
+            <View style={profileStyles.passwordInputWrap}>
+              <TextInput
+                value={deletePassword}
+                onChangeText={setDeletePassword}
+                secureTextEntry={!deletePasswordVisible}
+                style={profileStyles.passwordInput}
+                returnKeyType="done"
+                accessibilityLabel="Senha atual para excluir conta"
+              />
+              <Pressable
+                style={profileStyles.eyeButton}
+                onPress={() => setDeletePasswordVisible((current) => !current)}
+                accessibilityRole="button"
+                accessibilityLabel={deletePasswordVisible ? "Ocultar senha atual" : "Visualizar senha atual"}
+              >
+                <Ionicons name={deletePasswordVisible ? "eye-off-outline" : "eye-outline"} size={15} color="#94A3B8" />
+              </Pressable>
+            </View>
+          </ProfileField>
+          <Pressable
+            style={({ pressed }) => [
+              profileStyles.deleteAccountButton,
+              pressed && !loading && profileStyles.deleteAccountButtonPressed,
+              loading && profileStyles.disabled
+            ]}
+            disabled={loading}
+            onPress={confirmDeleteAccount}
+            accessibilityRole="button"
+            accessibilityLabel="Excluir conta"
+          >
+            <Ionicons name="trash-outline" size={16} color="#DC2626" />
+            <Text style={profileStyles.deleteAccountText}>Excluir conta</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -618,6 +679,46 @@ const profileStyles = StyleSheet.create({
   },
   saveButtonText: {
     color: "#FFFFFF",
+    fontSize: 13,
+    lineHeight: 16,
+    fontWeight: "900"
+  },
+  dangerCard: {
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 10,
+    paddingTop: 15,
+    paddingBottom: 16,
+    marginTop: 16,
+    backgroundColor: "#FFF7F7"
+  },
+  dangerTitle: {
+    paddingHorizontal: 16,
+    marginBottom: 13,
+    color: "#991B1B",
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: "900"
+  },
+  deleteAccountButton: {
+    minHeight: 41,
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+    borderRadius: 8,
+    marginHorizontal: 16,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#FFFFFF"
+  },
+  deleteAccountButtonPressed: {
+    opacity: 0.86,
+    transform: [{ scale: 0.99 }]
+  },
+  deleteAccountText: {
+    color: "#DC2626",
     fontSize: 13,
     lineHeight: 16,
     fontWeight: "900"

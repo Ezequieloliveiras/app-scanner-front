@@ -20,8 +20,7 @@
     "android": {
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.POST_NOTIFICATIONS",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.POST_NOTIFICATIONS"
       ],
       "package": "com.ezequieloliveira.appscannerfront"
     },
